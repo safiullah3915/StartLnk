@@ -1,0 +1,137 @@
+# ========== ROOT LEVEL GITIGNORE ==========
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+.env.example
+.env.cookie
+
+# Virtual Environments
+env/
+venv/
+*/env/
+*/venv/
+.venv
+
+# Python - General
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+.pylintrc
+.flake8
+setup.cfg
+
+# Node
+node_modules/
+package-lock.json
+yarn.lock
+
+# Database
+db.sqlite3
+db.sqlite3-journal
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+logs/
+django.log
+
+# Media and uploaded files
+media/
+*.jpg
+*.jpeg
+*.png
+*.gif
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Test coverage
+.coverage
+.pytest_cache/
+htmlcov/
+
+# Documentation (Markdown files - keep README.md and CONTRIBUTING.md)
+*.md
+!README.md
+!CONTRIBUTING.md
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Cache
+.cache/
+*.cache
+
+# Docker
+docker-compose.override.yml
+
+# Large model files (uncomment if needed)
+# *.pkl
+# *.joblib
+# *.h5
+# *.pt
+# *.pth
+# models/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# IDE specific Python
+.pytest_cache
+.mypy_cache
+.dmypy.json
+dmypy.json
+
+# Mac specific
+.AppleDouble
+.LSOverride
+
+# Windows specific
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/

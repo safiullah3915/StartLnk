@@ -1,0 +1,100 @@
+# Environment variables
+.env
+.env.local
+.env.*.local
+.env.example
+.env.cookie
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Virtual environments
+.venv
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+
+# Node
+node_modules/
+package-lock.json
+yarn.lock
+dist/
+build/
+
+# Database
+db.sqlite3
+db.sqlite3-journal
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+logs/
+django.log
+
+# Media and uploaded files
+media/
+*.jpg
+*.jpeg
+*.png
+*.gif
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Test coverage
+.coverage
+.pytest_cache/
+htmlcov/
+
+# Cache
+.cache/
+*.cache
+
+# IDE specific
+.pylintrc
+.flake8
+setup.cfg

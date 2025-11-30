@@ -1,0 +1,13 @@
+Flask==3.0.0
+Flask-CORS==4.0.0
+SQLAlchemy==2.0.23
+python-dotenv==1.0.0
+
+# Machine Learning & Deep Learning
+torch>=2.0.0
+numpy>=1.24.0
+scikit-learn>=1.3.0
+tqdm>=4.65.0
+
+# Matrix Factorization
+scipy>=1.10.0

@@ -1,0 +1,16 @@
+Django
+djangorestframework
+django-cors-headers
+PyJWT
+bcrypt
+python-decouple
+mysqlclient
+psycopg2-binary
+django-ratelimit
+Pillow
+django-extensions
+Faker
+sentence-transformers
+APScheduler
+django-apscheduler
+requests
