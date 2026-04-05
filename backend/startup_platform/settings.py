@@ -72,6 +72,11 @@ DATABASES = {
         'PASSWORD': config('DB_PASSWORD', default=''),
         'HOST': config('DB_HOST', default=''),
         'PORT': config('DB_PORT', default=''),
+        # SQLite: wait up to 30s for a write lock instead of failing immediately.
+        # WAL journal mode is enabled via connection_created signal in api/apps.py.
+        'OPTIONS': {
+            'timeout': 30,
+        } if config('DB_ENGINE', default='django.db.backends.sqlite3') == 'django.db.backends.sqlite3' else {},
     }
 }
 

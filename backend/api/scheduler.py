@@ -168,12 +168,12 @@ def start_scheduler():
         replace_existing=True,
     )
     
-    # Schedule the trending metrics computation task to run every 1 minute
-    # This runs periodically to ensure all metrics are recalculated with global max values
-    # Real-time updates happen via signals when interactions occur
+    # Schedule the trending metrics computation task to run every 15 minutes.
+    # Real-time updates happen via signals when interactions occur, so this
+    # periodic job only needs to recalculate global max values occasionally.
     _scheduler.add_job(
         compute_trending_metrics,
-        trigger=IntervalTrigger(minutes=1),  # Every 1 minute
+        trigger=IntervalTrigger(minutes=15),  # Every 15 minutes
         id="compute_trending_metrics",
         name="Compute trending metrics for all active startups",
         replace_existing=True,

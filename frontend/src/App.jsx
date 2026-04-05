@@ -30,6 +30,7 @@ import PotentialInvestors from './pages/PotentialInvestors/PotentialInvestors';
 import MatchedDevelopers from './pages/MatchedDevelopers/MatchedDevelopers';
 import ProtectedRoute from './components/ProtectedRoute/ProtectedRoute';
 import RoleBasedRoute from './components/RoleBasedRoute/RoleBasedRoute';
+import CompleteProfile from './pages/CompleteProfile/CompleteProfile';
 
 // Component to scroll to top on route change
 function ScrollToTop() {
@@ -60,9 +61,9 @@ function AppRoutes() {
 
   React.useEffect(() => {
     setTransitionStage('fade-out');
-    const timeout = setTimeout(() => setTransitionStage('fade-in'), 180);
+    const timeout = setTimeout(() => setTransitionStage('fade-in'), 150);
     return () => clearTimeout(timeout);
-  }, [location]);
+  }, [location.pathname]);
 
   if (loading) {
     return (
@@ -76,7 +77,7 @@ function AppRoutes() {
     <>
       <ScrollToTop />
       <div className={`page-transition ${transitionStage}`}>
-      <Routes location={location} key={location.pathname}>
+      <Routes>
       {/* Public routes */}
       <Route path="/" element={<LandingPage />} />
       <Route 
@@ -86,6 +87,10 @@ function AppRoutes() {
       <Route 
         path="/signup" 
         element={<Signup />} 
+      />
+      <Route 
+        path="/complete-profile" 
+        element={<CompleteProfile />} 
       />
       <Route 
         path="/verify-email" 

@@ -15,6 +15,7 @@ const apiClient = axios.create({
 // List of endpoints that don't require authentication
 const PUBLIC_ENDPOINTS = [
   '/signup',
+  '/check-username',
   '/auth/login',
   '/auth/refresh',
   '/auth/forget-password',

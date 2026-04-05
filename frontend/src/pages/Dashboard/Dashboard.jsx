@@ -225,11 +225,26 @@ const Dashboard = () => {
 
   if (authLoading || loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-xl">
-          {authLoading ? 'Authenticating...' : 'Loading dashboard...'}
+      <>
+        <Navbar />
+        <div style={{ minHeight: '80vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginTop: '4rem' }}>
+          <div style={{
+            width: '3.5rem', height: '3.5rem', 
+            border: '4px solid rgba(139, 92, 246, 0.2)', 
+            borderLeftColor: '#8B5CF6', 
+            borderRadius: '50%', 
+            animation: 'spin 1s linear infinite',
+            marginBottom: '1.5rem'
+          }}></div>
+          <div style={{ color: '#9CA3AF', fontSize: '1.1rem', fontWeight: '600', letterSpacing: '0.05em' }}>
+            {authLoading ? 'AUTHENTICATING...' : 'LOADING DASHBOARD...'}
+          </div>
+          <style dangerouslySetInnerHTML={{__html: `
+            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+          `}} />
         </div>
-      </div>
+        <Footer />
+      </>
     );
   }
 

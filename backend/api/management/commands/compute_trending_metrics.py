@@ -91,7 +91,18 @@ class Command(BaseCommand):
             max_views_30d = max_apps_30d = max_favs_30d = max_ints_30d = 1
             max_views_7d = max_apps_7d = max_engagement_7d = 1
         
-        # Second pass: Calculate scores using global maximums
+        # Second pass: Calculate scores and collect updates
+        metrics_to_update = []
+        metrics_to_create = []
+
+        # Fetch all existing metrics in one query
+        existing_metrics = {
+            m.startup_id: m
+            for m in StartupTrendingMetrics.objects.filter(
+                startup__in=[m['startup'] for m in all_metrics]
+            )
+        }
+
         for metrics_data in all_metrics:
             startup = metrics_data['startup']
             view_count_24h = metrics_data['view_count_24h']
@@ -108,36 +119,30 @@ class Command(BaseCommand):
             application_count_prev_7d = metrics_data['application_count_prev_7d']
             favorite_count_prev_7d = metrics_data['favorite_count_prev_7d']
             interest_count_prev_7d = metrics_data['interest_count_prev_7d']
-            
+
             # Count active positions
             active_positions_count = startup.positions.filter(is_active=True).count()
-            
-            # Compute popularity score (30-day window) - normalized against global max
-            # Use logarithmic scaling for better distribution
+
+            # Compute popularity score
             def log_normalize(value, max_value):
                 if max_value == 0 or value == 0:
                     return 0.0
-                # Use log scale: log(1 + value) / log(1 + max_value)
-                # This creates a more natural distribution where differences are more visible
                 return math.log(1 + value) / math.log(1 + max_value)
-            
+
             popularity_score = (
                 0.25 * log_normalize(view_count_30d, max_views_30d) +
                 0.35 * log_normalize(application_count_30d, max_apps_30d) +
                 0.25 * log_normalize(favorite_count_30d, max_favs_30d) +
                 0.15 * log_normalize(interest_count_30d, max_ints_30d)
             )
-            # Cap popularity score at 1.0
             popularity_score = min(popularity_score, 1.0)
-            
-            # Compute trending score (7-day window with recency boost) - normalized against global max
+
             trending_score = (
                 0.40 * log_normalize(view_count_7d, max_views_7d) +
                 0.30 * log_normalize(application_count_7d, max_apps_7d) +
                 0.30 * log_normalize(favorite_count_7d + interest_count_7d, max_engagement_7d)
             )
-            
-            # Velocity score compares last 7 days vs previous 7 days to capture momentum
+
             activity_7d = view_count_7d + application_count_7d + favorite_count_7d + interest_count_7d
             activity_prev_7d = (
                 view_count_prev_7d +
@@ -146,43 +151,56 @@ class Command(BaseCommand):
                 interest_count_prev_7d
             )
             velocity_score = activity_7d / max(activity_prev_7d, 1)
-            
+
             if activity_7d < MIN_ACTIVITY_7D:
                 velocity_score = 0.0
-            
-            # Apply velocity boost to trending score (startups with increasing activity get higher scores)
-            # Cap velocity boost to prevent extreme scores
-            velocity_boost = min(velocity_score, 2.0) * 0.25  # Max 50% boost
+
+            velocity_boost = min(velocity_score, 2.0) * 0.25
             trending_score = trending_score * (1 + velocity_boost)
             trending_score = min(trending_score, 1.0)
-            
+
             if view_count_7d < MIN_VIEWS_7D:
                 trending_score = 0.0
-            
-            # Update or create metrics
-            StartupTrendingMetrics.objects.update_or_create(
-                startup=startup,
-                defaults={
-                    'popularity_score': popularity_score,
-                    'trending_score': trending_score,
-                    'view_count_24h': view_count_24h,
-                    'view_count_7d': view_count_7d,
-                    'view_count_30d': view_count_30d,
-                    'application_count_24h': application_count_24h,
-                    'application_count_7d': application_count_7d,
-                    'application_count_30d': application_count_30d,
-                    'favorite_count_7d': favorite_count_7d,
-                    'interest_count_7d': interest_count_7d,
-                    'active_positions_count': active_positions_count,
-                    'velocity_score': velocity_score,
-                    # Note: StartupTrendingMetrics model doesn't have favorite_count_30d/interest_count_30d fields
-                    # These are only used for velocity calculation
-                }
-            )
-            
+
+            fields = {
+                'popularity_score': popularity_score,
+                'trending_score': trending_score,
+                'view_count_24h': view_count_24h,
+                'view_count_7d': view_count_7d,
+                'view_count_30d': view_count_30d,
+                'application_count_24h': application_count_24h,
+                'application_count_7d': application_count_7d,
+                'application_count_30d': application_count_30d,
+                'favorite_count_7d': favorite_count_7d,
+                'interest_count_7d': interest_count_7d,
+                'active_positions_count': active_positions_count,
+                'velocity_score': velocity_score,
+            }
+
+            if startup.id in existing_metrics:
+                obj = existing_metrics[startup.id]
+                for k, v in fields.items():
+                    setattr(obj, k, v)
+                metrics_to_update.append(obj)
+            else:
+                metrics_to_create.append(StartupTrendingMetrics(startup=startup, **fields))
+
             processed += 1
             if processed % 10 == 0:
                 self.stdout.write(f'Processed {processed}/{total} startups...')
-        
+
+        # Single bulk write — acquires lock once instead of 225 times
+        update_fields = [
+            'popularity_score', 'trending_score',
+            'view_count_24h', 'view_count_7d', 'view_count_30d',
+            'application_count_24h', 'application_count_7d', 'application_count_30d',
+            'favorite_count_7d', 'interest_count_7d',
+            'active_positions_count', 'velocity_score',
+        ]
+        if metrics_to_update:
+            StartupTrendingMetrics.objects.bulk_update(metrics_to_update, update_fields, batch_size=100)
+        if metrics_to_create:
+            StartupTrendingMetrics.objects.bulk_create(metrics_to_create, batch_size=100, ignore_conflicts=True)
+
         self.stdout.write(self.style.SUCCESS(f'Computed metrics for {processed} startups'))
 

@@ -1,0 +1,409 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+
+/* ───────────────────────────────────────────
+   Complete Profile — 2-Step Wizard
+   ─────────────────────────────────────────── */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Inter", sans-serif;
+}
+
+/* Full-page wrapper — centers the card */
+.cp-page {
+    min-height: 100vh;
+    background: #f0f2f5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+}
+
+/* White card */
+.cp-card {
+    background: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 4px 40px rgba(0, 0, 0, 0.09);
+    padding: 2.5rem 2.25rem 2.25rem;
+    width: 100%;
+    max-width: 480px;
+    animation: cpFadeUp 0.35s ease;
+}
+
+@keyframes cpFadeUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Step header ── */
+.cp-step-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.75rem;
+}
+
+.cp-step-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #6b7280;
+}
+
+/* Progress bar segments */
+.cp-progress {
+    display: flex;
+    gap: 5px;
+}
+
+.cp-bar {
+    width: 38px;
+    height: 4px;
+    border-radius: 99px;
+    background: #e5e7eb;
+    transition: background 0.3s ease;
+}
+
+.cp-bar.active {
+    background: #25224A;
+}
+
+/* ── Heading ── */
+.cp-title {
+    font-size: 1.65rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 0.4rem;
+    line-height: 1.25;
+}
+
+.cp-subtitle {
+    font-size: 0.92rem;
+    color: #6b7280;
+    margin-bottom: 1.75rem;
+    line-height: 1.5;
+}
+
+/* ── Input group ── */
+.cp-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin-bottom: 1rem;
+}
+
+.cp-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+/* ── Input wrapper (icon-based) — no longer used, kept for safety ── */
+
+.cp-input {
+    width: 100%;
+    height: 2.85rem;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 0.93rem;
+    color: #1f2937;
+    background: #ffffff;
+    padding: 0 1rem;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    box-sizing: border-box;
+}
+
+/*
+ * SPECIFICITY OVERRIDE
+ * CreateStartupProject.module.css leaks a bare global rule:
+ *   input[type="text"], input[type="url"], textarea { width: 80% }
+ * CSS Modules only scope class selectors, NOT attribute selectors.
+ * That rule has specificity 0-1-1 (element + attribute).
+ * .cp-input alone is 0-1-0 and loses.
+ * .cp-card input[type="text"] is 0-1-2 and wins.
+ */
+.cp-card input[type="text"],
+.cp-card input[type="email"],
+.cp-card input[type="password"] {
+    width: 100% !important;
+    padding: 0 1rem !important;
+    border: 1.5px solid #e5e7eb !important;
+    border-radius: 10px !important;
+    background-color: #ffffff !important;
+    box-sizing: border-box !important;
+    height: 2.85rem !important;
+    font-size: 0.93rem !important;
+    color: #1f2937 !important;
+}
+
+.cp-input:focus {
+    border-color: #25224A;
+    box-shadow: 0 0 0 3px rgba(37, 34, 74, 0.1);
+}
+
+.cp-input.readonly {
+    background: #f9fafb;
+    color: #6b7280;
+    cursor: default;
+    border-color: #e5e7eb;
+}
+
+.cp-input.readonly:focus {
+    box-shadow: none;
+    border-color: #e5e7eb;
+}
+
+/* Locked email field — visually read-only, NOT disabled */
+.cp-locked {
+    background: #f3f4f6;
+    color: #6b7280;
+    cursor: default;
+    border-color: #e5e7eb;
+    pointer-events: none;
+    user-select: none;
+}
+
+.cp-locked:focus {
+    box-shadow: none;
+    border-color: #e5e7eb;
+}
+
+/* Scoped form wrapper — ensures all children share same width */
+.cp-form {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+/* Error border state */
+.cp-input-err {
+    border-color: #dc2626 !important;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1) !important;
+}
+
+/* Inline field error text */
+.cp-field-error {
+    font-size: 0.78rem;
+    color: #dc2626;
+    margin-top: 0.2rem;
+    display: block;
+    line-height: 1.4;
+}
+
+/* Disabled / locked email */
+.cp-input:disabled {
+    background: #f3f4f6 !important;
+    color: #9ca3af !important;
+    cursor: not-allowed !important;
+    border-color: #e5e7eb !important;
+    box-shadow: none !important;
+}
+
+/* Select (role) */
+.cp-select {
+    width: 100%;
+    height: 2.85rem;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 0.93rem;
+    color: #1f2937;
+    background: #ffffff;
+    padding: 0 1rem;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    box-sizing: border-box;
+    appearance: auto;
+    cursor: pointer;
+}
+
+.cp-select:focus {
+    border-color: #25224A;
+    box-shadow: 0 0 0 3px rgba(37, 34, 74, 0.1);
+}
+
+/* ── Continue / Complete button ── */
+.cp-btn {
+    width: 100%;
+    height: 3rem;
+    background: #25224A;
+    color: #ffffff;
+    border: none;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 0.5rem;
+    letter-spacing: 0.01em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+    box-sizing: border-box;
+}
+
+.cp-btn:hover:not(:disabled) {
+    background: #1a1835;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(37, 34, 74, 0.28);
+}
+
+.cp-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Loading state */
+.cp-btn.loading {
+    opacity: 0.8;
+    cursor: wait;
+}
+
+/* Spinner inside button */
+.cp-spinner {
+    width: 18px;
+    height: 18px;
+    border: 2.5px solid rgba(255,255,255,0.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: cpSpin 0.75s linear infinite;
+}
+
+@keyframes cpSpin {
+    to { transform: rotate(360deg); }
+}
+
+/* ── Role cards (visual alternative to plain select) ── */
+.cp-roles {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    margin-bottom: 0.5rem;
+}
+
+.cp-role-card {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.85rem 1rem;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.15s ease;
+    background: #ffffff;
+}
+
+.cp-role-card:hover {
+    border-color: #9ca3af;
+    background: #f9fafb;
+}
+
+.cp-role-card.selected {
+    border-color: #25224A;
+    background: #f5f4ff;
+    box-shadow: 0 0 0 3px rgba(37, 34, 74, 0.08);
+}
+
+.cp-role-icon {
+    font-size: 1.4rem;
+    width: 2.25rem;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.cp-role-info {
+    flex: 1;
+}
+
+.cp-role-name {
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.cp-role-desc {
+    font-size: 0.78rem;
+    color: #6b7280;
+    margin-top: 0.1rem;
+}
+
+/* Radio dot */
+.cp-role-radio {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid #d1d5db;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: border-color 0.2s ease;
+}
+
+.cp-role-card.selected .cp-role-radio {
+    border-color: #25224A;
+}
+
+.cp-role-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #25224A;
+    opacity: 0;
+    transform: scale(0.4);
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.cp-role-card.selected .cp-role-dot {
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* ── Error message ── */
+.cp-error {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #dc2626;
+    border-radius: 8px;
+    padding: 0.7rem 0.9rem;
+    font-size: 0.85rem;
+    margin-bottom: 0.75rem;
+}
+
+/* ── Back link ── */
+.cp-back {
+    text-align: center;
+    margin-top: 1rem;
+    font-size: 0.85rem;
+    color: #6b7280;
+}
+
+.cp-back button {
+    background: none;
+    border: none;
+    color: #25224A;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: 0;
+}
+
+.cp-back button:hover {
+    text-decoration: underline;
+}
+
+/* ── Responsive ── */
+@media (max-width: 540px) {
+    .cp-card {
+        padding: 2rem 1.25rem 1.75rem;
+        border-radius: 16px;
+    }
+    .cp-title {
+        font-size: 1.4rem;
+    }
+}

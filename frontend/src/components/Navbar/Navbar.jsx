@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import styles from "./Navbar.module.css";
 import { useAuth } from "../../contexts/AuthContext";
@@ -14,6 +14,25 @@ const Navbar = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated, logout, isEntrepreneur, isStudent, isInvestor } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
+
+  const matchedDropdownRef = useRef(null);
+  const profileDropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target)) {
+        setIsProfileOpen(false);
+      }
+      if (matchedDropdownRef.current && !matchedDropdownRef.current.contains(event.target)) {
+        setIsMatchedDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   // Change navbar style on scroll
   // useEffect(() => {
@@ -192,7 +211,7 @@ const Navbar = () => {
           if (link.type === "dropdown") {
             const isMatchedActive = link.dropdown.some(item => location.pathname === item.path);
             return (
-              <div key={index} className={styles.dropdownContainer}>
+              <div key={index} className={styles.dropdownContainer} ref={matchedDropdownRef}>
                 <button
                   onClick={toggleMatchedDropdown}
                   className={`${styles.navLink} ${styles.dropdownToggle} ${isMatchedActive ? styles.active : ""}`}
@@ -236,7 +255,7 @@ const Navbar = () => {
 
       {isAuthenticated && (
         <div className={styles.userMenu}>
-          <div className={styles.profileContainer}>
+          <div className={styles.profileContainer} ref={profileDropdownRef}>
             <button onClick={toggleProfileDropdown} className={styles.profileButton}>
               <div className={styles.profileAvatar}>
                 {user?.username?.charAt(0).toUpperCase() || 'U'}

@@ -150,6 +150,34 @@ def home(request):
 
 
 # Authentication Views
+
+@method_decorator(csrf_exempt, name='dispatch')
+class CheckUsernameView(generics.GenericAPIView):
+	"""Lightweight endpoint to check username availability before signup."""
+	permission_classes = [AllowAny]
+
+	def get(self, request, *args, **kwargs):
+		username = request.query_params.get('username', '').strip()
+		if not username:
+			return Response({'available': False, 'error': 'Username is required.'}, status=400)
+
+		import re
+		if not re.match(r'^[a-zA-Z0-9@.+\-_]+$', username):
+			return Response({
+				'available': False,
+				'error': 'Username can only contain letters, numbers, and @/./+/-/_ characters.'
+			}, status=200)
+
+		exists = User.objects.filter(username__iexact=username).exists()
+		if exists:
+			return Response({
+				'available': False,
+				'error': 'This username is already taken. Please choose a different one.'
+			}, status=200)
+
+		return Response({'available': True}, status=200)
+
+
 @method_decorator(ratelimit(key='ip', rate='5/m', method='POST'), name='post')
 @method_decorator(csrf_exempt, name='dispatch')
 class SignupView(generics.CreateAPIView):

@@ -1,5 +1,4 @@
-import React, { useState } from "react";
-import styles from "./CreateStartupProject.module.css"; // Use CSS Module
+import React, { useState } from 'react';
 import { Navbar } from '../../components/Navbar/Navbar';
 import { Footer } from '../../components/Footer/Footer';
 import { useNavigate } from 'react-router-dom';
@@ -7,678 +6,522 @@ import { toast } from 'react-toastify';
 import { useAuth } from '../../contexts/AuthContext';
 import apiClient from '../../utils/axiosConfig';
 import { debugAuthStatus } from '../../utils/authDebug';
+import './CreateStartup.css';
 
+/* ─── Static data ─────────────────────────────────────────────────────────── */
+const CATEGORIES = [
+  { value: 'saas',        label: 'SaaS' },
+  { value: 'ecommerce',   label: 'Ecommerce' },
+  { value: 'agency',      label: 'Agency' },
+  { value: 'legal',       label: 'Legal' },
+  { value: 'marketplace', label: 'Marketplace' },
+  { value: 'media',       label: 'Media' },
+  { value: 'platform',    label: 'Platform' },
+  { value: 'real_estate', label: 'Real Estate' },
+  { value: 'robotics',    label: 'Robotics' },
+  { value: 'software',    label: 'Software' },
+  { value: 'web3',        label: 'Web3' },
+  { value: 'crypto',      label: 'Crypto' },
+  { value: 'other',       label: 'Other' },
+];
+
+const STAGES = [
+  'Idea Stage', 'Building MVP', 'MVP Stage',
+  'Product Market Fit', 'Fund raising', 'Growth', 'Exit',
+];
+
+/* ─── Helpers ─────────────────────────────────────────────────────────────── */
+const Field = ({ label, required, error, children }) => (
+  <div className="cs-section" style={{ marginBottom: '1rem' }}>
+    <label className="cs-label">
+      {label}{required && <span>*</span>}
+    </label>
+    {children}
+    {error && <span className="cs-error">{error}</span>}
+  </div>
+);
+
+/* ─── Main component ──────────────────────────────────────────────────────── */
 const CreateStartupProject = () => {
-  const navigate = useNavigate();
-  const { user } = useAuth();
+  const navigate  = useNavigate();
+  const { user }  = useAuth();
   const [loading, setLoading] = useState(false);
-  const DEBUG_SKIP_VALIDATION = true; // Set to false to enable validation
+  const [step,    setStep]    = useState(1);
+  const [dir,     setDir]     = useState('forward');
+
+  const TOTAL_STEPS = 3;
+
+  /* unchanged formData structure — same fields, same API payload */
   const [formData, setFormData] = useState({
-    title: '',
-    role_title: '',
-    description: '',
-    field: '',
-    website_url: '',
-    stages: [],
-    stage: '',
-    revenue: '',
-    profit: '',
-    asking_price: '',
-    ttm_revenue: '',
-    ttm_profit: '',
+    title:              '',
+    role_title:         '',
+    description:        '',
+    field:              '',
+    website_url:        '',
+    stage:              '',
+    revenue:            '',
+    profit:             '',
+    asking_price:       '',
+    ttm_revenue:        '',
+    ttm_profit:         '',
     last_month_revenue: '',
-    last_month_profit: '',
-    type: 'marketplace',
-    earn_through: '',
-    phase: '',
-    team_size: '',
-    category: 'saas'
+    last_month_profit:  '',
+    type:               'marketplace',
+    earn_through:       '',
+    phase:              '',
+    team_size:          '',
+    category:           'saas',
   });
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
+  const [errors, setErrors] = useState({});
 
-  const handleCheckboxChange = (e) => {
-    const { name, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: checked ? [...prev[name], e.target.value] : prev[name].filter(item => item !== e.target.value)
-    }));
-  };
+  /* ── Input handlers (same as original) ── */
+  const set = (name, value) =>
+    setFormData(prev => ({ ...prev, [name]: value }));
 
-  const handleButtonClick = (e) => {
-    console.log('🚨 Button clicked!', e.type);
-    console.log('🎯 Event target:', e.target);
-  };
+  const handleInputChange = (e) =>
+    set(e.target.name, e.target.value);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    console.log('🔥 Form submitted! Handler called');
-    console.log('📊 Current form data:', formData);
-    
-    if (DEBUG_SKIP_VALIDATION) {
-      console.log('🚀 DEBUG MODE: Skipping validation - proceeding directly to API call');
-    } else {
-      // Validate required fields according to backend model
-      console.log('🔍 Starting validation...');
-      console.log('Title validation - Value:', formData.title, 'Length:', formData.title?.length);
-      if (!formData.title || formData.title.length < 3) {
-        console.log('❌ Title validation FAILED');
-        toast.error('Startup name must be at least 3 characters long');
-        return;
-      }
-      console.log('✅ Title validation PASSED');
-      
-      console.log('Description validation - Value:', formData.description, 'Length:', formData.description?.length);
-      if (!formData.description || formData.description.length < 5) {
-        console.log('❌ Description validation FAILED');
-        toast.error('Description must be at least 5 characters long');
-        return;
-      }
-      console.log('✅ Description validation PASSED');
-      
-      console.log('Field validation - Value:', formData.field, 'Trimmed:', formData.field?.trim());
-      if (!formData.field || formData.field.trim() === '') {
-        console.log('❌ Field validation FAILED');
-        toast.error('Field/Industry is required');
-        return;
-      }
-      console.log('✅ Field validation PASSED');
+  /* ── Per-step validation ── */
+  const validateStep = (s) => {
+    const e = {};
+    if (s === 1) {
+      if (!formData.title || formData.title.length < 3)
+        e.title = 'Startup name must be at least 3 characters.';
+      if (!formData.description || formData.description.length < 5)
+        e.description = 'Description must be at least 5 characters.';
+      if (!formData.field.trim())
+        e.field = 'Field / Industry is required.';
     }
+    if (s === 2) {
+      if (!formData.stage)
+        e.stage = 'Please select a startup stage.';
+      if (!formData.phase.trim())
+        e.phase = 'Current phase is required.';
+      if (!formData.team_size.trim())
+        e.team_size = 'Team size is required.';
+      if (!formData.earn_through.trim())
+        e.earn_through = 'Please specify how you / team members earn.';
+    }
+    if (s === 3 && formData.type === 'marketplace') {
+      if (!formData.revenue.trim())   e.revenue   = 'Current revenue is required.';
+      if (!formData.profit.trim())    e.profit    = 'Current profit is required.';
+      if (!formData.asking_price.trim()) e.asking_price = 'Asking price is required.';
+      if (!formData.ttm_revenue.trim())  e.ttm_revenue  = 'TTM revenue is required.';
+      if (!formData.ttm_profit.trim())   e.ttm_profit   = 'TTM profit is required.';
+      if (!formData.last_month_revenue.trim()) e.last_month_revenue = 'Last month revenue is required.';
+      if (!formData.last_month_profit.trim())  e.last_month_profit  = 'Last month profit is required.';
+    }
+    return e;
+  };
 
-    console.log('✅ All validations passed, proceeding with API call...');
-    console.log('👤 Current user:', user);
-    console.log('🔐 Authentication status:', user ? 'Authenticated' : 'Not authenticated');
-    
-    // Simple authentication check using AuthContext
+  /* ── Navigation ── */
+  const goNext = () => {
+    const e = validateStep(step);
+    if (Object.keys(e).length) { setErrors(e); return; }
+    setErrors({});
+    setDir('forward');
+    setStep(s => s + 1);
+  };
+
+  const goBack = () => {
+    setErrors({});
+    setDir('back');
+    setStep(s => s - 1);
+  };
+
+  /* ── Submit (same logic as original) ── */
+  const handleSubmit = async () => {
+    const e = validateStep(3);
+    if (Object.keys(e).length) { setErrors(e); return; }
+
     if (!user || !user.id) {
-      console.error('❌ AUTHENTICATION FAILED: User not logged in!');
       toast.error('Please login first to create a startup');
       navigate('/login');
       return;
     }
-    
-    console.log('✅ User authenticated:', user.username);
-    
-    // Run debug for troubleshooting (optional)
+
     debugAuthStatus();
-    
     setLoading(true);
-    
+
     try {
-      console.log('🚀 ================ STARTUP CREATION ATTEMPT ================');
-      console.log('📋 Form data being sent:', formData);
-      console.log('🚀 Making API call to /api/startups...');
-      
-      // Ensure data types match backend expectations
       const cleanedFormData = {
-        title: formData.title,
-        role_title: formData.role_title,
-        description: formData.description,
-        field: formData.field,
-        website_url: formData.website_url || '',
-        // Convert single stage to array for backend (backend expects ListField)
-        stages: formData.stage ? [formData.stage] : [],
-        revenue: formData.revenue || '',
-        profit: formData.profit || '',
-        asking_price: formData.asking_price || '',
-        ttm_revenue: formData.ttm_revenue || '',
-        ttm_profit: formData.ttm_profit || '',
+        title:              formData.title,
+        role_title:         formData.role_title,
+        description:        formData.description,
+        field:              formData.field,
+        website_url:        formData.website_url || '',
+        stages:             formData.stage ? [formData.stage] : [],
+        revenue:            formData.revenue || '',
+        profit:             formData.profit || '',
+        asking_price:       formData.asking_price || '',
+        ttm_revenue:        formData.ttm_revenue || '',
+        ttm_profit:         formData.ttm_profit || '',
         last_month_revenue: formData.last_month_revenue || '',
-        last_month_profit: formData.last_month_profit || '',
-        type: formData.type,
-        earn_through: formData.earn_through || '',
-        phase: formData.phase || '',
-        team_size: formData.team_size || '',
-        category: formData.category || 'other'
+        last_month_profit:  formData.last_month_profit || '',
+        type:               formData.type,
+        earn_through:       formData.earn_through || '',
+        phase:              formData.phase || '',
+        team_size:          formData.team_size || '',
+        category:           formData.category || 'other',
       };
-      
-      console.log('🧺 Cleaned form data:', cleanedFormData);
-      console.log('🌐 About to make API call to /api/startups...');
-      
-      const response = await apiClient.post('/api/startups', cleanedFormData);
-      
-      console.log('✅ API call successful!', response);
-      console.log('📄 Response data:', response.data);
-      
+
+      await apiClient.post('/api/startups', cleanedFormData);
       toast.success('Startup created successfully!');
       navigate('/dashboard');
     } catch (error) {
-      console.error('❌ DETAILED ERROR ANALYSIS:');
-      console.error('Full error object:', error);
-      console.error('Error message:', error.message);
-      console.error('Error response:', error.response);
-      console.error('Error response data:', error.response?.data);
-      console.error('Error response status:', error.response?.status);
-      console.error('Error response headers:', error.response?.headers);
-      console.error('Request config:', error.config);
-      console.error('Request URL:', error.config?.url);
-      console.error('Request method:', error.config?.method);
-      console.error('Request headers:', error.config?.headers);
-      // Use the formData here since cleanedFormData is only defined in the try block
-      console.error('Form data that was sent:', formData);
-      
-      // Check if this is a network error
-      if (!error.response) {
-        console.error('🌐 NETWORK ERROR: No response received from server');
-        console.error('Possible causes:');
-        console.error('- Backend server is not running');
-        console.error('- Wrong API URL');
-        console.error('- CORS issues');
-        console.error('- Network connectivity problems');
-      }
-      
-      // Better error message parsing
-      let errorMessage = 'Failed to create startup. Please try again.';
-      
+      console.error('Startup creation error:', error);
+      let msg = 'Failed to create startup. Please try again.';
       if (error.response?.data) {
-        const data = error.response.data;
-        if (typeof data === 'string' && data.includes('AnonymousUser')) {
-          errorMessage = 'Authentication failed. Please log in and try again.';
-        } else if (data.message) {
-          errorMessage = data.message;
-        } else if (data.error) {
-          errorMessage = data.error;
-        } else if (data.detail) {
-          errorMessage = data.detail;
-        } else if (typeof data === 'string' && data.length < 200) {
-          errorMessage = data;
-        }
+        const d = error.response.data;
+        if (typeof d === 'string' && d.includes('AnonymousUser'))
+          msg = 'Authentication failed. Please log in and try again.';
+        else if (d.message) msg = d.message;
+        else if (d.error)   msg = d.error;
+        else if (d.detail)  msg = d.detail;
       } else if (error.message) {
-        errorMessage = error.message;
+        msg = error.message;
       }
-      
-      console.error('💬 Error message to user:', errorMessage);
-      toast.error(errorMessage);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
   };
 
+  /* ── Derived ── */
+  const progressPct = Math.round((step / TOTAL_STEPS) * 100);
+  const animClass   = dir === 'back' ? 'cs-step-back' : 'cs-step';
+  const isMarketplace = formData.type === 'marketplace';
+
+  /* ──────────────────────────────────────────────────────────────────────── */
   return (
     <>
-    <Navbar/>
-    <div className={styles.container}>
-      <form className={styles.form} onSubmit={handleSubmit}>
-        <h2>Create Startup Project</h2>
-
-          <div className={styles.formGroup}>
-            <label>Startup name *</label>
-            <input 
-              type="text" 
-              name="title"
-              value={formData.title}
-              onChange={handleInputChange}
-              placeholder="Type your startup name" 
-              required
-            />
+      <Navbar />
+      <div className="cs-page">
+        {/* Fixed progress bar */}
+        <div className="cs-topbar">
+          <div className="cs-topbar-fill" style={{ width: `${progressPct}%` }} />
         </div>
 
+        <div className="cs-wrapper">
+          <p className="cs-step-label">Step {step} of {TOTAL_STEPS}</p>
 
-        <div className={styles.formGroup}>
-          <label>Categories</label>
-          <div className={styles.category}>
-            <label className={`${styles.catg} ${formData.category === 'saas' ? styles.selected : ''}`}>
-              <input 
-                type="radio" 
-                name="category" 
-                value="saas" 
-                checked={formData.category === 'saas'}
-                onChange={handleInputChange}
-              />
-              <span>SaaS</span>
-            </label>
-            <label className={`${styles.catg} ${formData.category === 'ecommerce' ? styles.selected : ''}`}>
-              <input 
-                type="radio" 
-                name="category" 
-                value="ecommerce" 
-                checked={formData.category === 'ecommerce'}
-                onChange={handleInputChange}
-              />
-              <span>Ecommerce</span>
-            </label>
-            <label className={`${styles.catg} ${formData.category === 'agency' ? styles.selected : ''}`}>
-              <input 
-                type="radio" 
-                name="category" 
-                value="agency" 
-                checked={formData.category === 'agency'}
-                onChange={handleInputChange}
-              />
-              <span>Agency</span>
-            </label>
-            <label className={`${styles.catg} ${formData.category === 'legal' ? styles.selected : ''}`}>
-              <input 
-                type="radio" 
-                name="category" 
-                value="legal" 
-                checked={formData.category === 'legal'}
-                onChange={handleInputChange}
-              />
-              <span>Legal</span>
-            </label>
-            <label className={`${styles.catg} ${formData.category === 'marketplace' ? styles.selected : ''}`}>
-              <input 
-                type="radio" 
-                name="category" 
-                value="marketplace" 
-                checked={formData.category === 'marketplace'}
-                onChange={handleInputChange}
-              />
-              <span>Marketplace</span>
-            </label>
-            <label className={`${styles.catg} ${formData.category === 'media' ? styles.selected : ''}`}>
-              <input 
-                type="radio" 
-                name="category" 
-                value="media" 
-                checked={formData.category === 'media'}
-                onChange={handleInputChange}
-              />
-              <span>Media</span>
-            </label>
-            <label className={`${styles.catg} ${formData.category === 'platform' ? styles.selected : ''}`}>
-              <input 
-                type="radio" 
-                name="category" 
-                value="platform" 
-                checked={formData.category === 'platform'}
-                onChange={handleInputChange}
-              />
-              <span>Platform</span>
-            </label>
-            <label className={`${styles.catg} ${formData.category === 'real_estate' ? styles.selected : ''}`}>
-              <input 
-                type="radio" 
-                name="category" 
-                value="real_estate" 
-                checked={formData.category === 'real_estate'}
-                onChange={handleInputChange}
-              />
-              <span>Real Estate</span>
-            </label>
-            <label className={`${styles.catg} ${formData.category === 'robotics' ? styles.selected : ''}`}>
-              <input 
-                type="radio" 
-                name="category" 
-                value="robotics" 
-                checked={formData.category === 'robotics'}
-                onChange={handleInputChange}
-              />
-              <span>Robotics</span>
-            </label>
-            <label className={`${styles.catg} ${formData.category === 'software' ? styles.selected : ''}`}>
-              <input 
-                type="radio" 
-                name="category" 
-                value="software" 
-                checked={formData.category === 'software'}
-                onChange={handleInputChange}
-              />
-              <span>Software</span>
-            </label>
-            <label className={`${styles.catg} ${formData.category === 'web3' ? styles.selected : ''}`}>
-              <input 
-                type="radio" 
-                name="category" 
-                value="web3" 
-                checked={formData.category === 'web3'}
-                onChange={handleInputChange}
-              />
-              <span>Web3</span>
-            </label>
-            <label className={`${styles.catg} ${formData.category === 'crypto' ? styles.selected : ''}`}>
-              <input 
-                type="radio" 
-                name="category" 
-                value="crypto" 
-                checked={formData.category === 'crypto'}
-                onChange={handleInputChange}
-              />
-              <span>Crypto</span>
-            </label>
-            <label className={`${styles.catg} ${formData.category === 'other' ? styles.selected : ''}`}>
-              <input 
-                type="radio" 
-                name="category" 
-                value="other" 
-                checked={formData.category === 'other'}
-                onChange={handleInputChange}
-              />
-              <span>Other</span>
-            </label>
-          </div>
-          
-          <label>Startup Description *</label>
-          <textarea 
-            name="description"
-            value={formData.description}
-            onChange={handleInputChange}
-            placeholder="Write a description here" 
-            rows="4"
-            required
-          ></textarea>
-          
-          <label>Field/Industry *</label>
-          <input 
-            type="text" 
-            name="field"
-            value={formData.field}
-            onChange={handleInputChange}
-            placeholder="e.g., Technology, Healthcare, Finance" 
-            required
-          />
+          {/* ══ STEP 1: Basics ══════════════════════════════════════════════ */}
+          {step === 1 && (
+            <div key="s1" className={`cs-card ${animClass}`}>
+              <h1 className="cs-title">Tell Us About Your Startup</h1>
+              <p className="cs-subtitle">
+                Give us the core details so we can position your startup correctly.
+              </p>
+
+              {/* Startup name */}
+              <Field label="Startup Name" required error={errors.title}>
+                <input
+                  className="cs-input"
+                  type="text"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleInputChange}
+                  placeholder="e.g. TechFlow, BuildBridge"
+                />
+              </Field>
+
+              {/* Category */}
+              <div className="cs-section">
+                <div className="cs-section-heading">
+                  <span>🏷️</span> Category
+                </div>
+                <div className="cs-chips">
+                  {CATEGORIES.map(cat => (
+                    <button
+                      key={cat.value}
+                      type="button"
+                      className={`cs-chip${formData.category === cat.value ? ' selected' : ''}`}
+                      onClick={() => set('category', cat.value)}
+                    >
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="cs-divider" />
+
+              {/* Description */}
+              <Field label="Startup Description" required error={errors.description}>
+                <textarea
+                  className="cs-textarea"
+                  name="description"
+                  value={formData.description}
+                  onChange={handleInputChange}
+                  placeholder="Describe what your startup does, who it's for, and what problem it solves."
+                  rows={4}
+                />
+              </Field>
+
+              {/* Field / Industry */}
+              <Field label="Field / Industry" required error={errors.field}>
+                <input
+                  className="cs-input"
+                  type="text"
+                  name="field"
+                  value={formData.field}
+                  onChange={handleInputChange}
+                  placeholder="e.g., Technology, Healthcare, Finance"
+                />
+              </Field>
+
+              <div className="cs-nav">
+                <button
+                  type="button"
+                  className="cs-back-btn"
+                  onClick={() => navigate('/dashboard')}
+                >
+                  ✕ Cancel
+                </button>
+                <button type="button" className="cs-next-btn" onClick={goNext}>
+                  Continue →
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ══ STEP 2: Stage & Type ════════════════════════════════════════ */}
+          {step === 2 && (
+            <div key="s2" className={`cs-card ${animClass}`}>
+              <h1 className="cs-title">Stage &amp; Setup</h1>
+              <p className="cs-subtitle">
+                Where is your startup now, and what are you looking for?
+              </p>
+
+              {/* Startup stage */}
+              <div className="cs-section">
+                <div className="cs-section-heading">
+                  <span>🚀</span> Stage of Your Startup
+                </div>
+                <div className="cs-chips">
+                  {STAGES.map(s => (
+                    <button
+                      key={s}
+                      type="button"
+                      className={`cs-chip${formData.stage === s ? ' selected' : ''}`}
+                      onClick={() => { set('stage', s); setErrors(p => ({ ...p, stage: undefined })); }}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+                {errors.stage && <span className="cs-error">{errors.stage}</span>}
+              </div>
+
+              <div className="cs-divider" />
+
+              {/* Startup type — big cards */}
+              <div className="cs-section">
+                <div className="cs-section-heading">
+                  <span>📋</span> Startup Type
+                </div>
+                <div className="cs-type-grid">
+                  <div
+                    className={`cs-type-card${formData.type === 'marketplace' ? ' selected' : ''}`}
+                    onClick={() => set('type', 'marketplace')}
+                  >
+                    <div className="cs-type-icon">🏪</div>
+                    <div className="cs-type-name">For Sale</div>
+                    <div className="cs-type-desc">
+                      List your startup on the marketplace to find buyers or investors.
+                    </div>
+                  </div>
+                  <div
+                    className={`cs-type-card${formData.type === 'collaboration' ? ' selected' : ''}`}
+                    onClick={() => set('type', 'collaboration')}
+                  >
+                    <div className="cs-type-icon">🤝</div>
+                    <div className="cs-type-name">Collaboration</div>
+                    <div className="cs-type-desc">
+                      Looking for co-founders, developers, or team members to join.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="cs-divider" />
+
+              {/* Website + Phase */}
+              <div className="cs-row">
+                <Field label="Website URL" error={errors.website_url}>
+                  <input
+                    className="cs-input"
+                    type="url"
+                    name="website_url"
+                    value={formData.website_url}
+                    onChange={handleInputChange}
+                    placeholder="https://yourstartup.com"
+                  />
+                </Field>
+                <Field label="Current Phase" required error={errors.phase}>
+                  <input
+                    className="cs-input"
+                    type="text"
+                    name="phase"
+                    value={formData.phase}
+                    onChange={handleInputChange}
+                    placeholder="e.g., Seed Stage, Series A"
+                  />
+                </Field>
+              </div>
+
+              {/* Team size + Earn through */}
+              <div className="cs-row">
+                <Field
+                  label={formData.type === 'collaboration' ? 'Current Team Size' : 'Team Size'}
+                  required
+                  error={errors.team_size}
+                >
+                  <input
+                    className="cs-input"
+                    type="text"
+                    name="team_size"
+                    value={formData.team_size}
+                    onChange={handleInputChange}
+                    placeholder={formData.type === 'collaboration' ? 'e.g., Just me, 1–2' : 'e.g., 2–5 people'}
+                  />
+                </Field>
+                <Field
+                  label={formData.type === 'collaboration' ? 'How will team earn?' : 'How do you earn?'}
+                  required
+                  error={errors.earn_through}
+                >
+                  <input
+                    className="cs-input"
+                    type="text"
+                    name="earn_through"
+                    value={formData.earn_through}
+                    onChange={handleInputChange}
+                    placeholder={formData.type === 'collaboration' ? 'e.g., Equity, Revenue Share' : 'e.g., Subscriptions, Ads'}
+                  />
+                </Field>
+              </div>
+
+              <div className="cs-nav">
+                <button type="button" className="cs-back-btn" onClick={goBack}>
+                  ← Back
+                </button>
+                <button type="button" className="cs-next-btn" onClick={goNext}>
+                  Continue →
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ══ STEP 3: Financials (marketplace) OR Confirm (collaboration) ═ */}
+          {step === 3 && (
+            <div key="s3" className={`cs-card ${animClass}`}>
+              {isMarketplace ? (
+                <>
+                  <h1 className="cs-title">Financial Details</h1>
+                  <p className="cs-subtitle">
+                    Accurate numbers build trust with buyers. All values are private until published.
+                  </p>
+
+                  <div className="cs-row">
+                    <Field label="Current Revenue" required error={errors.revenue}>
+                      <input className="cs-input" type="text" name="revenue"
+                        value={formData.revenue} onChange={handleInputChange}
+                        placeholder="e.g., $10,000/month" />
+                    </Field>
+                    <Field label="Current Profit" required error={errors.profit}>
+                      <input className="cs-input" type="text" name="profit"
+                        value={formData.profit} onChange={handleInputChange}
+                        placeholder="e.g., $5,000/month" />
+                    </Field>
+                  </div>
+
+                  <div className="cs-row">
+                    <Field label="Asking Price" required error={errors.asking_price}>
+                      <input className="cs-input" type="text" name="asking_price"
+                        value={formData.asking_price} onChange={handleInputChange}
+                        placeholder="e.g., $100,000" />
+                    </Field>
+                    <Field label="TTM Revenue" required error={errors.ttm_revenue}>
+                      <input className="cs-input" type="text" name="ttm_revenue"
+                        value={formData.ttm_revenue} onChange={handleInputChange}
+                        placeholder="e.g., $120,000" />
+                    </Field>
+                  </div>
+
+                  <div className="cs-row">
+                    <Field label="TTM Profit" required error={errors.ttm_profit}>
+                      <input className="cs-input" type="text" name="ttm_profit"
+                        value={formData.ttm_profit} onChange={handleInputChange}
+                        placeholder="e.g., $60,000" />
+                    </Field>
+                    <Field label="Last Month Revenue" required error={errors.last_month_revenue}>
+                      <input className="cs-input" type="text" name="last_month_revenue"
+                        value={formData.last_month_revenue} onChange={handleInputChange}
+                        placeholder="e.g., $12,000" />
+                    </Field>
+                  </div>
+
+                  <Field label="Last Month Profit" required error={errors.last_month_profit}>
+                    <input className="cs-input" type="text" name="last_month_profit"
+                      value={formData.last_month_profit} onChange={handleInputChange}
+                      placeholder="e.g., $6,000" />
+                  </Field>
+                </>
+              ) : (
+                /* Collaboration — no financials, just confirm */
+                <>
+                  <h1 className="cs-title">Ready to Publish?</h1>
+                  <p className="cs-subtitle">
+                    Review your startup details and create your collaboration listing.
+                  </p>
+                  <div style={{
+                    background: '#f5f3ff', borderRadius: '12px',
+                    padding: '1.25rem 1.5rem', marginBottom: '1rem',
+                  }}>
+                    {[
+                      ['Startup', formData.title],
+                      ['Category', formData.category?.toUpperCase()],
+                      ['Stage', formData.stage],
+                      ['Phase', formData.phase],
+                      ['Team size', formData.team_size],
+                      ['Team earns via', formData.earn_through],
+                      ['Website', formData.website_url || '—'],
+                    ].map(([k, v]) => (
+                      <div key={k} style={{
+                        display: 'flex', justifyContent: 'space-between',
+                        padding: '0.4rem 0', borderBottom: '1px solid #e0e7ff',
+                        fontSize: '0.85rem',
+                      }}>
+                        <span style={{ color: '#6b7280', fontWeight: 600 }}>{k}</span>
+                        <span style={{ color: '#1f2937', fontWeight: 500 }}>{v}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              <div className="cs-nav">
+                <button type="button" className="cs-back-btn" onClick={goBack}>
+                  ← Back
+                </button>
+                <button
+                  type="button"
+                  className="cs-next-btn cs-submit-btn"
+                  onClick={handleSubmit}
+                  disabled={loading}
+                >
+                  {loading
+                    ? <><div className="cs-spinner" /> Creating...</>
+                    : '🚀 Create Startup'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
-
-        <div className={styles.formGroup}>
-          <label>Stage of your startup</label>
-          <div className={styles.checkboxGroup}>
-            <label className={styles.checkboxlabel}>
-              <input 
-                type="radio" 
-                name="stage"
-                value="Idea Stage"
-                checked={formData.stage === 'Idea Stage'}
-                onChange={handleInputChange}
-              /> Idea Stage
-            </label>
-            <label className={styles.checkboxlabel}>
-              <input 
-                type="radio" 
-                name="stage"
-                value="Building MVP"
-                checked={formData.stage === 'Building MVP'}
-                onChange={handleInputChange}
-              /> Building MVP
-            </label>
-            <label className={styles.checkboxlabel}>
-              <input 
-                type="radio" 
-                name="stage"
-                value="MVP Stage"
-                checked={formData.stage === 'MVP Stage'}
-                onChange={handleInputChange}
-              /> MVP Stage
-            </label>
-            <label className={styles.checkboxlabel}>
-              <input 
-                type="radio" 
-                name="stage"
-                value="Product Market Fit"
-                checked={formData.stage === 'Product Market Fit'}
-                onChange={handleInputChange}
-              /> Product Market Fit
-            </label>
-            <label className={styles.checkboxlabel}>
-              <input 
-                type="radio" 
-                name="stage"
-                value="Fund raising"
-                checked={formData.stage === 'Fund raising'}
-                onChange={handleInputChange}
-              /> Fund raising
-            </label>
-            <label className={styles.checkboxlabel}>
-              <input 
-                type="radio" 
-                name="stage"
-                value="Growth"
-                checked={formData.stage === 'Growth'}
-                onChange={handleInputChange}
-              /> Growth
-            </label>
-            <label className={styles.checkboxlabel}>
-              <input 
-                type="radio" 
-                name="stage"
-                value="Exit"
-                checked={formData.stage === 'Exit'}
-                onChange={handleInputChange}
-              /> Exit
-            </label>
-          </div>
-        </div>
-
-        <div className={styles.formGroup}>
-          <label>Startup Type</label>
-          <select 
-            name="type" 
-            value={formData.type} 
-            onChange={handleInputChange}
-          >
-            <option value="marketplace">Marketplace (For Sale)</option>
-            <option value="collaboration">Collaboration (Looking for Team)</option>
-          </select>
-        </div>
-
-        {/* Conditional fields based on type */}
-        {formData.type === 'marketplace' && (
-          <>
-            {/*<h3>Marketplace Information (For Sale)</h3>*/}
-            
-            <div className={styles.row}>
-              <div className={styles.formGroup}>
-                <label>Website URL</label>
-                <input 
-                  type="url" 
-                  name="website_url"
-                  value={formData.website_url}
-                  onChange={handleInputChange}
-                  placeholder="https://demowebsite.com" 
-                  required
-                />
-              </div>
-              <div className={styles.formGroup}>
-                <label>Current Phase</label>
-                <input 
-                  type="text" 
-                  name="phase"
-                  value={formData.phase}
-                  onChange={handleInputChange}
-                  placeholder="e.g., Seed Stage, Series A" 
-                  required
-                />
-              </div>
-            </div>
-            
-            <div className={styles.row}>
-              <div className={styles.formGroup}>
-                <label>Team Size</label>
-                <input 
-                  type="text" 
-                  name="team_size"
-                  value={formData.team_size}
-                  onChange={handleInputChange}
-                  placeholder="e.g., 2-5 people" 
-                  required
-                />
-              </div>
-              <div className={styles.formGroup}>
-                <label>How do you earn?</label>
-                <input 
-                  type="text" 
-                  name="earn_through"
-                  value={formData.earn_through}
-                  onChange={handleInputChange}
-                  placeholder="e.g., Subscriptions, Sales, Ads" 
-                  required
-                />
-              </div>
-            </div>
-            
-            {/*<h4>Financial Information *</h4>*/}
-            <div className={styles.row}>
-              <div className={styles.formGroup}>
-                <label>Current Revenue *</label>
-                <input 
-                  type="text" 
-                  name="revenue"
-                  value={formData.revenue}
-                  onChange={handleInputChange}
-                  placeholder="e.g., $10,000/month" 
-                  required
-                />
-              </div>
-              <div className={styles.formGroup}>
-                <label>Current Profit *</label>
-                <input 
-                  type="text" 
-                  name="profit"
-                  value={formData.profit}
-                  onChange={handleInputChange}
-                  placeholder="e.g., $5,000/month" 
-                  required
-                />
-              </div>
-            </div>
-            
-            <div className={styles.row}>
-              <div className={styles.formGroup}>
-                <label>Asking Price *</label>
-                <input 
-                  type="text" 
-                  name="asking_price"
-                  value={formData.asking_price}
-                  onChange={handleInputChange}
-                  placeholder="e.g., $100,000" 
-                  required
-                />
-              </div>
-              <div className={styles.formGroup}>
-                <label>TTM Revenue *</label>
-                <input 
-                  type="text" 
-                  name="ttm_revenue"
-                  value={formData.ttm_revenue}
-                  onChange={handleInputChange}
-                  placeholder="e.g., $120,000" 
-                  required
-                />
-              </div>
-            </div>
-            
-            <div className={styles.row}>
-              <div className={styles.formGroup}>
-                <label>TTM Profit *</label>
-                <input 
-                  type="text" 
-                  name="ttm_profit"
-                  value={formData.ttm_profit}
-                  onChange={handleInputChange}
-                  placeholder="e.g., $60,000" 
-                  required
-                />
-              </div>
-              <div className={styles.formGroup}>
-                <label>Last Month Revenue *</label>
-                <input 
-                  type="text" 
-                  name="last_month_revenue"
-                  value={formData.last_month_revenue}
-                  onChange={handleInputChange}
-                  placeholder="e.g., $12,000" 
-                  required
-                />
-              </div>
-            </div>
-            
-            <div className={styles.formGroup}>
-              <label>Last Month Profit *</label>
-              <input 
-                type="text" 
-                name="last_month_profit"
-                value={formData.last_month_profit}
-                onChange={handleInputChange}
-                placeholder="e.g., $6,000" 
-                required
-              />
-            </div>
-          </>
-        )}
-
-        {formData.type === 'collaboration' && (
-          <>
-            {/*<h3>Collaboration Details (Looking for Team)</h3>*/}
-            
-            <div className={styles.row}>
-              <div className={styles.formGroup}>
-                <label>Website URL</label>
-                <input 
-                  type="url" 
-                  name="website_url"
-                  value={formData.website_url}
-                  onChange={handleInputChange}
-                  placeholder="https://demowebsite.com" 
-                  required
-                />
-              </div>
-              <div className={styles.formGroup}>
-                <label>Current Phase</label>
-                <input 
-                  type="text" 
-                  name="phase"
-                  value={formData.phase}
-                  onChange={handleInputChange}
-                  placeholder="e.g., Seed Stage, Series A, Idea Stage" 
-                  required
-                />
-              </div>
-            </div>
-            
-            <div className={styles.row}>
-              <div className={styles.formGroup}>
-                <label>Current Team Size</label>
-                <input 
-                  type="text" 
-                  name="team_size"
-                  value={formData.team_size}
-                  onChange={handleInputChange}
-                  placeholder="e.g., 1-2 people, Just me" 
-                  required
-                />
-              </div>
-              <div className={styles.formGroup}>
-                <label>How will team members earn?</label>
-                <input 
-                  type="text" 
-                  name="earn_through"
-                  value={formData.earn_through}
-                  onChange={handleInputChange}
-                  placeholder="e.g., Equity, Revenue Share, Salary" 
-                  required
-                />
-              </div>
-            </div>
-          </>
-        )}
-
-        <div className={styles.actionButtons}>
-          <button 
-            type="button" 
-            className={styles.cancelBtn}
-            onClick={() => navigate('/dashboard')}
-          >
-            Cancel
-          </button>
-          <button 
-            type="submit" 
-            className={styles.submitBtn}
-            disabled={loading}
-            onClick={handleButtonClick}
-          >
-            {loading ? 'Creating...' : 'Create Project'}
-          </button>
-        </div>
-      </form>
-    </div>
-
-<Footer/>
+      </div>
+      <Footer />
     </>
   );
 };

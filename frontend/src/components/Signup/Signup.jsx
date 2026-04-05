@@ -1,211 +1,145 @@
 import React from "react";
-// import style from "./login.css"
 import "./login.css"
-import { useState, useEffect } from "react";
-import {Submit} from "../Submit/Submit"
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Bounce, ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import "../Submit/Submit.css"
-import { useAuth } from "../../contexts/AuthContext";
 import { Navbar } from "../Navbar/Navbar";
 
 
-
-
-
-
-
-function Signup({leftimg, logo, line1, line2, paragraph}){
-    const { signup } = useAuth();
+function Signup() {
     const navigate = useNavigate();
 
-//javascript
+    const [password, setPassword] = useState("");
+    const [email, setEmail] = useState("");
 
-const [name, setName] = useState("")
-const [password, setPassword] = useState("")
-const [email, setEmail] = useState("")
-const [role, setRole] = useState("entrepreneur") // Default role
-const [loading, setLoading] = useState(false)
-//call
-
-function passwordError(){
-    toast.error('Password must be greater than 8 characters', {
-        position: "top-center",
-        autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        theme: "light",
-        transition: Bounce,
+    function passwordError() {
+        toast.error('Password must be at least 8 characters', {
+            position: "top-center",
+            autoClose: 3000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            theme: "light",
+            transition: Bounce,
         });
-}
-function userAlreadyExist(){
-    toast.error('User already exists', {
-        position: "top-center",
-        autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        theme: "light",
-        transition: Bounce,
-        });
-}
-
-
-function sucess() {
-    toast.success('Signup Succesfully', {
-        position: "top-center",
-        autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        theme: "light",
-        transition: Bounce,
-        });
-};
-
-const register = async (e) => {
-    e.preventDefault();
-    
-    if(password.length < 8){
-        passwordError();
-        return;
     }
-    
-    if (!name.trim() || !email.trim() || !password.trim()) {
-        toast.error('Please fill in all fields');
-        return;
-    }
-    
-    setLoading(true);
-    
-    console.log('🚀 Signup form data:', {
-        name: name,
-        email: email,
-        password: password ? '[REDACTED]' : 'EMPTY',
-        role: role
-    });
-    
-    try {
-        const result = await signup(name, email, password, role); // name is used as username
-        
-        if (result.success) {
-            if (result.requiresVerification) {
-                sucess();
-                toast.info('Please check your email to verify your account.');
-                // Redirect to email verification page
-                navigate(`/verify-email?email=${encodeURIComponent(email)}`);
-            } else {
-                // User is already verified and authenticated
-                sucess();
-                // Redirect to onboarding preferences after signup
-                // Use setTimeout to ensure state updates complete before navigation
-                setTimeout(() => {
-                    navigate('/onboarding-preferences', { replace: true });
-                }, 100);
-            }
-        } else {
-            console.log('❌ Signup failed with result:', result);
-            if (result.error === "User already exists" || result.error?.includes('already exists')) {
-                userAlreadyExist();
-            } else {
-                toast.error(result.error || 'Signup failed');
-            }
+
+    const handleNext = (e) => {
+        e.preventDefault();
+
+        if (password.length < 8) {
+            passwordError();
+            return;
         }
-    } catch (error) {
-        console.error("Signup failed:", error);
-        toast.error('Signup failed');
-    } finally {
-        setLoading(false);
-    }
-}
+        if (!email.trim() || !password.trim()) {
+            toast.error('Please fill in all fields', { position: "top-center", autoClose: 3000 });
+            return;
+        }
 
+        // Store credentials temporarily — backend is NOT called yet
+        sessionStorage.setItem('signup_email', email.trim());
+        sessionStorage.setItem('signup_password', password);
 
-//Checking if fields are filled
-let allFieldsFill = (e)=>{
-   
-   
-    return name.trim() !== "" && password.trim() !== "" && email.trim() !== "";
-}
+        navigate('/complete-profile');
+    };
 
+    const allFieldsFill = () => password.trim() !== "" && email.trim() !== "";
 
+    return (
+        <>
+            <Navbar />
+            <div className="main signup-page">
 
+                {/* ── Left side ── */}
+                <div className="left">
+                    <div className="leftimg"><video src="./bs2.mp4" autoPlay muted loop></video></div>
+                </div>
 
-return(
-    <>
-    <Navbar />
-    {loading && (
-        <div className="progress-overlay">
-            <div className="progress-modal">
-                <div className="progress-spinner-large"></div>
-                <p className="progress-text">Creating Account...</p>
+                {/* ── Right side ── */}
+                <div className="right">
+                    <div className="loginbox">
+
+                        <h2 className="welcome-title">Create Your Account</h2>
+                        <p className="welcome-subtitle">Join thousands of entrepreneurs worldwide</p>
+
+                        {/* Social buttons */}
+                        <div className="social-buttons">
+                            <button className="social-btn" type="button" disabled>
+                                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+                                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                                </svg>
+                                Continue with Google
+                            </button>
+
+                            <button className="social-btn" type="button" disabled>
+                                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
+                                    <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+                                </svg>
+                                Continue with GitHub
+                            </button>
+                        </div>
+
+                        {/* Divider */}
+                        <div className="divider">
+                            <span className="divider-line"></span>
+                            <span className="divider-text">or continue with email</span>
+                            <span className="divider-line"></span>
+                        </div>
+
+                        {/* Email */}
+                        <div className="field-group">
+                            <label htmlFor="signup-email">Email Address</label>
+                            <input
+                                id="signup-email"
+                                type="email"
+                                placeholder="name@example.com"
+                                className="inp"
+                                autoComplete="on"
+                                onChange={(e) => setEmail(e.target.value)}
+                            />
+                        </div>
+
+                        {/* Password */}
+                        <div className="field-group">
+                            <label htmlFor="signup-password">Password</label>
+                            <input
+                                id="signup-password"
+                                type="password"
+                                placeholder="Create a strong password (min. 8 characters)"
+                                className="inp"
+                                autoComplete="on"
+                                onChange={(e) => setPassword(e.target.value)}
+                            />
+                        </div>
+
+                        {/* Next button */}
+                        <div className="btnbox">
+                            <form onSubmit={handleNext} className="btn-form">
+                                <button
+                                    type="submit"
+                                    disabled={!allFieldsFill()}
+                                    className="btn"
+                                >
+                                    Next →
+                                </button>
+                            </form>
+
+                            <Link to="/login" className="noaccount">
+                                <p className="signupText">Already have an account? <span className="signup-link">Sign in here</span></p>
+                            </Link>
+                        </div>
+
+                    </div>
+                </div>
             </div>
-        </div>
-    )}
-    <div className="main signup-page">
-
-<div className="left">
-<div className="leftimg"><video src="./bs2.mp4" autoPlay muted loop></video></div>
-</div>
-
-
-    <div className="right">
-<div className="loginbox">
-<div className="logo"></div>
-
-<h2 className="welcome-title">Create Your Account</h2>
-<p className="welcome-subtitle">Join thousands of entrepreneurs worldwide</p>
-
-    <label htmlFor="username">Full Name</label>
-    <input type="text" placeholder="Enter your full name" className="inp" autoComplete="on" onChange={(e)=>{setName(e.target.value)}}/>
-
-
-    <label htmlFor="email">Email Address</label>
-    <input type="email" placeholder="Enter your email address" className="inp" autoComplete="on" onChange={(e)=>{setEmail(e.target.value)}}/>
-
-
-    <label htmlFor="password" >Password</label>
-    <input type="password" placeholder="Create a strong password" className="inp" autoComplete="on" onChange={(e)=>{setPassword(e.target.value)}}/>
-
-    <label htmlFor="role">I am a</label>
-    <select 
-        className="inp" 
-        value={role} 
-        onChange={(e) => setRole(e.target.value)}
-    >
-        <option value="entrepreneur">Entrepreneur</option>
-        <option value="student">Student/Professional</option>
-        <option value="investor">Investor</option>
-    </select>
-
-   
-
-    <div className="btnbox">
-    <Link to="/login" className="noaccount">
-    <p className="signupText">Already have an account? <span className="signup-link">Sign in here</span></p>
-        </Link>
-
-
-        <input 
-  type="submit" 
-  disabled={!allFieldsFill() || loading} 
-  onClick={register}  
-  value="Create Account" 
-  className="btn"
-/>
-
-
-    </div>
-</div>
-    </div>
-    </div>
-    <ToastContainer />
-    </>
-);
+            <ToastContainer />
+        </>
+    );
 }
 
-export {Signup}
+export { Signup }
