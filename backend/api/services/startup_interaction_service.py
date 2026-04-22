@@ -1,41 +1,10 @@
 """
 Startup Interaction Service
 Handles startup → user interactions for reverse recommendations
-
-Integration Points:
-- When entrepreneur views developer/investor profile from recommendations:
-  Call create_startup_interaction() with interaction_type='view'
-  
-- When entrepreneur clicks on developer/investor profile from recommendations:
-  Call create_startup_interaction() with interaction_type='click'
-  
-- When entrepreneur contacts developer/investor from recommendations:
-  Call create_startup_interaction() with interaction_type='contact'
-  
-- When developer applies to startup position (reverse of apply):
-  Call create_startup_interaction() with interaction_type='apply_received'
-
-Example usage:
-  from api.services.startup_interaction_service import StartupInteractionService
-  from api.models import Startup, User
-  
-  startup = Startup.objects.get(id=startup_id)
-  target_user = User.objects.get(id=user_id)
-  session = RecommendationSession.objects.get(id=session_id)
-  
-  StartupInteractionService.create_startup_interaction(
-      startup=startup,
-      target_user=target_user,
-      interaction_type='view',
-      recommendation_session=session,
-      recommendation_source='recommendation',
-      recommendation_rank=1,
-      recommendation_score=0.95
-  )
 """
 from typing import Optional, Dict, Any
 from api.models import Startup
-from api.recommendation_models import StartupInteraction, RecommendationSession
+from api.recommendation_models import StartupInteraction
 
 
 class StartupInteractionService:
@@ -46,7 +15,7 @@ class StartupInteractionService:
         startup: Startup,
         target_user,
         interaction_type: str,
-        recommendation_session: Optional[RecommendationSession] = None,
+        recommendation_session_id: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
         recommendation_source: Optional[str] = None,
         recommendation_rank: Optional[int] = None,
@@ -60,7 +29,7 @@ class StartupInteractionService:
             startup: Startup instance
             target_user: User instance (developer or investor)
             interaction_type: Type of interaction ('view', 'click', 'contact', 'apply_received')
-            recommendation_session: Optional RecommendationSession instance
+            recommendation_session_id: Optional UUID string of recommendation session
             metadata: Optional metadata dict
             recommendation_source: Optional source ('organic' or 'recommendation')
             recommendation_rank: Optional rank in recommendation list
@@ -75,8 +44,8 @@ class StartupInteractionService:
             metadata = {}
         
         # Add recommendation context to metadata if available
-        if recommendation_session:
-            metadata['recommendation_session_id'] = str(recommendation_session.id)
+        if recommendation_session_id:
+            metadata['recommendation_session_id'] = recommendation_session_id
             if recommendation_source is None:
                 recommendation_source = 'recommendation'
         
@@ -86,7 +55,7 @@ class StartupInteractionService:
             target_user=target_user,
             interaction_type=interaction_type,
             defaults={
-                'recommendation_session': recommendation_session,
+                'recommendation_session_id': recommendation_session_id,
                 'recommendation_source': recommendation_source or 'organic',
                 'recommendation_rank': recommendation_rank,
                 'recommendation_score': recommendation_score,
@@ -106,11 +75,6 @@ class StartupInteractionService:
         """
         Build metadata dict with startup context
         
-        Args:
-            startup: Startup instance
-            target_user: User instance
-            recommendation_context: Optional context dict with session info
-            
         Returns:
             Metadata dict
         """
@@ -136,15 +100,7 @@ class StartupInteractionService:
     
     @staticmethod
     def get_weight_for_interaction_type(interaction_type: str) -> float:
-        """
-        Get weight for interaction type
-        
-        Args:
-            interaction_type: Type of interaction
-            
-        Returns:
-            Weight value
-        """
+        """Get weight for interaction type"""
         weight_mapping = {
             'view': 0.5,
             'click': 1.0,
@@ -155,15 +111,6 @@ class StartupInteractionService:
     
     @staticmethod
     def validate_interaction_type(interaction_type: str) -> bool:
-        """
-        Validate interaction type
-        
-        Args:
-            interaction_type: Type of interaction to validate
-            
-        Returns:
-            True if valid, False otherwise
-        """
+        """Validate interaction type"""
         valid_types = ['view', 'click', 'contact', 'apply_received']
         return interaction_type in valid_types
-
