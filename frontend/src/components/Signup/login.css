@@ -26,7 +26,8 @@
     display: flex;
     width: 100%;
     height: 100vh;
-    padding-top: 70px; /* offset for fixed navbar */
+    padding-top: 70px;
+    /* offset for fixed navbar */
     overflow: hidden;
     box-sizing: border-box;
 }
@@ -228,7 +229,7 @@ label {
 
 /* ───────── Submit button ───────── */
 .btn {
-    width: 100% !important;
+    /*width: 100% !important;*/
     height: 2.9rem !important;
     background: var(--primary-dark) !important;
     color: #ffffff !important;
@@ -238,7 +239,7 @@ label {
     font-weight: 600 !important;
     cursor: pointer !important;
     transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease !important;
-    margin: 0.25rem 0 0 0 !important;
+    /* margin: 0.25rem 0 0 0 !important; */
     letter-spacing: 0.01em !important;
     display: flex !important;
     align-items: center !important;
@@ -252,7 +253,7 @@ label {
     color: #ffffff !important;
     transform: translateY(-1px) !important;
     box-shadow: 0 6px 20px rgba(37, 34, 74, 0.3) !important;
-    width: 100% !important;
+    /*width: 100% !important;*/
 }
 
 .btn:disabled {
@@ -330,8 +331,13 @@ label {
 }
 
 @keyframes spin {
-    0%   { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 /* ───────── Post-Signup Overlay ───────── */
@@ -362,8 +368,15 @@ label {
 }
 
 @keyframes slideUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to   { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* ───────── Responsive ───────── */
@@ -371,10 +384,12 @@ label {
     .left {
         display: none;
     }
+
     .right {
         width: 100%;
         padding: 1rem;
     }
+
     .loginbox {
         max-width: 420px;
         width: 100%;
@@ -386,6 +401,7 @@ label {
         padding: 1.75rem 1.25rem;
         border-radius: 14px;
     }
+
     .welcome-title {
         font-size: 1.4rem;
     }
