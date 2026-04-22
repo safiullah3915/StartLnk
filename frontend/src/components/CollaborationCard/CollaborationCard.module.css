@@ -1,145 +1,74 @@
-.marketplace {
-  padding: 2rem;
-  max-width: 1400px;
-  
-  margin: auto;
-}
-.linkWrapper{
+.linkWrapper {
+  display: block;
   text-decoration: none;
-  color:#292929;
-}
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  /* justify-content: space-between; */
-  margin-bottom: 2rem;
-  flex-wrap: wrap;
-  color: #555;
-  /* background-color: red; */
+  color: inherit;
+  height: 100%;
 }
 
-.header h2 {
-  font-size: 2rem;
-  color: #343434;
-  font-weight: bold;
-}
-
-.filters {
-  display: flex;
-  gap: 1rem;
-}
-
-.filters select {
-  padding: 0.5rem 1rem;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  background: #fff;
-  cursor: pointer;
-}
-
-.cardsGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-  gap: 2rem;
+.cardWrapper {
+  width: 100%;
+  height: 100%;
 }
 
 .card {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 7px;
-  min-height: 14rem;
-  padding: 1.5rem;
-  box-shadow: 0 2px 8px rgba(106, 106, 106, 0.04);
-  transition: box-shadow 0.3s ease;
-  min-width: 15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 100%;
+  padding: 1.75rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 24px;
+  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .card:hover {
-  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
 }
 
 .cardHeader {
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.titleRow {
+  display: flex;
   align-items: center;
-  margin-bottom: 1rem;
+  gap: 1rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.iconBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  flex-shrink: 0;
+  border-radius: 14px;
+  background: #eef2ff;
+}
+
+.iconImage {
+  width: 1.25rem;
+  height: 1.25rem;
 }
 
 .cardHeader h3 {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #444444;
-  font-weight: bold;
-}
-
-.tag {
-  background-color: #e3dbfa;
-  color: #7b61ff;
-  padding: 0.2rem 0.6rem;
-  border-radius: 5px;
-  font-size: 0.8rem;
-  font-weight: 500;
-}
-
-.description {
-  font-size: 0.95rem;
-  color: #555;
-  margin: 1rem 0 1.5rem 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.5;
-}
-
-.stats {
-  display: flex;
-  justify-content: space-between;
-}
-
-.stats div {
-  text-align: center;
-}
-
-.stats strong {
-  display: block;
-  font-size: 0.85rem;
-}
-
-.stats p {
-    color: #434343;
-  /* font-weight: bold; */
-  /* margin: 2.5rem 0rem 2.5rem 0rem; */
-
-
-}
-.statsheading p{
-    color: #484848;
-    font-size: 0.rem;
-    padding: 0.5rem;
-}
-.icon {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-.icon img:nth-child(1){
-    position: relative;
-    /* background-color: red; */
-}
-.icon img:nth-child(2){
-    transform: translateX(-150%);
-    /* transform: translateY(50%); */
-    /* background-color: blue; */
-}
-
-/* New styles for enhanced card */
-.cardWrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
+  margin: 0;
+  color: #1f2937;
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1.25;
+  overflow-wrap: break-word;
 }
 
 .headerRight {
@@ -147,178 +76,146 @@
   flex-direction: column;
   gap: 0.5rem;
   align-items: flex-end;
+  flex-shrink: 0;
+}
+
+.tag {
+  padding: 0.45rem 0.85rem;
+  border-radius: 12px;
+  background: #eef2ff;
+  color: #4f46e5;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .matchBadge {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 0.3rem 0.8rem;
-  border-radius: 20px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+  color: #ffffff;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
 }
 
 .matchReasons {
-  background: #f0f9ff;
-  border-left: 3px solid #3b82f6;
-  padding: 0.75rem;
-  margin: 0.5rem 0;
-  border-radius: 4px;
+  background: #f8fbff;
+  border: 1px solid #dbeafe;
+  border-radius: 12px;
+  padding: 0.9rem 1rem;
+  margin: -0.25rem 0 0;
 }
 
 .matchReasons strong {
-  color: #1e40af;
-  font-size: 0.85rem;
   display: block;
-  margin-bottom: 0.3rem;
+  margin-bottom: 0.4rem;
+  color: #1d4ed8;
+  font-size: 0.82rem;
 }
 
 .matchReasons ul {
   margin: 0;
-  padding-left: 1.2rem;
-  font-size: 0.8rem;
-  color: #374151;
+  padding-left: 1rem;
+  color: #475569;
+  font-size: 0.82rem;
 }
 
-.matchReasons li {
-  margin: 0.2rem 0;
+.matchReasons li + li {
+  margin-top: 0.25rem;
 }
 
-.primaryPosition {
-  display: flex;
-  gap: 1rem;
-  padding: 1rem;
-  border: 1px solid #e0e7ff;
-  border-radius: 8px;
-  background: #f5f7ff;
-  margin-bottom: 1rem;
-  align-items: center;
-}
-
-.primaryPositionInfo {
-  flex: 1;
-}
-
-.primaryPositionInfo h4 {
-  margin: 0.2rem 0;
-  font-size: 1rem;
-  color: #1f2937;
-}
-
-.primaryPositionInfo p {
+.description {
   margin: 0;
-  color: #4b5563;
-  font-size: 0.9rem;
-  line-height: 1.4;
+  color: #64748b;
+  font-size: 0.98rem;
+  line-height: 1.55;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.positionLabel {
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.25rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #eef2f7;
+}
+
+.statsheading {
+  min-width: 0;
+}
+
+.statsLabel {
+  display: block;
+  margin-bottom: 0.45rem;
+  color: #94a3b8;
+  font-size: 0.78rem;
+  font-weight: 700;
   text-transform: uppercase;
-  font-size: 0.7rem;
-  letter-spacing: 0.05em;
-  color: #4f46e5;
-  font-weight: 600;
+  letter-spacing: 0.08em;
 }
 
-.primaryPositionCta {
-  background: #4f46e5;
-  color: white;
-  padding: 0.6rem 1.2rem;
-  border-radius: 6px;
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 0.85rem;
-  white-space: nowrap;
-  transition: background 0.2s ease;
-}
-
-.primaryPositionCta:hover {
-  background: #4338ca;
-}
-
-.positionsSection {
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-top: none;
-  border-radius: 0 0 7px 7px;
-  padding: 0.75rem 1.5rem;
-}
-
-.positionsToggle {
-  background: none;
-  border: none;
-  color: #4f46e5;
-  font-weight: 600;
-  cursor: pointer;
-  padding: 0.5rem 0;
-  width: 100%;
-  text-align: left;
-  font-size: 0.9rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.positionsToggle:hover {
-  color: #4338ca;
-}
-
-.positionsList {
-  margin-top: 0.75rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.positionItem {
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  padding: 1rem;
-}
-
-.positionHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.5rem;
-}
-
-.positionHeader strong {
-  color: #1f2937;
+.statsheading p {
+  margin: 0;
+  color: #0f172a;
   font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.35;
+  overflow-wrap: break-word;
 }
 
-.positionDesc {
-  color: #6b7280;
-  font-size: 0.85rem;
-  margin: 0.5rem 0;
-  line-height: 1.4;
-}
+@media (max-width: 768px) {
+  .card {
+    padding: 1.35rem;
+    border-radius: 18px;
+    gap: 1.25rem;
+  }
 
-.appliedBadge {
-  background: #d1fae5;
-  color: #065f46;
-  padding: 0.2rem 0.6rem;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
+  .cardHeader {
+    gap: 0.75rem;
+  }
 
-.applyButton {
-  display: inline-block;
-  background: #4f46e5;
-  color: white;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  text-decoration: none;
-  font-size: 0.85rem;
-  font-weight: 600;
-  transition: background 0.2s;
-  margin-top: 0.5rem;
-}
+  .titleRow {
+    gap: 0.75rem;
+  }
 
-.applyButton:hover {
-  background: #4338ca;
+  .iconBadge {
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 12px;
+  }
+
+  .cardHeader h3 {
+    font-size: 1rem;
+  }
+
+  .tag {
+    padding: 0.35rem 0.65rem;
+    font-size: 0.74rem;
+  }
+
+  .matchBadge {
+    font-size: 0.72rem;
+  }
+
+  .description {
+    font-size: 0.92rem;
+  }
+
+  .stats {
+    gap: 0.9rem;
+    padding-top: 1.1rem;
+  }
+
+  .statsLabel {
+    font-size: 0.72rem;
+  }
+
+  .statsheading p {
+    font-size: 0.9rem;
+  }
 }

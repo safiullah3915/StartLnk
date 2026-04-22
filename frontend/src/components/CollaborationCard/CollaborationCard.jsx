@@ -50,9 +50,10 @@ const CollaborationCard = ({
       <Link to={getLinkDestination()} className={styles.linkWrapper}>
         <div className={styles.card}>
           <div className={styles.cardHeader}>
-            <div className={styles.icon}>
-              <img src="/diamond.svg" alt="" />
-              <img src="/Decentralized Network.svg" alt="" />
+            <div className={styles.titleRow}>
+              <div className={styles.iconBadge}>
+                <img src="/Decentralized Network.svg" alt="" className={styles.iconImage} />
+              </div>
               <h3>{startupData.title || 'Startup Name'}</h3>
             </div>
             <div className={styles.headerRight}>
@@ -80,15 +81,15 @@ const CollaborationCard = ({
           <p className={styles.description}>{startupData.description || 'No description available'}</p>
           <div className={styles.stats}>
             <div className={styles.statsheading}>
-              Earn Through
+              <span className={styles.statsLabel}>Earn Through</span>
               <p>{startupData.earn_through || 'Equity'}</p>
             </div>
             <div className={styles.statsheading}>
-              Phase
+              <span className={styles.statsLabel}>Phase</span>
               <p>{startupData.phase || 'N/A'}</p>
             </div>
             <div className={styles.statsheading}>
-              Team Size
+              <span className={styles.statsLabel}>Team Size</span>
               <p>{startupData.team_size || '1-5'}</p>
             </div>
           </div>

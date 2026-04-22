@@ -230,6 +230,10 @@ select:focus {
   accent-color: #2563eb;
 }
 @media (max-width: 600px) {
+  .container {
+    margin-top: 5rem;
+  }
+
   .row {
     flex-direction: column;
   }

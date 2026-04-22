@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import styles from "./ApplyJob.module.css";
 import { Navbar } from "../../components/Navbar/Navbar";
 import { Footer } from "../../components/Footer/Footer";
@@ -19,6 +19,8 @@ const ApplyJob = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [uploadingResume, setUploadingResume] = useState(false);
+  const [isPositionMenuOpen, setIsPositionMenuOpen] = useState(false);
+  const positionDropdownRef = useRef(null);
   const [formData, setFormData] = useState({
     position_id: '',
     cover_letter: '',
@@ -26,6 +28,9 @@ const ApplyJob = () => {
     portfolio_url: '',
     resume: null
   });
+  const selectedPositionTitle =
+    positions.find(position => String(position.id) === String(formData.position_id))?.title ||
+    'Select Position';
 
   useEffect(() => {
     // Allow students and entrepreneurs (but not if they own the startup)
@@ -44,6 +49,25 @@ const ApplyJob = () => {
       setFormData(prev => ({ ...prev, position_id: positionId }));
     }
   }, [startupId, isStudent, isEntrepreneur, user, navigate]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        positionDropdownRef.current &&
+        !positionDropdownRef.current.contains(event.target)
+      ) {
+        setIsPositionMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, []);
 
   const loadStartupDetails = async () => {
     try {
@@ -120,6 +144,13 @@ const ApplyJob = () => {
       ...prev,
       resume: e.target.files[0]
     }));
+  };
+
+  const handlePositionSelect = (positionId) => {
+    setFormData(prev => ({ ...prev, position_id: positionId }));
+    const position = positions.find(p => p.id === positionId) || null;
+    setSelectedPosition(position);
+    setIsPositionMenuOpen(false);
   };
 
   const handleSubmit = async (e) => {
@@ -223,7 +254,6 @@ const ApplyJob = () => {
         <div className={styles.container}>
           <div className={styles.loading}>Loading startup details...</div>
         </div>
-        <Footer/>
       </>
     );
   }
@@ -235,7 +265,6 @@ const ApplyJob = () => {
         <div className={styles.container}>
           <div className={styles.error}>Startup not found</div>
         </div>
-        <Footer/>
       </>
     );
   }
@@ -272,25 +301,47 @@ const ApplyJob = () => {
 
       <form onSubmit={handleSubmit}>
         {positions.length > 0 && (
-          <div className={styles.formGroup}>
+          <div className={`${styles.formGroup} ${styles.positionFormGroup}`}>
             <label>Select Position *</label>
-            <select 
-              value={formData.position_id}
-              onChange={(e) => {
-                const positionId = e.target.value;
-                setFormData(prev => ({ ...prev, position_id: positionId }));
-                const position = positions.find(p => p.id === positionId);
-                setSelectedPosition(position);
-              }}
-              required
-            >
-              <option value="">Choose a position...</option>
-              {positions.map(position => (
-                <option key={position.id} value={position.id}>
-                  {position.title}
-                </option>
-              ))}
-            </select>
+            <div className={styles.positionDropdown} ref={positionDropdownRef}>
+              <button
+                type="button"
+                className={styles.positionSelect}
+                onClick={() => setIsPositionMenuOpen(prev => !prev)}
+                aria-haspopup="listbox"
+                aria-expanded={isPositionMenuOpen}
+              >
+                <span className={styles.positionSelectText}>
+                  {selectedPositionTitle}
+                </span>
+                <span
+                  className={`${styles.positionChevron} ${isPositionMenuOpen ? styles.positionChevronOpen : ''}`}
+                  aria-hidden="true"
+                />
+              </button>
+
+              {isPositionMenuOpen && (
+                <div className={styles.positionMenu} role="listbox">
+                  <button
+                    type="button"
+                    className={`${styles.positionOption} ${!formData.position_id ? styles.positionOptionActive : ''}`}
+                    onClick={() => handlePositionSelect('')}
+                  >
+                    Select Position
+                  </button>
+                  {positions.map(position => (
+                    <button
+                      key={position.id}
+                      type="button"
+                      className={`${styles.positionOption} ${formData.position_id === position.id ? styles.positionOptionActive : ''}`}
+                      onClick={() => handlePositionSelect(position.id)}
+                    >
+                      {position.title}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
         <div className={styles.formGroup}>
@@ -367,9 +418,6 @@ const ApplyJob = () => {
       </form>
 
 </div>
-
-
-    <Footer/>
     </>
   );
 };

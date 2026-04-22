@@ -15,6 +15,7 @@ const PositionManagement = () => {
   const [startup, setStartup] = useState(null);
   const [loading, setLoading] = useState(true);
   const [deletingPosition, setDeletingPosition] = useState(false);
+  const [positionConfirm, setPositionConfirm] = useState(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newPosition, setNewPosition] = useState({
     title: '',
@@ -87,29 +88,25 @@ const PositionManagement = () => {
     }
   };
 
-  const handleTogglePosition = async (positionId, isActive, positionTitle) => {
-    // Show confirmation dialog
-    const confirmed = window.confirm(
-      `Are you sure you want to ${isActive ? 'close' : 'reopen'} the position "${positionTitle}"?\n\n${isActive ? 'This will close the position and it will no longer be visible on the platform. You can still view applications for this position, but it cannot be reopened.' : 'This will make the position active again and visible on the platform.'}`
-    );
-    
-    if (!confirmed) {
+  const handleTogglePosition = (positionId, isActive, positionTitle) => {
+    if (!isActive) {
+      toast.error('Closed positions cannot be reopened');
       return;
     }
-    
+
+    setPositionConfirm({ positionId, positionTitle });
+  };
+
+  const confirmTogglePosition = async () => {
+    if (!positionConfirm) {
+      return;
+    }
+
     try {
       setDeletingPosition(true);
-      
-      if (isActive) {
-        // Close position (sets is_active=False, but position remains in database)
-        await positionAPI.closePosition(positionId);
-        toast.success('Position closed successfully');
-      } else {
-        // Closed positions cannot be reopened per requirements
-        toast.error('Closed positions cannot be reopened');
-        return;
-      }
-      
+      await positionAPI.closePosition(positionConfirm.positionId);
+      toast.success('Position closed successfully');
+      setPositionConfirm(null);
       loadPositions();
     } catch (error) {
       console.error('Failed to toggle position:', error);
@@ -147,6 +144,50 @@ const PositionManagement = () => {
           <div className={styles.progressModal}>
             <div className={styles.progressSpinner}></div>
             <p className={styles.progressText}>Processing...</p>
+          </div>
+        </div>
+      )}
+      {positionConfirm && (
+        <div
+          className={styles.confirmOverlay}
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setPositionConfirm(null)}
+        >
+          <div className={styles.confirmCard} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.confirmHeader}>
+              <h4 className={styles.confirmTitle}>Confirm Close</h4>
+              <button
+                type="button"
+                className={styles.confirmClose}
+                onClick={() => setPositionConfirm(null)}
+              >
+                &times;
+              </button>
+            </div>
+            <div className={styles.confirmWarning}>
+              <span className={styles.confirmWarningIcon}>!</span>
+              <p>
+                Are you sure you want to close "{positionConfirm.positionTitle}"? This action
+                cannot be undone.
+              </p>
+            </div>
+            <div className={styles.confirmActions}>
+              <button
+                type="button"
+                className={styles.confirmCancel}
+                onClick={() => setPositionConfirm(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={styles.confirmDelete}
+                onClick={confirmTogglePosition}
+              >
+                Close Position
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -406,3 +447,4 @@ const PositionManagement = () => {
 };
 
 export default PositionManagement;
+

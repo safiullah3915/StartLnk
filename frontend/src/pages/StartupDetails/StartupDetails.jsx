@@ -6,7 +6,6 @@ import { Link, useParams, useNavigate } from "react-router-dom";
 import { toast } from 'react-toastify';
 import { useAuth } from '../../contexts/AuthContext';
 import { startupAPI, userAPI, recommendationAPI } from '../../utils/apiServices';
-import { useRecommendationContext } from '../../hooks/useRecommendationContext';
 import apiClient from '../../utils/axiosConfig';
 import { BarChart, LineChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ReferenceLine, ResponsiveContainer, LabelList, Label } from 'recharts';
 
@@ -14,7 +13,7 @@ const StartupDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, isStudent, isInvestor, isEntrepreneur } = useAuth();
-  const { getRecommendationContext } = useRecommendationContext();
+
   const [startup, setStartup] = useState(null);
   const [positions, setPositions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -49,40 +48,15 @@ const StartupDetails = () => {
   const loadStartupDetails = async () => {
     try {
       console.log('[StartupDetails] Loading startup with ID:', id);
-      
-      // Get recommendation context from URL query params or hook
-      const urlParams = new URLSearchParams(window.location.search);
-      const sessionIdFromUrl = urlParams.get('recommendation_session_id');
-      const rankFromUrl = urlParams.get('recommendation_rank');
-      
-      // Also check hook for recommendation context
-      const contextFromHook = getRecommendationContext(id);
-      
-      // Use URL params if available, otherwise use hook context
-      const recommendationContext = sessionIdFromUrl 
-        ? { sessionId: sessionIdFromUrl, rank: rankFromUrl ? parseInt(rankFromUrl) : null }
-        : contextFromHook;
-      
-      // Build request URL with recommendation context if available
-      let requestUrl = `/api/startups/${id}`;
-      if (recommendationContext?.sessionId) {
-        const params = new URLSearchParams({
-          recommendation_session_id: recommendationContext.sessionId,
-        });
-        if (recommendationContext.rank) {
-          params.append('recommendation_rank', recommendationContext.rank.toString());
-        }
-        requestUrl += `?${params.toString()}`;
-      }
-      
-      const response = await apiClient.get(requestUrl);
+
+      const response = await apiClient.get(`/api/startups/${id}`);
       console.log('[StartupDetails] Startup loaded successfully:', response.data?.title);
       setStartup(response.data);
     } catch (error) {
       console.error('[StartupDetails] Failed to load startup details:', error);
       const status = error.response?.status;
       const errorData = error.response?.data;
-      
+
       console.error('[StartupDetails] Error details:', {
         status,
         id,
@@ -90,25 +64,21 @@ const StartupDetails = () => {
         detail: errorData?.detail,
         fullError: errorData
       });
-      
+
       // Only redirect on 404 (not found) - startup doesn't exist
       if (status === 404) {
         toast.error('Startup not found');
-        // Navigate back to previous page instead of marketplace
-        // This preserves the back button functionality
+        // Navigate back to previous page
         if (window.history.length > 2) {
           navigate(-1);
         } else {
-          // Fallback to trending-startups if no history
-          navigate('/trending-startups');
+          // Fallback to marketplace if no history
+          navigate('/marketplace');
         }
       } else if (status === 500) {
-        // Server error - might be a serialization issue with older startups
+        // Server error
         toast.error('Error loading startup details. The startup may have incomplete data.');
-        console.error('[StartupDetails] Server error - check backend logs for details');
-        // Don't redirect on 500, let user see the error
       } else {
-        // For other errors, show error but don't redirect
         toast.error('Failed to load startup details. Please try again.');
       }
     } finally {
@@ -134,16 +104,16 @@ const StartupDetails = () => {
 
   const checkFavoriteStatus = async () => {
     if (!user || !isInvestor()) return;
-    
+
     try {
       const response = await userAPI.getUserFavorites();
       console.log('[StartupDetails] Checking favorite status for startup:', id);
       console.log('[StartupDetails] Favorites response:', response.data);
-      
+
       // Handle both paginated and non-paginated responses
       const favorites = response.data.results || response.data;
       const isFav = Array.isArray(favorites) && favorites.some(fav => fav.startup.id === id);
-      
+
       console.log('[StartupDetails] Is favorited:', isFav);
       setIsFavorited(isFav);
     } catch (error) {
@@ -154,16 +124,16 @@ const StartupDetails = () => {
 
   const checkInterestStatus = async () => {
     if (!user || !isInvestor()) return;
-    
+
     try {
       const response = await userAPI.getUserInterests();
       console.log('[StartupDetails] Checking interest status for startup:', id);
       console.log('[StartupDetails] Interests response:', response.data);
-      
+
       // Handle both paginated and non-paginated responses
       const interests = response.data.results || response.data;
       const hasInt = Array.isArray(interests) && interests.some(interest => interest.startup.id === id);
-      
+
       console.log('[StartupDetails] Has interest:', hasInt);
       setHasInterest(hasInt);
     } catch (error) {
@@ -174,7 +144,7 @@ const StartupDetails = () => {
 
   const checkInteractionStatus = async () => {
     if (!user) return;
-    
+
     try {
       const response = await recommendationAPI.getStartupInteractionStatus(id);
       setHasLike(response.data.has_like || false);
@@ -192,15 +162,12 @@ const StartupDetails = () => {
     }
 
     try {
-      // Get recommendation context if this startup was from a recommendation
-      const recommendationContext = getRecommendationContext(id);
-      
       if (hasLike) {
-        await recommendationAPI.unlikeStartup(id, recommendationContext);
+        await recommendationAPI.unlikeStartup(id);
         setHasLike(false);
         toast.success('Like removed');
       } else {
-        await recommendationAPI.likeStartup(id, recommendationContext);
+        await recommendationAPI.likeStartup(id);
         setHasLike(true);
         setHasDislike(false);
         toast.success('Startup liked!');
@@ -219,15 +186,12 @@ const StartupDetails = () => {
     }
 
     try {
-      // Get recommendation context if this startup was from a recommendation
-      const recommendationContext = getRecommendationContext(id);
-      
       if (hasDislike) {
-        await recommendationAPI.undislikeStartup(id, recommendationContext);
+        await recommendationAPI.undislikeStartup(id);
         setHasDislike(false);
         toast.success('Dislike removed');
       } else {
-        await recommendationAPI.dislikeStartup(id, recommendationContext);
+        await recommendationAPI.dislikeStartup(id);
         setHasDislike(true);
         setHasLike(false);
         toast.success('Startup disliked');
@@ -241,13 +205,13 @@ const StartupDetails = () => {
   const checkAppliedPositions = async () => {
     // Also check which startups the user has applied to (for one-application-per-startup rule)
     if (!user || isInvestor()) return;
-    
+
     try {
       const response = await userAPI.getUserApplications();
       console.log('[StartupDetails] Checking applied positions and startups');
-      
+
       const applications = response.data.results || response.data;
-      
+
       if (Array.isArray(applications)) {
         // Extract position IDs
         const appliedIds = new Set(
@@ -255,14 +219,14 @@ const StartupDetails = () => {
             .filter(app => app.position && app.position.id)
             .map(app => app.position.id)
         );
-        
+
         // Extract startup IDs (to check if user has applied to any position in this startup)
         const appliedStartupIdsSet = new Set(
           applications
             .filter(app => app.startup && app.startup.id)
             .map(app => app.startup.id)
         );
-        
+
         console.log('[StartupDetails] Applied position IDs:', Array.from(appliedIds));
         console.log('[StartupDetails] Applied startup IDs:', Array.from(appliedStartupIdsSet));
         setAppliedPositionIds(appliedIds);
@@ -275,8 +239,8 @@ const StartupDetails = () => {
 
   const toggleFavorite = async () => {
     // Check if user is authenticated
-    if (!user || !isInvestor()) {
-      toast.error('Please log in as an investor to use favorites');
+    if (!user) {
+      toast.error('Please log in to use favorites');
       navigate('/login');
       return;
     }
@@ -285,20 +249,17 @@ const StartupDetails = () => {
     console.log('Toggle Favorite - Startup ID:', id);
 
     try {
-      // Get recommendation context if this startup was from a recommendation
-      const recommendationContext = getRecommendationContext(id);
-      
       if (isFavorited) {
         // Remove from favorites using DELETE
         console.log('Removing from favorites...');
-        await startupAPI.deleteFavorite(id, recommendationContext);
+        await startupAPI.deleteFavorite(id);
         setIsFavorited(false);
         console.log('Successfully removed from favorites');
         toast.success('Removed from favorites');
       } else {
         // Add to favorites using POST
         console.log('Adding to favorites...');
-        await startupAPI.toggleFavorite(id, recommendationContext);
+        await startupAPI.toggleFavorite(id);
         setIsFavorited(true);
         console.log('Successfully added to favorites');
         toast.success('Added to favorites');
@@ -306,7 +267,7 @@ const StartupDetails = () => {
     } catch (error) {
       console.error('Failed to toggle favorite:', error);
       console.error('Error response:', error.response?.data);
-      
+
       // Handle specific authentication errors
       if (error.response?.status === 403 || error.response?.status === 401) {
         toast.error('Please log in to use favorites');
@@ -331,16 +292,13 @@ const StartupDetails = () => {
     }
 
     try {
-      // Get recommendation context if this startup was from a recommendation
-      const recommendationContext = getRecommendationContext(id);
-      
-      await startupAPI.expressInterest(id, { message: interestMessage }, recommendationContext);
+      await startupAPI.expressInterest(id, { message: interestMessage });
       setHasInterest(true);
       setInterestMessage('');
       toast.success('Interest expressed successfully!');
     } catch (error) {
       console.error('Failed to express interest:', error);
-      
+
       // Handle specific authentication errors
       if (error.response?.status === 403 || error.response?.status === 401) {
         toast.error('Please log in to express interest');
@@ -381,6 +339,14 @@ const StartupDetails = () => {
 
   // Financial Charts Component
   const FinancialChart = ({ startup }) => {
+    const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+    useEffect(() => {
+      const handleResize = () => setIsMobile(window.innerWidth <= 768);
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     const revenueData = [
       {
         label: 'TTM',
@@ -419,48 +385,53 @@ const StartupDetails = () => {
     const revenueYAxisMax = maxRevenue > 0 ? Math.ceil(maxRevenue * 1.2) : 10000;
     const profitYAxisMax = Math.max(maxProfit, askingPrice) > 0 ? Math.ceil(Math.max(maxProfit, askingPrice) * 1.2) : 10000;
 
+    const chartHeight = isMobile ? 320 : 450;
+    const barMargin = isMobile ? { top: 20, right: 10, left: -20, bottom: 40 } : { top: 30, right: 40, left: 30, bottom: 70 };
+    const lineMargin = isMobile ? { top: 20, right: 30, left: -10, bottom: 40 } : { top: 30, right: 120, left: 50, bottom: 70 };
+    const fontSize = isMobile ? 11 : 14;
+
     return (
       <div className={styles.chartsWrapper}>
         {/* Revenue Bar Chart */}
         <div className={styles.chartSection}>
           <h4 className={styles.chartTitle}>Revenue Comparison</h4>
-          <ResponsiveContainer width="100%" height={450}>
-            <BarChart data={revenueData} margin={{ top: 30, right: 40, left: 30, bottom: 70 }}>
+          <ResponsiveContainer width="100%" height={chartHeight}>
+            <BarChart data={revenueData} margin={barMargin}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
-                dataKey="label" 
-                tick={{ fontSize: 14, fill: '#374151', fontWeight: 600 }}
-                label={{ value: 'Time Period', position: 'insideBottom', offset: -10, style: { textAnchor: 'middle', fontSize: 14, fill: '#374151', fontWeight: 700 } }}
+              <XAxis
+                dataKey="label"
+                tick={{ fontSize: fontSize, fill: '#374151', fontWeight: 600 }}
+                label={!isMobile ? { value: 'Time Period', position: 'insideBottom', offset: -10, style: { textAnchor: 'middle', fontSize: 14, fill: '#374151', fontWeight: 700 } } : null}
               />
-              <YAxis 
-                tick={{ fontSize: 12, fill: '#374151', fontWeight: 600 }}
-                label={{ value: 'Amount ($)', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle', fontSize: 14, fill: '#374151', fontWeight: 700 } }}
+              <YAxis
+                tick={{ fontSize: fontSize, fill: '#374151', fontWeight: 600 }}
+                label={!isMobile ? { value: 'Amount ($)', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle', fontSize: 14, fill: '#374151', fontWeight: 700 } } : null}
                 domain={[0, revenueYAxisMax]}
-                width={80}
+                width={isMobile ? 50 : 80}
               />
-              <Tooltip 
+              <Tooltip
                 formatter={(value) => [`$${value.toLocaleString()}`, 'Revenue']}
                 labelFormatter={(label) => `Period: ${label}`}
-                contentStyle={{ 
-                  backgroundColor: 'rgba(255, 255, 255, 0.95)', 
+                contentStyle={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
                   border: '1px solid #e5e7eb',
                   borderRadius: '8px',
-                  fontSize: '14px',
+                  fontSize: isMobile ? '12px' : '14px',
                   fontWeight: 600
                 }}
               />
-              <Legend wrapperStyle={{ paddingTop: '20px', fontWeight: 600 }} />
-              <Bar 
-                dataKey="revenue" 
-                fill="#2563eb" 
+              <Legend wrapperStyle={{ paddingTop: '10px', fontWeight: 600, fontSize: fontSize }} />
+              <Bar
+                dataKey="revenue"
+                fill="#2563eb"
                 name="Revenue"
                 radius={[8, 8, 0, 0]}
               >
-                <LabelList 
-                  dataKey="revenue" 
-                  position="top" 
+                <LabelList
+                  dataKey="revenue"
+                  position="top"
                   formatter={(value) => `$${value.toLocaleString()}`}
-                  style={{ fill: '#1f2937', fontSize: '12px', fontWeight: 600 }}
+                  style={{ fill: '#1f2937', fontSize: isMobile ? '10px' : '12px', fontWeight: 600 }}
                 />
               </Bar>
             </BarChart>
@@ -470,25 +441,25 @@ const StartupDetails = () => {
         {/* Profit Line Chart */}
         <div className={styles.chartSection}>
           <h4 className={styles.chartTitle}>Profit Comparison</h4>
-          <ResponsiveContainer width="100%" height={450}>
-            <LineChart data={profitData} margin={{ top: 30, right: 120, left: 50, bottom: 70 }}>
+          <ResponsiveContainer width="100%" height={chartHeight}>
+            <LineChart data={profitData} margin={lineMargin}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
-                dataKey="label" 
-                tick={{ fontSize: 14, fill: '#374151', fontWeight: 600 }}
-                label={{ value: 'Time Period', position: 'insideBottom', offset: -10, style: { textAnchor: 'middle', fontSize: 14, fill: '#374151', fontWeight: 700 } }}
+              <XAxis
+                dataKey="label"
+                tick={{ fontSize: fontSize, fill: '#374151', fontWeight: 600 }}
+                label={!isMobile ? { value: 'Time Period', position: 'insideBottom', offset: -10, style: { textAnchor: 'middle', fontSize: 14, fill: '#374151', fontWeight: 700 } } : null}
               />
-              <YAxis 
-                tick={{ fontSize: 12, fill: '#374151', fontWeight: 600 }}
-                label={{ value: 'Amount ($)', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle', fontSize: 14, fill: '#374151', fontWeight: 700 } }}
+              <YAxis
+                tick={{ fontSize: fontSize, fill: '#374151', fontWeight: 600 }}
+                label={!isMobile ? { value: 'Amount ($)', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle', fontSize: 14, fill: '#374151', fontWeight: 700 } } : null}
                 domain={[0, profitYAxisMax]}
-                width={80}
+                width={isMobile ? 50 : 80}
               />
-              <Tooltip 
+              <Tooltip
                 formatter={(value) => [`$${value.toLocaleString()}`, 'Profit']}
                 labelFormatter={(label) => `Period: ${label}`}
-                contentStyle={{ 
-                  backgroundColor: 'rgba(255, 255, 255, 0.95)', 
+                contentStyle={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
                   border: '1px solid #e5e7eb',
                   borderRadius: '8px',
                   fontSize: '14px',
@@ -496,37 +467,37 @@ const StartupDetails = () => {
                 }}
               />
               <Legend wrapperStyle={{ paddingTop: '20px', fontWeight: 600 }} />
-              <Line 
-                type="monotone" 
-                dataKey="profit" 
-                stroke="#f97316" 
+              <Line
+                type="monotone"
+                dataKey="profit"
+                stroke="#f97316"
                 strokeWidth={3}
                 dot={{ r: 8, fill: '#f97316', strokeWidth: 2, stroke: '#fff' }}
                 activeDot={{ r: 10 }}
                 name="Profit"
               >
-                <LabelList 
-                  dataKey="profit" 
-                  position="top" 
+                <LabelList
+                  dataKey="profit"
+                  position="top"
                   formatter={(value) => `$${value.toLocaleString()}`}
                   style={{ fill: '#1f2937', fontSize: '12px', fontWeight: 600 }}
                   offset={10}
                 />
               </Line>
               {askingPrice > 0 && (
-                <ReferenceLine 
-                  y={askingPrice} 
+                <ReferenceLine
+                  y={askingPrice}
                   stroke="#6b7280"
                   strokeDasharray="5 5"
                   strokeWidth={2}
                 >
-                  <Label 
+                  <Label
                     value={`$${askingPrice.toLocaleString()}`}
                     position="left"
                     offset={15}
-                    style={{ 
-                      fontSize: 13, 
-                      fill: '#000000', 
+                    style={{
+                      fontSize: 13,
+                      fill: '#000000',
                       fontWeight: 700,
                       backgroundColor: 'rgba(255, 255, 255, 0.98)',
                       padding: '5px 10px',
@@ -535,18 +506,18 @@ const StartupDetails = () => {
                       boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                     }}
                   />
-                  <Label 
+                  <Label
                     value="Asking Price"
                     position="right"
                     offset={20}
-                    style={{ 
-                      fontSize: 13, 
-                      fill: '#6b7280', 
-                      fontWeight: 600, 
-                      backgroundColor: 'rgba(255, 255, 255, 0.95)', 
-                      padding: '4px 8px', 
-                      borderRadius: '4px', 
-                      border: '1px solid #e5e7eb' 
+                    style={{
+                      fontSize: 13,
+                      fill: '#6b7280',
+                      fontWeight: 600,
+                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      border: '1px solid #e5e7eb'
                     }}
                   />
                 </ReferenceLine>
@@ -561,11 +532,11 @@ const StartupDetails = () => {
   if (loading) {
     return (
       <>
-        <Navbar/>
+        <Navbar />
         <div className={styles.container}>
           <div className={styles.loading}>Loading startup details...</div>
         </div>
-        <Footer/>
+        <Footer />
       </>
     );
   }
@@ -573,397 +544,405 @@ const StartupDetails = () => {
   if (!startup) {
     return (
       <>
-        <Navbar/>
+        <Navbar />
         <div className={styles.container}>
           <div className={styles.error}>Startup not found</div>
         </div>
-        <Footer/>
+        <Footer />
       </>
     );
   }
 
   return (
     <>
-    <Navbar/>
-    <div className={styles.container}>
-      {/* Header with Title and Action Buttons */}
-      <div className={styles.headerSection}>
-      <h1 className={styles.title}>{startup.title}</h1>
-        
-        <div className={styles.actionButtons}>
-          {/* Like/Dislike Buttons (for all logged-in users) */}
-          {user && (
-            <>
-              <button 
-                className={`${styles.actionBtn} ${hasLike ? styles.liked : ''}`}
-                onClick={handleLike}
-                title={hasLike ? 'Remove like' : 'Like this startup'}
-              >
-                {hasLike ? '👍 Liked' : '👍 Like'}
-              </button>
-              <button 
-                className={`${styles.actionBtn} ${hasDislike ? styles.disliked : ''}`}
-                onClick={handleDislike}
-                title={hasDislike ? 'Remove dislike' : 'Dislike this startup'}
-              >
-                {hasDislike ? '👎 Disliked' : '👎 Dislike'}
-              </button>
-            </>
-          )}
-          
-          {/* Investor Favorite Button */}
-          {isInvestor() && (
-            <button 
-              className={`${styles.actionBtn} ${isFavorited ? styles.favorited : ''}`}
-              onClick={toggleFavorite}
-            >
-              {isFavorited ? '❤️ Favorited' : '🤍 Add to Favorites'}
-            </button>
-          )}
-        </div>
-      </div>
+      <Navbar />
+      <div className={styles.container}>
+        {/* Header with Title and Action Buttons */}
+        <div className={styles.headerSection}>
+          <h1 className={styles.title}>{startup.title}</h1>
 
-      {/* Tags */}
-      <div className={styles.tags}>
-        <span className={`${styles.tag} ${styles.fund}`}>{startup.category}</span>
-        <span className={`${styles.tag} ${styles.equity}`}>{startup.type}</span>
-        <span className={`${styles.tag} ${styles.collab}`}>{startup.field}</span>
-      </div>
-
-      {/* Description */}
-      <h3 className={styles.sectionTitle}>Description</h3>
-      <p className={styles.description}>
-        {startup.description}
-      </p>
-
-      <hr className={styles.divider} />
-
-      {/* Conditional Performance Section based on Type */}
-      {startup.type === 'marketplace' ? (
-        <>
-          <h3 className={styles.sectionTitle}>Financial Performance</h3>
-      <div className={styles.performance}>
-        <div className={styles.metric}>
-          <span className={styles.metricLabel}>TTM REVENUE</span>
-          <div className={styles.metricLabel2}>
-                <img src="/Get Revenue.svg" alt="" />
-            <p className={styles.metricValue}>{startup.performance?.ttmRevenue || startup.ttm_revenue || '$0'}</p>
-          </div>
-        </div>
-        <div className={styles.metric}>
-          <span className={styles.metricLabel}>TTM PROFIT</span>
-          <div className={styles.metricLabel2}>
-                <img src="/Stocks Growth.svg" alt="" />
-            <p className={styles.metricValue}>{startup.performance?.ttmProfit || startup.ttm_profit || '$0'}</p>
-          </div>
-        </div>
-        <div className={styles.metric}>
-          <span className={styles.metricLabel}>LAST MONTH REVENUE</span>
-          <div className={styles.metricLabel2}>
-                <img src="/Profit.svg" alt="" />
-            <p className={styles.metricValue}>{startup.performance?.lastMonthRevenue || startup.last_month_revenue || '$0'}</p>
-          </div>
-        </div>
-        <div className={styles.metric}>
-          <span className={styles.metricLabel}>LAST MONTH PROFIT</span>
-          <div className={styles.metricLabel2}>
-                <img src="/Weak Financial Growth.svg" alt="" />
-            <p className={styles.metricValue}>{startup.performance?.lastMonthProfit || startup.last_month_profit || '$0'}</p>
-          </div>
-        </div>
-      </div>
-          
-          <div className={styles.performance}>
-            <div className={styles.metric}>
-              <span className={styles.metricLabel}>CURRENT REVENUE</span>
-              <p className={styles.metricValue}>{startup.revenue || '$0'}</p>
-            </div>
-            <div className={styles.metric}>
-              <span className={styles.metricLabel}>CURRENT PROFIT</span>
-              <p className={styles.metricValue}>{startup.profit || '$0'}</p>
-            </div>
-            <div className={styles.metric}>
-              <span className={styles.metricLabel}>ASKING PRICE</span>
-              <p className={styles.metricValue}>{startup.asking_price || '$0'}</p>
-            </div>
-          </div>
-
-          {/* Financial Performance Chart */}
-          <div className={styles.chartContainer}>
-            <h3 className={styles.sectionTitle}>Financial Performance Chart</h3>
-            <FinancialChart startup={startup} />
-          </div>
-        </>
-      ) : (
-        <>
-          <h3 className={styles.sectionTitle}>Collaboration Details</h3>
-          <div className={styles.performance}>
-            <div className={styles.metric}>
-              <span className={styles.metricLabel}>EARN THROUGH</span>
-              <p className={styles.metricValue}>{startup.earn_through || 'N/A'}</p>
-            </div>
-            <div className={styles.metric}>
-              <span className={styles.metricLabel}>CURRENT PHASE</span>
-              <p className={styles.metricValue}>{startup.phase || 'N/A'}</p>
-            </div>
-            <div className={styles.metric}>
-              <span className={styles.metricLabel}>TEAM SIZE</span>
-              <p className={styles.metricValue}>{startup.team_size || 'N/A'}</p>
-            </div>
-            <div className={styles.metric}>
-              <span className={styles.metricLabel}>CATEGORY</span>
-              <p className={styles.metricValue}>
-                {startup.category ? startup.category.charAt(0).toUpperCase() + startup.category.slice(1) : 'N/A'}
-              </p>
-            </div>
-          </div>
-        </>
-      )}
-
-      <hr className={styles.divider} />
-
-      {/* Positions - Only for Collaboration startups, Hidden for Investors */}
-      {!isInvestor() && startup?.type === 'collaboration' && (
-        <>
-      <h3 className={styles.sectionTitle}>Available Positions</h3>
-      <div className={styles.positions}>
-        {positions.length > 0 ? (
-          positions.map((position) => (
-            <div key={position.id} className={styles.positionCard}>
-              <h4 className={styles.positionTitle}>{position.title}</h4>
-              <p className={styles.positionDescription}>{position.description}</p>
-              {position.requirements && (
-                <p className={styles.positionRequirements}>
-                  <strong>Requirements:</strong> {position.requirements}
-                </p>
-              )}
-              {/* Show Apply button for students OR entrepreneurs who don't own this startup */}
-              {(isStudent() || (isEntrepreneur() && user?.id !== startup?.owner?.id)) && (
-                appliedPositionIds.has(position.id) || appliedStartupIds.has(startup?.id) ? (
-                  <div className={styles.appliedBadge}>
-                    {appliedStartupIds.has(startup?.id) && !appliedPositionIds.has(position.id) ? (
-                      'You have already applied to one position for this startup'
-                    ) : (
-                      'Applied'
-                    )}
-                  </div>
-                ) : (
-                  <Link 
-                    to={`/apply-for-collaboration/${id}?position=${position.id}`} 
-                    className={styles.applyButton}
-                  >
-                    Apply for this Position
-                  </Link>
-                )
-              )}
-            </div>
-          ))
-        ) : (
-          <div className={styles.noPositions}>
-            {startup?.type === 'collaboration' 
-              ? 'No open positions at the moment. Check back later!' 
-              : 'This startup is not currently looking for team members.'}
-          </div>
-        )}
-      </div>
-      
-      {/* Entrepreneur Actions - Only for Collaboration startups */}
-      {isEntrepreneur() && user?.id === startup?.owner?.id && startup?.type === 'collaboration' && (
-        <div className={styles.entrepreneurActions}>
-          <Link to={`/startups/${id}/positions`} className={styles.manageButton}>
-            Manage Positions
-          </Link>
-            </div>
-          )}
-        </>
-      )}
-      
-      {/* Investor Express Interest Section - At End */}
-      {isInvestor() && (
-        <div className={styles.investorActions}>
-          {!hasInterest && (
-            <div className={styles.interestSection}>
-              <h3 className={styles.sectionTitle}>Express Your Interest</h3>
-              <textarea
-                value={interestMessage}
-                onChange={(e) => setInterestMessage(e.target.value)}
-                placeholder="Express your interest in this startup..."
-                className={styles.interestInput}
-                rows="3"
-              />
-              <button 
-                className={styles.actionBtn}
-                onClick={expressInterest}
-              >
-                Express Interest
-              </button>
-            </div>
-          )}
-          
-          {hasInterest && (
-            <div className={styles.interestStatus}>
-              ✅ Interest expressed
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Convert to Marketplace Button - Only for Collaboration startups owned by entrepreneur */}
-      {isEntrepreneur() && user?.id === startup?.owner?.id && startup?.type === 'collaboration' && (
-        <div className={styles.entrepreneurActions}>
-          <button 
-            className={styles.convertButton}
-            onClick={() => setShowConvertModal(true)}
-          >
-            Convert to Marketplace
-          </button>
-        </div>
-      )}
-
-      {/* Convert to Marketplace Modal */}
-      {showConvertModal && (
-        <div className={styles.modalOverlay} onClick={() => !converting && setShowConvertModal(false)}>
-          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <h2 className={styles.modalTitle}>Convert Startup to Marketplace</h2>
-            
-            <div className={styles.warningMessage}>
-              <strong>⚠️ Important:</strong> From now on, you will not be able to manage positions for this startup. 
-              All existing positions will remain visible but cannot be managed or created after conversion.
-            </div>
-
-            <form onSubmit={handleConvertToMarketplace} className={styles.convertForm}>
-              <h4 className={styles.sectionSubtitle}>Financial Information (Required)</h4>
-              
-              <div className={styles.formRow}>
-                <div className={styles.formGroup}>
-                  <label>Current Revenue *</label>
-                  <input 
-                    type="text" 
-                    name="revenue"
-                    value={convertFormData.revenue}
-                    onChange={(e) => setConvertFormData({...convertFormData, revenue: e.target.value})}
-                    placeholder="e.g., $10,000/month" 
-                    required
-                    disabled={converting}
-                  />
-                </div>
-                <div className={styles.formGroup}>
-                  <label>Current Profit *</label>
-                  <input 
-                    type="text" 
-                    name="profit"
-                    value={convertFormData.profit}
-                    onChange={(e) => setConvertFormData({...convertFormData, profit: e.target.value})}
-                    placeholder="e.g., $5,000/month" 
-                    required
-                    disabled={converting}
-                  />
-                </div>
-              </div>
-
-              <div className={styles.formRow}>
-                <div className={styles.formGroup}>
-                  <label>Asking Price *</label>
-                  <input 
-                    type="text" 
-                    name="asking_price"
-                    value={convertFormData.asking_price}
-                    onChange={(e) => setConvertFormData({...convertFormData, asking_price: e.target.value})}
-                    placeholder="e.g., $100,000" 
-                    required
-                    disabled={converting}
-                  />
-                </div>
-                <div className={styles.formGroup}>
-                  <label>TTM Revenue *</label>
-                  <input 
-                    type="text" 
-                    name="ttm_revenue"
-                    value={convertFormData.ttm_revenue}
-                    onChange={(e) => setConvertFormData({...convertFormData, ttm_revenue: e.target.value})}
-                    placeholder="e.g., $120,000" 
-                    required
-                    disabled={converting}
-                  />
-                </div>
-              </div>
-
-              <div className={styles.formRow}>
-                <div className={styles.formGroup}>
-                  <label>TTM Profit *</label>
-                  <input 
-                    type="text" 
-                    name="ttm_profit"
-                    value={convertFormData.ttm_profit}
-                    onChange={(e) => setConvertFormData({...convertFormData, ttm_profit: e.target.value})}
-                    placeholder="e.g., $60,000" 
-                    required
-                    disabled={converting}
-                  />
-                </div>
-                <div className={styles.formGroup}>
-                  <label>Last Month Revenue *</label>
-                  <input 
-                    type="text" 
-                    name="last_month_revenue"
-                    value={convertFormData.last_month_revenue}
-                    onChange={(e) => setConvertFormData({...convertFormData, last_month_revenue: e.target.value})}
-                    placeholder="e.g., $12,000" 
-                    required
-                    disabled={converting}
-                  />
-                </div>
-              </div>
-
-              <div className={styles.formRow}>
-                <div className={styles.formGroup}>
-                  <label>Last Month Profit *</label>
-                  <input 
-                    type="text" 
-                    name="last_month_profit"
-                    value={convertFormData.last_month_profit}
-                    onChange={(e) => setConvertFormData({...convertFormData, last_month_profit: e.target.value})}
-                    placeholder="e.g., $6,000" 
-                    required
-                    disabled={converting}
-                  />
-                </div>
-              </div>
-
-              <div className={styles.modalActions}>
-                <button 
-                  type="button"
-                  className={styles.cancelButton}
-                  onClick={() => setShowConvertModal(false)}
-                  disabled={converting}
+          <div className={styles.actionButtons}>
+            {user && (
+              <>
+                <button
+                  className={`${styles.iconBtn} ${styles.likeBtn} ${hasLike ? styles.activeLike : ''}`}
+                  onClick={handleLike}
+                  title={hasLike ? 'Remove like' : 'Like this startup'}
                 >
-                  Cancel
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill={hasLike ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>
                 </button>
-                <button 
-                  type="submit"
-                  className={styles.confirmButton}
-                  disabled={converting}
+                <button
+                  className={`${styles.iconBtn} ${styles.dislikeBtn} ${hasDislike ? styles.activeDislike : ''}`}
+                  onClick={handleDislike}
+                  title={hasDislike ? 'Remove dislike' : 'Dislike this startup'}
                 >
-                  {converting ? 'Converting...' : 'Confirm Conversion'}
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill={hasDislike ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"></path></svg>
                 </button>
-              </div>
-            </form>
-
-            {/* Circular Progress Indicator */}
-            {converting && (
-              <div className={styles.progressOverlay}>
-                <div className={styles.progressModal}>
-                  <div className={styles.progressSpinner}></div>
-                  <p className={styles.progressText}>Converting to Marketplace...</p>
-                </div>
-              </div>
+                <button
+                  className={`${styles.iconBtn} ${styles.favoriteBtn} ${isFavorited ? styles.activeFavorite : ''}`}
+                  onClick={toggleFavorite}
+                  title={isFavorited ? 'Remove favorite' : 'Add to favorites'}
+                >
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill={isFavorited ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                </button>
+              </>
             )}
           </div>
         </div>
-      )}
-    </div>
 
-    <Footer/>
+        {/* Tags */}
+        <div className={styles.tags}>
+          <span className={`${styles.tag} ${styles.fund}`}>{startup.category}</span>
+          <span className={`${styles.tag} ${styles.equity}`}>{startup.type}</span>
+          <span className={`${styles.tag} ${styles.collab}`}>{startup.field}</span>
+        </div>
+
+        {/* Description */}
+        <h3 className={styles.sectionTitle}>Description</h3>
+        <p className={styles.description}>
+          {startup.description}
+        </p>
+
+        <hr className={styles.divider} />
+
+        {/* Conditional Performance Section based on Type */}
+        {startup.type === 'marketplace' ? (
+          <>
+            <h3 className={styles.sectionTitle}>Financial Performance</h3>
+            <div className={styles.financePerformanceContainer}>
+              <div className={styles.metric}>
+                <span className={styles.financeMetricLabel}>TTM REVENUE</span>
+                <div className={styles.financeMetricContainer}>
+                  <img src="/Get Revenue.svg" alt="" />
+                  <p className={styles.financeMetricValue}>{startup.performance?.ttmRevenue || startup.ttm_revenue || '$0'}</p>
+                </div>
+              </div>
+              <div className={styles.metric}>
+                <span className={styles.financeMetricLabel}>TTM PROFIT</span>
+                <div className={styles.financeMetricContainer}>
+                  <img src="/Stocks Growth.svg" alt="" />
+                  <p className={styles.financeMetricValue}>{startup.performance?.ttmProfit || startup.ttm_profit || '$0'}</p>
+                </div>
+              </div>
+              <div className={styles.metric}>
+                <span className={styles.financeMetricLabel}>LAST MONTH REVENUE</span>
+                <div className={styles.financeMetricContainer}>
+                  <img src="/Profit.svg" alt="" />
+                  <p className={styles.financeMetricValue}>{startup.performance?.lastMonthRevenue || startup.last_month_revenue || '$0'}</p>
+                </div>
+              </div>
+              <div className={styles.metric}>
+                <span className={styles.financeMetricLabel}>LAST MONTH PROFIT</span>
+                <div className={styles.financeMetricContainer}>
+                  <img src="/Weak Financial Growth.svg" alt="" />
+                  <p className={styles.financeMetricValue}>{startup.performance?.lastMonthProfit || startup.last_month_profit || '$0'}</p>
+                </div>
+              </div>
+              <div className={styles.metric}>
+                <span className={styles.financeMetricLabel}>CURRENT REVENUE</span>
+                <div className={styles.financeMetricContainer}>
+                  <p className={styles.financeMetricValueTextOnly}>{startup.revenue || '$0'}</p>
+                </div>
+              </div>
+              <div className={styles.metric}>
+                <span className={styles.financeMetricLabel}>CURRENT PROFIT</span>
+                <div className={styles.financeMetricContainer}>
+                  <p className={styles.financeMetricValueTextOnly}>{startup.profit || '$0'}</p>
+                </div>
+              </div>
+              <div className={`${styles.metric} ${styles.fullWidthMetric || ''}`}>
+                <span className={styles.financeMetricLabel}>ASKING PRICE</span>
+                <div className={styles.financeMetricContainer}>
+                  <p className={styles.financeMetricValueTextOnly}>{startup.asking_price || '$0'}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Financial Performance Chart */}
+            <div className={styles.chartContainer}>
+              <h3 className={styles.sectionTitle}>Financial Performance Chart</h3>
+              <FinancialChart startup={startup} />
+            </div>
+          </>
+        ) : (
+          <>
+            <h3 className={`${styles.sectionTitle} ${styles.collabSectionTitle}`}>COLLABORATION DETAILS</h3>
+            <div className={`${styles.performance} ${styles.collabPerformance}`}>
+              <div className={`${styles.metric} ${styles.collabMetric}`}>
+                <span className={styles.collabMetricLabel}>EARN THROUGH</span>
+                <p className={styles.collabMetricValue}>{startup.earn_through || 'N/A'}</p>
+              </div>
+              <div className={`${styles.metric} ${styles.collabMetric}`}>
+                <span className={styles.collabMetricLabel}>CURRENT PHASE</span>
+                <p className={styles.collabMetricValue}>{startup.phase || 'N/A'}</p>
+              </div>
+              <div className={`${styles.metric} ${styles.collabMetric}`}>
+                <span className={styles.collabMetricLabel}>TEAM SIZE</span>
+                <p className={styles.collabMetricValue}>{startup.team_size || 'N/A'}</p>
+              </div>
+              <div className={`${styles.metric} ${styles.collabMetric}`}>
+                <span className={styles.collabMetricLabel}>CATEGORY</span>
+                <p className={styles.collabMetricValue}>
+                  {startup.category ? startup.category.charAt(0).toUpperCase() + startup.category.slice(1) : 'N/A'}
+                </p>
+              </div>
+            </div>
+          </>
+        )}
+
+        <hr className={styles.divider} />
+
+        {/* Positions - Only for Collaboration startups, Hidden for Investors */}
+        {!isInvestor() && startup?.type === 'collaboration' && (
+          <>
+            <h3 className={styles.sectionTitle}>Available Positions</h3>
+            <div className={styles.positions}>
+              {positions.length > 0 ? (
+                positions.map((position) => (
+                  <div key={position.id} className={styles.positionCard}>
+                    <h4 className={styles.positionTitle}>{position.title}</h4>
+                    <p className={styles.positionDescription}>{position.description}</p>
+                    {position.requirements && (
+                      <p className={styles.positionRequirements}>
+                        <strong>Requirements:</strong> {position.requirements}
+                      </p>
+                    )}
+                    {/* Show Apply button for students OR entrepreneurs who don't own this startup */}
+                    {(isStudent() || (isEntrepreneur() && user?.id !== startup?.owner?.id)) && (
+                      appliedPositionIds.has(position.id) || appliedStartupIds.has(startup?.id) ? (
+                        <div className={styles.appliedBadge}>
+                          {appliedStartupIds.has(startup?.id) && !appliedPositionIds.has(position.id) ? (
+                            'You have already applied to one position for this startup'
+                          ) : (
+                            'Applied'
+                          )}
+                        </div>
+                      ) : (
+                        <Link
+                          to={`/apply-for-collaboration/${id}?position=${position.id}`}
+                          className={styles.applyButton}
+                        >
+                          Apply for this Position
+                        </Link>
+                      )
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div className={styles.noPositions}>
+                  {startup?.type === 'collaboration'
+                    ? 'No open positions at the moment. Check back later!'
+                    : 'This startup is not currently looking for team members.'}
+                </div>
+              )}
+            </div>
+
+            {/* Entrepreneur Actions - Only for Collaboration startups */}
+            {isEntrepreneur() && user?.id === startup?.owner?.id && startup?.type === 'collaboration' && (
+              <div className={styles.entrepreneurActions}>
+                <Link to={`/startups/${id}/positions`} className={styles.manageButton}>
+                  Manage Positions
+                </Link>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Investor Express Interest Section - At End */}
+        {isInvestor() && (
+          <div className={styles.investorActions}>
+            {!hasInterest && (
+              <div className={styles.interestSection}>
+                <h3 className={styles.sectionTitle}>Express Your Interest</h3>
+                <textarea
+                  value={interestMessage}
+                  onChange={(e) => setInterestMessage(e.target.value)}
+                  placeholder="Express your interest in this startup..."
+                  className={styles.interestInput}
+                  rows="3"
+                />
+                <button
+                  className={styles.actionBtn}
+                  onClick={expressInterest}
+                >
+                  Express Interest
+                </button>
+              </div>
+            )}
+
+            {hasInterest && (
+              <div className={styles.interestStatus}>
+                ✅ Interest expressed
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Convert to Marketplace - Disabled for Phase 2 */}
+        {isEntrepreneur() && user?.id === startup?.owner?.id && startup?.type === 'collaboration' && (
+          <div className={styles.entrepreneurActions}>
+            <button
+              className={styles.convertButton}
+              disabled
+              style={{ cursor: 'not-allowed', opacity: 0.5, position: 'relative' }}
+              title="Coming Soon — Marketplace conversion is not available yet"
+            >
+              Convert to Marketplace
+              <span style={{
+                marginLeft: '0.5rem',
+                background: '#ef4444', color: '#fff',
+                fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.05em',
+                padding: '2px 5px', borderRadius: '4px', textTransform: 'uppercase',
+                verticalAlign: 'middle'
+              }}>Comming Soon</span>
+            </button>
+          </div>
+        )}
+
+        {/* Convert to Marketplace Modal */}
+        {showConvertModal && (
+          <div className={styles.modalOverlay} onClick={() => !converting && setShowConvertModal(false)}>
+            <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+              <h2 className={styles.modalTitle}>Convert Startup to Marketplace</h2>
+
+              <div className={styles.warningMessage}>
+                <strong>⚠️ Important:</strong> From now on, you will not be able to manage positions for this startup.
+                All existing positions will remain visible but cannot be managed or created after conversion.
+              </div>
+
+              <form onSubmit={handleConvertToMarketplace} className={styles.convertForm}>
+                <h4 className={styles.sectionSubtitle}>Financial Information (Required)</h4>
+
+                <div className={styles.formRow}>
+                  <div className={styles.formGroup}>
+                    <label>Current Revenue *</label>
+                    <input
+                      type="text"
+                      name="revenue"
+                      value={convertFormData.revenue}
+                      onChange={(e) => setConvertFormData({ ...convertFormData, revenue: e.target.value })}
+                      placeholder="e.g., $10,000/month"
+                      required
+                      disabled={converting}
+                    />
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label>Current Profit *</label>
+                    <input
+                      type="text"
+                      name="profit"
+                      value={convertFormData.profit}
+                      onChange={(e) => setConvertFormData({ ...convertFormData, profit: e.target.value })}
+                      placeholder="e.g., $5,000/month"
+                      required
+                      disabled={converting}
+                    />
+                  </div>
+                </div>
+
+                <div className={styles.formRow}>
+                  <div className={styles.formGroup}>
+                    <label>Asking Price *</label>
+                    <input
+                      type="text"
+                      name="asking_price"
+                      value={convertFormData.asking_price}
+                      onChange={(e) => setConvertFormData({ ...convertFormData, asking_price: e.target.value })}
+                      placeholder="e.g., $100,000"
+                      required
+                      disabled={converting}
+                    />
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label>TTM Revenue *</label>
+                    <input
+                      type="text"
+                      name="ttm_revenue"
+                      value={convertFormData.ttm_revenue}
+                      onChange={(e) => setConvertFormData({ ...convertFormData, ttm_revenue: e.target.value })}
+                      placeholder="e.g., $120,000"
+                      required
+                      disabled={converting}
+                    />
+                  </div>
+                </div>
+
+                <div className={styles.formRow}>
+                  <div className={styles.formGroup}>
+                    <label>TTM Profit *</label>
+                    <input
+                      type="text"
+                      name="ttm_profit"
+                      value={convertFormData.ttm_profit}
+                      onChange={(e) => setConvertFormData({ ...convertFormData, ttm_profit: e.target.value })}
+                      placeholder="e.g., $60,000"
+                      required
+                      disabled={converting}
+                    />
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label>Last Month Revenue *</label>
+                    <input
+                      type="text"
+                      name="last_month_revenue"
+                      value={convertFormData.last_month_revenue}
+                      onChange={(e) => setConvertFormData({ ...convertFormData, last_month_revenue: e.target.value })}
+                      placeholder="e.g., $12,000"
+                      required
+                      disabled={converting}
+                    />
+                  </div>
+                </div>
+
+                <div className={styles.formRow}>
+                  <div className={styles.formGroup}>
+                    <label>Last Month Profit *</label>
+                    <input
+                      type="text"
+                      name="last_month_profit"
+                      value={convertFormData.last_month_profit}
+                      onChange={(e) => setConvertFormData({ ...convertFormData, last_month_profit: e.target.value })}
+                      placeholder="e.g., $6,000"
+                      required
+                      disabled={converting}
+                    />
+                  </div>
+                </div>
+
+                <div className={styles.modalActions}>
+                  <button
+                    type="button"
+                    className={styles.cancelButton}
+                    onClick={() => setShowConvertModal(false)}
+                    disabled={converting}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className={styles.confirmButton}
+                    disabled={converting}
+                  >
+                    {converting ? 'Converting...' : 'Confirm Conversion'}
+                  </button>
+                </div>
+              </form>
+
+              {/* Circular Progress Indicator */}
+              {converting && (
+                <div className={styles.progressOverlay}>
+                  <div className={styles.progressModal}>
+                    <div className={styles.progressSpinner}></div>
+                    <p className={styles.progressText}>Converting to Marketplace...</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <Footer />
     </>
   );
 };

@@ -26,6 +26,8 @@ const SearchStartups = () => {
   });
   const [searchInput, setSearchInput] = useState(initialQuery);
   const [totalResults, setTotalResults] = useState(0);
+  const [showSearch, setShowSearch] = useState(true);
+  const [showFilters, setShowFilters] = useState(true);
 
   const categories = [
     { value: '', label: 'All Categories' },
@@ -69,6 +71,11 @@ const SearchStartups = () => {
     { value: '11-25', label: '11-25 people' },
     { value: '25+', label: '25+ people' }
   ];
+
+  const filterButtonClass = (isActive) =>
+    isActive ? `${styles.filterChip} ${styles.filterChipActive}` : styles.filterChip;
+  const toolbarButtonClass = (isActive) =>
+    isActive ? `${styles.toolbarButton} ${styles.toolbarButtonActive}` : styles.toolbarButton;
 
   useEffect(() => {
     performSearch();
@@ -148,76 +155,98 @@ const SearchStartups = () => {
     <>
       <Navbar />
       <div className={styles.container}>
-        <div className={styles.header}>
-          <h1>Search Startups</h1>
-          <p>Find startups to join, collaborate with, or invest in</p>
+        <div className={styles.hero}>
+          <div className={styles.heroCopy}>
+            <h1>Startup Ecosystem</h1>
+            <p>Vetted high-growth ventures ready for collaboration and investment.</p>
+          </div>
+
+          <div className={styles.heroActions}>
+            <button
+              type="button"
+              className={toolbarButtonClass(showSearch)}
+              onClick={() => setShowSearch(prev => !prev)}
+            >
+              <span className={styles.toolbarIcon} aria-hidden="true">⌕</span>
+              {showSearch ? 'Hide Search' : 'Show Search'}
+            </button>
+            <button
+              type="button"
+              className={toolbarButtonClass(showFilters)}
+              onClick={() => setShowFilters(prev => !prev)}
+            >
+              <span className={styles.toolbarIcon} aria-hidden="true">☷</span>
+              {showFilters ? 'Hide Filters' : 'Show Filters'}
+            </button>
+            <div className={styles.resultsCount}>
+              <strong>{totalResults}</strong>
+              <span>Results</span>
+            </div>
+          </div>
         </div>
 
         <div className={styles.searchSection}>
-          <form onSubmit={handleSearch} className={styles.searchForm}>
-            <div className={styles.mainSearch}>
-              <input
-                type="text"
-                placeholder="Search by startup name, description, or keyword..."
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                className={styles.searchInput}
-              />
-              <button type="submit" className={styles.searchButton} disabled={loading}>
-                {loading ? 'Searching...' : 'Search'}
-              </button>
-            </div>
-          </form>
+          {showSearch && (
+            <form onSubmit={handleSearch} className={styles.searchForm}>
+              <div className={styles.mainSearch}>
+                <span className={styles.searchFieldIcon} aria-hidden="true">⌕</span>
+                <input
+                  type="text"
+                  placeholder="Search by name, keyword, or industry..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  className={styles.searchInput}
+                />
+              </div>
+            </form>
+          )}
 
-          <div className={styles.filters}>
-            <div className={styles.filterRow}>
-              <select
-                value={filters.type}
-                onChange={(e) => handleFilterChange('type', e.target.value)}
-                className={styles.filterSelect}
-              >
-                {types.map(type => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
+          {showFilters && (
+            <div className={styles.filtersPanel}>
+              <div className={styles.filterBlock}>
+                <h3>Startup Type</h3>
+                <div className={styles.filterChips}>
+                  {types.map(type => (
+                    <button
+                      key={type.value || 'all-types'}
+                      type="button"
+                      className={filterButtonClass(filters.type === type.value)}
+                      onClick={() => handleFilterChange('type', type.value)}
+                    >
+                      {type.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-              <select
-                value={filters.category}
-                onChange={(e) => handleFilterChange('category', e.target.value)}
-                className={styles.filterSelect}
-              >
-                {categories.map(cat => (
-                  <option key={cat.value} value={cat.value}>
-                    {cat.label}
-                  </option>
-                ))}
-              </select>
+              <div className={styles.filterBlock}>
+                <h3>Industry Category</h3>
+                <div className={styles.filterChips}>
+                  {categories.map(categoryOption => (
+                    <button
+                      key={categoryOption.value || 'all-categories'}
+                      type="button"
+                      className={filterButtonClass(filters.category === categoryOption.value)}
+                      onClick={() => handleFilterChange('category', categoryOption.value)}
+                    >
+                      {categoryOption.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={clearFilters}
                 className={styles.clearButton}
               >
                 Clear Filters
               </button>
             </div>
-          </div>
+          )}
         </div>
 
         <div className={styles.results}>
-          <div className={styles.resultHeader}>
-            <h2>
-              {totalResults > 0 
-                ? `${totalResults} startups found` 
-                : loading 
-                  ? 'Searching...' 
-                  : 'No startups found'
-              }
-            </h2>
-          </div>
-
           {startups.length === 0 && !loading ? (
             <div className={styles.noResults}>
               <p>No startups match your search criteria.</p>

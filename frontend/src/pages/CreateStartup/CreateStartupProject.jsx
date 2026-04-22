@@ -10,19 +10,19 @@ import './CreateStartup.css';
 
 /* ─── Static data ─────────────────────────────────────────────────────────── */
 const CATEGORIES = [
-  { value: 'saas',        label: 'SaaS' },
-  { value: 'ecommerce',   label: 'Ecommerce' },
-  { value: 'agency',      label: 'Agency' },
-  { value: 'legal',       label: 'Legal' },
+  { value: 'saas', label: 'SaaS' },
+  { value: 'ecommerce', label: 'Ecommerce' },
+  { value: 'agency', label: 'Agency' },
+  { value: 'legal', label: 'Legal' },
   { value: 'marketplace', label: 'Marketplace' },
-  { value: 'media',       label: 'Media' },
-  { value: 'platform',    label: 'Platform' },
+  { value: 'media', label: 'Media' },
+  { value: 'platform', label: 'Platform' },
   { value: 'real_estate', label: 'Real Estate' },
-  { value: 'robotics',    label: 'Robotics' },
-  { value: 'software',    label: 'Software' },
-  { value: 'web3',        label: 'Web3' },
-  { value: 'crypto',      label: 'Crypto' },
-  { value: 'other',       label: 'Other' },
+  { value: 'robotics', label: 'Robotics' },
+  { value: 'software', label: 'Software' },
+  { value: 'web3', label: 'Web3' },
+  { value: 'crypto', label: 'Crypto' },
+  { value: 'other', label: 'Other' },
 ];
 
 const STAGES = [
@@ -43,34 +43,34 @@ const Field = ({ label, required, error, children }) => (
 
 /* ─── Main component ──────────────────────────────────────────────────────── */
 const CreateStartupProject = () => {
-  const navigate  = useNavigate();
-  const { user }  = useAuth();
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [step,    setStep]    = useState(1);
-  const [dir,     setDir]     = useState('forward');
+  const [step, setStep] = useState(1);
+  const [dir, setDir] = useState('forward');
 
   const TOTAL_STEPS = 3;
 
   /* unchanged formData structure — same fields, same API payload */
   const [formData, setFormData] = useState({
-    title:              '',
-    role_title:         '',
-    description:        '',
-    field:              '',
-    website_url:        '',
-    stage:              '',
-    revenue:            '',
-    profit:             '',
-    asking_price:       '',
-    ttm_revenue:        '',
-    ttm_profit:         '',
+    title: '',
+    role_title: '',
+    description: '',
+    field: '',
+    website_url: '',
+    stage: '',
+    revenue: '',
+    profit: '',
+    asking_price: '',
+    ttm_revenue: '',
+    ttm_profit: '',
     last_month_revenue: '',
-    last_month_profit:  '',
-    type:               'marketplace',
-    earn_through:       '',
-    phase:              '',
-    team_size:          '',
-    category:           'saas',
+    last_month_profit: '',
+    type: 'marketplace',
+    earn_through: '',
+    phase: '',
+    team_size: '',
+    category: 'saas',
   });
 
   const [errors, setErrors] = useState({});
@@ -86,10 +86,10 @@ const CreateStartupProject = () => {
   const validateStep = (s) => {
     const e = {};
     if (s === 1) {
-      if (!formData.title || formData.title.length < 3)
-        e.title = 'Startup name must be at least 3 characters.';
-      if (!formData.description || formData.description.length < 5)
-        e.description = 'Description must be at least 5 characters.';
+      if (!formData.title || formData.title.length < 5)
+        e.title = 'Startup name must be at least 5 characters.';
+      if (!formData.description || formData.description.length < 20)
+        e.description = 'Description must be at least 20 characters.';
       if (!formData.field.trim())
         e.field = 'Field / Industry is required.';
     }
@@ -104,13 +104,13 @@ const CreateStartupProject = () => {
         e.earn_through = 'Please specify how you / team members earn.';
     }
     if (s === 3 && formData.type === 'marketplace') {
-      if (!formData.revenue.trim())   e.revenue   = 'Current revenue is required.';
-      if (!formData.profit.trim())    e.profit    = 'Current profit is required.';
+      if (!formData.revenue.trim()) e.revenue = 'Current revenue is required.';
+      if (!formData.profit.trim()) e.profit = 'Current profit is required.';
       if (!formData.asking_price.trim()) e.asking_price = 'Asking price is required.';
-      if (!formData.ttm_revenue.trim())  e.ttm_revenue  = 'TTM revenue is required.';
-      if (!formData.ttm_profit.trim())   e.ttm_profit   = 'TTM profit is required.';
+      if (!formData.ttm_revenue.trim()) e.ttm_revenue = 'TTM revenue is required.';
+      if (!formData.ttm_profit.trim()) e.ttm_profit = 'TTM profit is required.';
       if (!formData.last_month_revenue.trim()) e.last_month_revenue = 'Last month revenue is required.';
-      if (!formData.last_month_profit.trim())  e.last_month_profit  = 'Last month profit is required.';
+      if (!formData.last_month_profit.trim()) e.last_month_profit = 'Last month profit is required.';
     }
     return e;
   };
@@ -146,24 +146,24 @@ const CreateStartupProject = () => {
 
     try {
       const cleanedFormData = {
-        title:              formData.title,
-        role_title:         formData.role_title,
-        description:        formData.description,
-        field:              formData.field,
-        website_url:        formData.website_url || '',
-        stages:             formData.stage ? [formData.stage] : [],
-        revenue:            formData.revenue || '',
-        profit:             formData.profit || '',
-        asking_price:       formData.asking_price || '',
-        ttm_revenue:        formData.ttm_revenue || '',
-        ttm_profit:         formData.ttm_profit || '',
+        title: formData.title,
+        role_title: formData.role_title,
+        description: formData.description,
+        field: formData.field,
+        website_url: formData.website_url || '',
+        stages: formData.stage ? [formData.stage] : [],
+        revenue: formData.revenue || '',
+        profit: formData.profit || '',
+        asking_price: formData.asking_price || '',
+        ttm_revenue: formData.ttm_revenue || '',
+        ttm_profit: formData.ttm_profit || '',
         last_month_revenue: formData.last_month_revenue || '',
-        last_month_profit:  formData.last_month_profit || '',
-        type:               formData.type,
-        earn_through:       formData.earn_through || '',
-        phase:              formData.phase || '',
-        team_size:          formData.team_size || '',
-        category:           formData.category || 'other',
+        last_month_profit: formData.last_month_profit || '',
+        type: formData.type,
+        earn_through: formData.earn_through || '',
+        phase: formData.phase || '',
+        team_size: formData.team_size || '',
+        category: formData.category || 'other',
       };
 
       await apiClient.post('/api/startups', cleanedFormData);
@@ -174,11 +174,23 @@ const CreateStartupProject = () => {
       let msg = 'Failed to create startup. Please try again.';
       if (error.response?.data) {
         const d = error.response.data;
-        if (typeof d === 'string' && d.includes('AnonymousUser'))
+        if (typeof d === 'string' && d.includes('AnonymousUser')) {
           msg = 'Authentication failed. Please log in and try again.';
-        else if (d.message) msg = d.message;
-        else if (d.error)   msg = d.error;
-        else if (d.detail)  msg = d.detail;
+        } else if (d.message) {
+          msg = d.message;
+        } else if (d.error) {
+          msg = d.error;
+        } else if (d.detail) {
+          msg = d.detail;
+        } else if (typeof d === 'object') {
+          // Extract first field error if DRF serializer errors are returned
+          const firstKey = Object.keys(d)[0];
+          if (firstKey && Array.isArray(d[firstKey])) {
+            msg = `${firstKey}: ${d[firstKey][0]}`;
+          } else if (firstKey && typeof d[firstKey] === 'string') {
+            msg = `${firstKey}: ${d[firstKey]}`;
+          }
+        }
       } else if (error.message) {
         msg = error.message;
       }
@@ -190,7 +202,7 @@ const CreateStartupProject = () => {
 
   /* ── Derived ── */
   const progressPct = Math.round((step / TOTAL_STEPS) * 100);
-  const animClass   = dir === 'back' ? 'cs-step-back' : 'cs-step';
+  const animClass = dir === 'back' ? 'cs-step-back' : 'cs-step';
   const isMarketplace = formData.type === 'marketplace';
 
   /* ──────────────────────────────────────────────────────────────────────── */
@@ -323,11 +335,18 @@ const CreateStartupProject = () => {
                 </div>
                 <div className="cs-type-grid">
                   <div
-                    className={`cs-type-card${formData.type === 'marketplace' ? ' selected' : ''}`}
-                    onClick={() => set('type', 'marketplace')}
+                    className={`cs-type-card cs-type-card--disabled`}
+                    style={{ cursor: 'not-allowed', opacity: 0.5, position: 'relative' }}
+                    title="Coming Soon — For Sale feature is not available yet"
                   >
+                    <span style={{
+                      position: 'absolute', top: '0.5rem', right: '0.5rem',
+                      background: '#ef4444', color: '#fff',
+                      fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.05em',
+                      padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase'
+                    }}>Coming Soon</span>
                     <div className="cs-type-icon">🏪</div>
-                    <div className="cs-type-name">For Sale</div>
+                    <div className="cs-type-name" style={{ color: '#ef4444' }}>For Sale</div>
                     <div className="cs-type-desc">
                       List your startup on the marketplace to find buyers or investors.
                     </div>
@@ -521,7 +540,6 @@ const CreateStartupProject = () => {
           )}
         </div>
       </div>
-      <Footer />
     </>
   );
 };

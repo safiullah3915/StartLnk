@@ -17,7 +17,7 @@ function LeftImageRightText() {
               SaaS, ecommerce, agencies.
             </p>
             <Link to="/collaboration">
-              <Submit btn1text={"View Listings"}/>
+              <Submit btn1text={"View Listings"} extraClass={styles.viewListingsBtn}/>
             </Link>
           </div>
         </div>

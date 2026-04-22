@@ -6,14 +6,15 @@ import JobCard from "../../components/JobCard/JobCard";
 import styles from "./Collaboration.module.css";
 import { positionAPI, userAPI, recommendationAPI } from '../../utils/apiServices';
 import { useAuth } from '../../contexts/AuthContext';
-import { useRecommendationContext } from '../../hooks/useRecommendationContext';
 import { toast } from 'react-toastify';
 
 const Collaboration = () => {
   const [positions, setPositions] = useState([]);
+  const [allPositions, setAllPositions] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
+  const [showSearch, setShowSearch] = useState(true);
   const [filters, setFilters] = useState({
     category: '',
     field: '',
@@ -24,19 +25,8 @@ const Collaboration = () => {
   const [appliedPositionIds, setAppliedPositionIds] = useState(new Set());
   const [appliedStartupIds, setAppliedStartupIds] = useState(new Set());
   const { isStudent, isInvestor, isEntrepreneur, user } = useAuth();
-  const { storeSession, getRecommendationContext } = useRecommendationContext();
   const positionsPerPage = 9;
   
-  // New states for recommendation mode
-  const [viewMode, setViewMode] = useState('recommended'); // 'recommended' | 'all'
-  const [recommendedStartups, setRecommendedStartups] = useState([]);
-  const [recommendationScores, setRecommendationScores] = useState({});
-  const [recommendationReasons, setRecommendationReasons] = useState({});
-  const [recommendedLoading, setRecommendedLoading] = useState(false);
-  const [recommendedCurrentPage, setRecommendedCurrentPage] = useState(1);
-  const [totalRecommended, setTotalRecommended] = useState(0);
-  const startupsPerPage = 20;
-
   // Categories from backend CATEGORY_CHOICES
   const categories = [
     { value: '', label: 'All Categories' },
@@ -60,27 +50,97 @@ const Collaboration = () => {
     { value: '', label: 'All Phases' },
     { value: 'Idea Stage', label: 'Idea Stage' },
     { value: 'Building MVP', label: 'Building MVP' },
-    { value: 'MVP Stage', label: 'MVP Stage' },
+    { value: 'MVP', label: 'MVP' },
     { value: 'Product Market Fit', label: 'Product Market Fit' },
     { value: 'Fund raising', label: 'Fund raising' },
     { value: 'Growth', label: 'Growth' }
   ];
 
-  useEffect(() => {
-    if (viewMode === 'all') {
-      loadPositions();
-    }
-  }, [filters, viewMode]);
+  const teamSizes = [
+    { value: '', label: 'All Team Sizes' },
+    { value: '1', label: 'Just me' },
+    { value: '2-5', label: '2-5 people' },
+    { value: '6-10', label: '6-10 people' },
+    { value: '11-25', label: '11-25 people' },
+    { value: '25+', label: '25+ people' }
+  ];
 
   useEffect(() => {
-    if (viewMode === 'recommended') {
-      loadRecommendedStartups();
-    }
-  }, [viewMode, filters.query, recommendedCurrentPage]);
+    loadPositions();
+  }, [user, isEntrepreneur]);
 
   useEffect(() => {
-    setRecommendedCurrentPage(1);
-  }, [filters.query]);
+    const normalizeText = (value) =>
+      String(value || '')
+        .trim()
+        .toLowerCase()
+        .replace(/[_-]+/g, ' ')
+        .replace(/\s+/g, ' ');
+
+    const normalizedPhaseMap = {
+      'idea stage': 'idea stage',
+      'building mvp': 'building mvp',
+      'mvp': 'mvp',
+      'mvp stage': 'mvp',
+      'product market fit': 'product market fit',
+      'fund raising': 'fund raising',
+      'fundraising': 'fund raising',
+      'growth': 'growth'
+    };
+
+    const normalizedTeamSizeMap = {
+      '1': '1',
+      'just me': '1',
+      '2 5': '2-5',
+      '2 to 5': '2-5',
+      '2 5 people': '2-5',
+      '2-5': '2-5',
+      '6 10': '6-10',
+      '6 to 10': '6-10',
+      '6 10 people': '6-10',
+      '6-10': '6-10',
+      '11 25': '11-25',
+      '11 to 25': '11-25',
+      '11 25 people': '11-25',
+      '11-25': '11-25',
+      '25+': '25+',
+      '25 plus': '25+',
+      '25 people': '25+',
+      '25+ people': '25+'
+    };
+
+    const filteredPositions = allPositions.filter((position) => {
+      const matchesQuery = !filters.query || [
+        position.title,
+        position.description,
+        position.startup?.title,
+        position.startup?.description
+      ]
+        .filter(Boolean)
+        .some((value) => normalizeText(value).includes(normalizeText(filters.query)));
+
+      const matchesCategory =
+        !filters.category ||
+        normalizeText(position.startup?.category) === normalizeText(filters.category);
+
+      const startupPhase = normalizedPhaseMap[normalizeText(position.startup?.phase)] || normalizeText(position.startup?.phase);
+      const requestedPhase = normalizedPhaseMap[normalizeText(filters.phase)] || normalizeText(filters.phase);
+      const matchesPhase = !filters.phase || startupPhase === requestedPhase;
+
+      const startupTeamSize =
+        normalizedTeamSizeMap[normalizeText(position.startup?.team_size)] ||
+        normalizeText(position.startup?.team_size);
+      const requestedTeamSize =
+        normalizedTeamSizeMap[normalizeText(filters.team_size)] ||
+        normalizeText(filters.team_size);
+      const matchesTeamSize = !filters.team_size || startupTeamSize === requestedTeamSize;
+
+      return matchesQuery && matchesCategory && matchesPhase && matchesTeamSize;
+    });
+
+    setPositions(filteredPositions);
+    setCurrentPage(1);
+  }, [allPositions, filters]);
 
   useEffect(() => {
     const total = Math.max(1, Math.ceil(positions.length / positionsPerPage));
@@ -97,16 +157,7 @@ const Collaboration = () => {
   const loadPositions = async () => {
     try {
       setLoading(true);
-      const params = {};
-      
-      // Add non-empty filter values to params
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value && value.trim()) {
-          params[key] = value;
-        }
-      });
-
-      const response = await positionAPI.getAllPositions(params);
+      const response = await positionAPI.getAllPositions({});
       
       let allPositions = response.data.results || [];
       
@@ -117,123 +168,13 @@ const Collaboration = () => {
         });
       }
       
-      setPositions(allPositions);
-      setCurrentPage(1);
+      setAllPositions(allPositions);
     } catch (error) {
       console.error('Failed to load positions:', error);
+      setAllPositions([]);
       setPositions([]);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const loadRecommendedStartups = async () => {
-    try {
-      setRecommendedLoading(true);
-      const params = {
-        limit: startupsPerPage,
-        offset: (recommendedCurrentPage - 1) * startupsPerPage,
-        require_open_positions: true
-      };
-      
-      // Add search query if present
-      if (filters.query && filters.query.trim()) {
-        params.query = filters.query;
-      }
-      
-      const response = await recommendationAPI.getPersonalizedCollaborationStartups(params);
-      
-      console.log('[Collaboration] Recommended startups response:', response.data);
-      
-      if (response.data.error) {
-        toast.warning('Recommendation service temporarily unavailable. Switching to all opportunities.');
-        setViewMode('all');
-        return;
-      }
-      
-      // Optional UI fallback: if we received IDs but zero hydrated startups, retry once without open-position requirement
-      if ((!response.data.startups || response.data.startups.length === 0) && Array.isArray(response.data.startup_ids) && response.data.startup_ids.length > 0 && params.require_open_positions) {
-        console.log('[Collaboration] Empty hydrated startups with non-empty startup_ids, retrying without require_open_positions');
-        const fallbackResp = await recommendationAPI.getPersonalizedCollaborationStartups({
-          ...params,
-          require_open_positions: false
-        });
-        if (!fallbackResp.data.error) {
-          const fbStartups = fallbackResp.data.startups || [];
-          setRecommendedStartups(fbStartups);
-          setTotalRecommended(
-            typeof fallbackResp.data.total === 'number'
-              ? fallbackResp.data.total
-              : fbStartups.length
-          );
-          setRecommendationScores(fallbackResp.data.scores || {});
-          setRecommendationReasons(fallbackResp.data.match_reasons || {});
-          
-          // Store recommendation session for fallback response too
-          if (fbStartups.length > 0) {
-            const recommendations = fbStartups.map((startup, index) => {
-              const startupKey = startup?.id ? String(startup.id) : String(index);
-              const score = fallbackResp.data.scores?.[startupKey] ?? fallbackResp.data.scores?.[startup?.id] ?? 0.0;
-              return {
-                startup_id: startup.id,
-                rank: index + 1,
-                score: score,
-                method: fallbackResp.data.method_used || 'two_tower'
-              };
-            });
-            
-            storeSession({
-              recommendations: recommendations,
-              useCase: 'developer_startup',
-              method: fallbackResp.data.method_used || 'two_tower',
-              modelVersion: fallbackResp.data.model_version || 'two_tower_v1.0'
-            }).catch(err => {
-              console.error('[Collaboration] Failed to store recommendation session (fallback):', err);
-            });
-          }
-          return;
-        }
-      }
-      
-      const startupsResponse = response.data.startups || [];
-      setRecommendedStartups(startupsResponse);
-      setTotalRecommended(
-        typeof response.data.total === 'number'
-          ? response.data.total
-          : startupsResponse.length
-      );
-      setRecommendationScores(response.data.scores || {});
-      setRecommendationReasons(response.data.match_reasons || {});
-      
-      // Store recommendation session for feedback tracking
-      if (startupsResponse.length > 0) {
-        const recommendations = startupsResponse.map((startup, index) => {
-          const startupKey = startup?.id ? String(startup.id) : String(index);
-          const score = response.data.scores?.[startupKey] ?? response.data.scores?.[startup?.id] ?? 0.0;
-          return {
-            startup_id: startup.id,
-            rank: index + 1,
-            score: score,
-            method: response.data.method_used || 'two_tower'
-          };
-        });
-        
-        storeSession({
-          recommendations: recommendations,
-          useCase: 'developer_startup',
-          method: response.data.method_used || 'two_tower',
-          modelVersion: response.data.model_version || 'two_tower_v1.0'
-        }).catch(err => {
-          console.error('[Collaboration] Failed to store recommendation session:', err);
-          // Don't block UI if session storage fails
-        });
-      }
-    } catch (error) {
-      console.error('Failed to load recommended startups:', error);
-      toast.error('Failed to load personalized recommendations');
-      setRecommendedStartups([]);
-    } finally {
-      setRecommendedLoading(false);
     }
   };
 
@@ -247,6 +188,12 @@ const Collaboration = () => {
   const toggleFilters = () => {
     setShowFilters((prev) => !prev);
   };
+
+  const filterButtonClass = (isActive) =>
+    isActive ? `${styles.filterChip} ${styles.filterChipActive}` : styles.filterChip;
+
+  const toolbarButtonClass = (isActive) =>
+    isActive ? `${styles.toolbarButton} ${styles.toolbarButtonActive}` : styles.toolbarButton;
 
   const checkAppliedPositions = async () => {
     // Only check for students and entrepreneurs (not investors)
@@ -319,192 +266,149 @@ const Collaboration = () => {
     
       <Navbar />
       <div className={styles.marketplace}>
-        <div className={styles.header}>
-          <h2>{viewMode === 'recommended' ? 'Recommended jobs for you' : 'Search all jobs'}</h2>
+        <div className={styles.hero}>
+          <div className={styles.heroCopy}>
+            <h1>Search all jobs</h1>
+            <p>Discover startup roles by keyword, category, phase, and team size.</p>
+          </div>
 
-          {/* Tab System */}
-          <div className={styles.tabContainer}>
+          <div className={styles.heroActions}>
             <button
-              className={`${styles.tab} ${viewMode === 'recommended' ? styles.activeTab : ''}`}
-              onClick={() => {
-                setViewMode('recommended');
-                setRecommendedCurrentPage(1);
-              }}
+              type="button"
+              className={toolbarButtonClass(showSearch)}
+              onClick={() => setShowSearch((prev) => !prev)}
             >
-              Recommended Startups
+              <span className={styles.toolbarIcon} aria-hidden="true">⌕</span>
+              {showSearch ? 'Hide Search' : 'Show Search'}
             </button>
             <button
-              className={`${styles.tab} ${viewMode === 'all' ? styles.activeTab : ''}`}
-              onClick={() => {
-                setViewMode('all');
-                setCurrentPage(1);
-              }}
+              type="button"
+              className={toolbarButtonClass(showFilters)}
+              onClick={toggleFilters}
             >
-              Search All Jobs
+              <span className={styles.toolbarIcon} aria-hidden="true">☷</span>
+              {showFilters ? 'Hide Filters' : 'Show Filters'}
             </button>
+            <div className={styles.resultsCount}>
+              <strong>{positions.length}</strong>
+              <span>Results</span>
+            </div>
           </div>
-
-          {/* Search Bar */}
-          <div className={styles.searchSection}>
-            <input
-              type="text"
-              placeholder={viewMode === 'recommended' ? "Search recommended jobs..." : "Search jobs by title, description, or company..."}
-              value={filters.query}
-              onChange={(e) => handleFilterChange('query', e.target.value)}
-              className={styles.searchInput}
-            />
-          </div>
-
-          {/* Mobile Filter Toggle Button - Only show in 'all' mode */}
-          {viewMode === 'all' && (
-            <button className={styles.filterToggle} onClick={toggleFilters}>
-              {showFilters ? "Hide Filters" : "Show Filters"}
-            </button>
-          )}
-
-          {/* Filters Section - Only show in 'all' mode */}
-          {viewMode === 'all' && (
-            <div
-              className={`${styles.filters} ${
-                showFilters ? styles.showFilters : ""
-              }`}
-            >
-            <select 
-              value={filters.category} 
-              onChange={(e) => handleFilterChange('category', e.target.value)}
-            >
-              {categories.map((cat) => (
-                <option key={cat.value} value={cat.value}>
-                  {cat.label}
-                </option>
-              ))}
-            </select>
-            
-            {/*<input
-              type="text"
-              placeholder="Field/Industry"
-              value={filters.field}
-              onChange={(e) => handleFilterChange('field', e.target.value)}
-              className={styles.filterInput}
-            />*/}
-            
-            <select 
-              value={filters.phase} 
-              onChange={(e) => handleFilterChange('phase', e.target.value)}
-            >
-              {phases.map((phase) => (
-                <option key={phase.value} value={phase.value}>
-                  {phase.label}
-                </option>
-              ))}
-            </select>
-            
-            <select 
-              value={filters.team_size} 
-              onChange={(e) => handleFilterChange('team_size', e.target.value)}
-            >
-              <option value="">All Team Sizes</option>
-              <option value="1">Just me</option>
-              <option value="2-5">2-5 people</option>
-              <option value="6-10">6-10 people</option>
-              <option value="11-25">11-25 people</option>
-              <option value="25+">25+ people</option>
-            </select>
-          </div>
-          )}
         </div>
 
-        {/* Cards Grid - Conditional rendering based on viewMode */}
-        {viewMode === 'recommended' ? (
-          // Recommended Startups View
-          <div className={styles.cardsGrid}>
-            {recommendedLoading ? (
-              <div className={styles.loading}>Loading personalized recommendations...</div>
-            ) : recommendedStartups.length > 0 ? (
-              recommendedStartups.map((startup, index) => {
-                const startupKey = startup?.id ? String(startup.id) : String(index);
-                const score = recommendationScores[startupKey] ?? recommendationScores[startup?.id];
-                const reasons = recommendationReasons[startupKey] ?? recommendationReasons[startup?.id];
-                
-                // Get recommendation context for this startup
-                const recommendationContext = getRecommendationContext(startup.id);
-                
-                return (
-                  <CollaborationCard
-                    key={startup.id || index}
-                    startup={startup}
-                    score={score}
-                    matchReasons={reasons}
-                    appliedPositionIds={appliedPositionIds}
-                    appliedStartupIds={appliedStartupIds}
-                    recommendationContext={recommendationContext}
-                  />
-                );
-              })
-            ) : (
-              <div className={styles.noResults}>
-                <h3>No recommendations available</h3>
-                <p>We're building your personalized recommendations. Try the "Search All Jobs" tab to browse every open role.</p>
+        <div className={styles.searchSection}>
+          {showSearch && (
+            <div className={styles.searchForm}>
+              <div className={styles.mainSearch}>
+                <span className={styles.searchFieldIcon} aria-hidden="true">⌕</span>
+                <input
+                  type="text"
+                  placeholder="Search jobs by title, description, or company..."
+                  value={filters.query}
+                  onChange={(e) => handleFilterChange('query', e.target.value)}
+                  className={styles.searchInput}
+                />
               </div>
-            )}
-          </div>
-        ) : (
-          // All Positions View
-          <div className={styles.cardsGrid}>
-            {loading ? (
-              <div className={styles.loading}>Loading job opportunities...</div>
-            ) : positions.length > 0 ? (
-              paginatedPositions.map((position, index) => {
-                const hasAppliedToPosition = appliedPositionIds.has(position.id);
-                const hasAppliedToStartup = position.startup?.id && appliedStartupIds.has(position.startup.id);
-                return (
-                  <JobCard 
-                    key={position.id || index} 
-                    {...position} 
-                    isApplied={hasAppliedToPosition || hasAppliedToStartup}
-                    hasAppliedToSpecificPosition={hasAppliedToPosition}
-                    hasAppliedToStartup={hasAppliedToStartup && !hasAppliedToPosition}
-                  />
-                );
-              })
-            ) : (
-              <div className={styles.noResults}>
-                <h3>No job opportunities found</h3>
-                <p>Try adjusting your filters or search terms, or check back later for new positions.</p>
+            </div>
+          )}
+
+          {showFilters && (
+            <div className={styles.filtersPanel}>
+              <div className={styles.filterBlock}>
+                <h3>Industry Category</h3>
+                <div className={styles.filterChips}>
+                  {categories.map((cat) => (
+                    <button
+                      key={cat.value || 'all-categories'}
+                      type="button"
+                      className={filterButtonClass(filters.category === cat.value)}
+                      onClick={() => handleFilterChange('category', cat.value)}
+                    >
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-            )}
+
+              <div className={styles.filterBlock}>
+                <h3>Startup Phase</h3>
+                <div className={styles.filterChips}>
+                  {phases.map((phase) => (
+                    <button
+                      key={phase.value || 'all-phases'}
+                      type="button"
+                      className={filterButtonClass(filters.phase === phase.value)}
+                      onClick={() => handleFilterChange('phase', phase.value)}
+                    >
+                      {phase.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className={styles.filterBlock}>
+                <h3>Team Size</h3>
+                <div className={styles.filterChips}>
+                  {teamSizes.map((teamSize) => (
+                    <button
+                      key={teamSize.value || 'all-team-sizes'}
+                      type="button"
+                      className={filterButtonClass(filters.team_size === teamSize.value)}
+                      onClick={() => handleFilterChange('team_size', teamSize.value)}
+                    >
+                      {teamSize.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setFilters({
+                    category: '',
+                    field: '',
+                    phase: '',
+                    team_size: '',
+                    query: ''
+                  });
+                }}
+                className={styles.clearButton}
+              >
+                Clear Filters
+              </button>
+            </div>
+          )}
           </div>
-        )}
+
+        {/* Cards Grid */}
+        <div className={styles.cardsGrid}>
+          {loading ? (
+            <div className={styles.loading}>Loading job opportunities...</div>
+          ) : positions.length > 0 ? (
+            paginatedPositions.map((position, index) => {
+              const hasAppliedToPosition = appliedPositionIds.has(position.id);
+              const hasAppliedToStartup = position.startup?.id && appliedStartupIds.has(position.startup.id);
+              return (
+                <JobCard 
+                  key={position.id || index} 
+                  {...position} 
+                  isApplied={hasAppliedToPosition || hasAppliedToStartup}
+                  hasAppliedToSpecificPosition={hasAppliedToPosition}
+                  hasAppliedToStartup={hasAppliedToStartup && !hasAppliedToPosition}
+                />
+              );
+            })
+          ) : (
+            <div className={styles.noResults}>
+              <h3>No job opportunities found</h3>
+              <p>Try adjusting your filters or search terms, or check back later for new positions.</p>
+            </div>
+          )}
+        </div>
         
-        {/* Pagination for Recommended Mode */}
-        {viewMode === 'recommended' && totalRecommended > startupsPerPage && (
-          <div className={styles.pagination}>
-            <button
-              type="button"
-              onClick={() => {
-                setRecommendedCurrentPage(p => Math.max(1, p - 1));
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              disabled={recommendedCurrentPage === 1}
-            >
-              &larr;
-            </button>
-            <span>Page {recommendedCurrentPage} of {Math.ceil(totalRecommended / startupsPerPage)}</span>
-            <button
-              type="button"
-              onClick={() => {
-                setRecommendedCurrentPage(p => Math.min(Math.ceil(totalRecommended / startupsPerPage), p + 1));
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              disabled={recommendedCurrentPage >= Math.ceil(totalRecommended / startupsPerPage)}
-            >
-              &rarr;
-            </button>
-          </div>
-        )}
-        
-        {/* Pagination for All Mode */}
-        {viewMode === 'all' && positions.length > 0 && totalPages > 1 && (
+        {/* Pagination */}
+        {positions.length > 0 && totalPages > 1 && (
           <div className={styles.pagination}>
             <button
               type="button"

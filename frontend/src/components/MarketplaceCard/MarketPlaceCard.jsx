@@ -58,27 +58,27 @@ const MarketPlaceCard = ({
   return (
     <Link to={getLinkDestination()} className={styles.linkWrapper}>
     <div className={styles.card}>
-
       <div className={styles.cardHeader}>
-        <div className={styles.icon}>
-            <img src="/diamond.svg" alt="" />
-            <img src="/Decentralized Network.svg" alt="" />
-        <h3>{startupData.title || 'Startup Name'}</h3>
+        <div className={styles.titleRow}>
+          <div className={styles.iconBadge}>
+            <img src="/Decentralized Network.svg" alt="" className={styles.iconImage} />
+          </div>
+          <h3>{startupData.title || 'Startup Name'}</h3>
         </div>
         <span className={styles.tag}>{startupData.category || 'Marketplace'}</span>
       </div>
       <p className={styles.description}>{startupData.description || 'No description available'}</p>
       <div className={styles.stats}>
         <div className={styles.statsheading}>
-          Revenue
+          <span className={styles.statsLabel}>Revenue</span>
           <p>{startupData?.revenue && startupData.revenue !== '' ? startupData.revenue : '$0'}</p>
         </div>
         <div className={styles.statsheading}>
-          Profit
+          <span className={styles.statsLabel}>Profit</span>
           <p>{startupData?.profit && startupData.profit !== '' ? startupData.profit : '$0'}</p>
         </div>
         <div className={styles.statsheading}>
-          Asking Price
+          <span className={styles.statsLabel}>Asking Price</span>
           <p>{startupData?.asking_price && startupData.asking_price !== '' ? startupData.asking_price : '$0'}</p>
         </div>
       </div>

@@ -15,6 +15,7 @@ const PositionApplications = () => {
   const [position, setPosition] = useState(null);
   const [startup, setStartup] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [applicationConfirm, setApplicationConfirm] = useState(null);
 
   useEffect(() => {
     loadApplications();
@@ -39,56 +40,43 @@ const PositionApplications = () => {
   };
 
   const handleApproveApplication = async (applicationId) => {
-    console.log('Approve button clicked for application:', applicationId);
-    const confirmed = window.confirm('Are you sure you want to approve this application?');
-    console.log('User confirmed:', confirmed);
-    if (!confirmed) return;
-    
+    setApplicationConfirm({ applicationId, action: 'approve' });
+  };
+
+  const confirmApplicationAction = async () => {
+    if (!applicationConfirm) return;
+
+    const { applicationId, action } = applicationConfirm;
     try {
-      console.log('Sending approve request for application:', applicationId);
-      const response = await applicationAPI.approveApplication(applicationId);
-      console.log('Approve response:', response);
-      toast.success('Application approved successfully! Opening chat...');
-      
-      // Navigate to messaging page with conversation ID
-      const conversationId = response.data?.conversation_id;
-      if (conversationId) {
-        setTimeout(() => {
-          navigate(`/message?conversation=${conversationId}`);
-        }, 1000);
+      if (action === 'approve') {
+        const response = await applicationAPI.approveApplication(applicationId);
+        toast.success('Application approved successfully! Opening chat...');
+
+        const conversationId = response.data?.conversation_id;
+        if (conversationId) {
+          setTimeout(() => {
+            navigate(`/message?conversation=${conversationId}`);
+          }, 1000);
+        } else {
+          setTimeout(() => {
+            navigate('/message');
+          }, 1000);
+        }
       } else {
-        // Fallback: navigate to messages page
-        setTimeout(() => {
-          navigate('/message');
-        }, 1000);
+        await applicationAPI.declineApplication(applicationId);
+        toast.success('Application declined');
       }
-      
+      setApplicationConfirm(null);
       loadApplications();
     } catch (error) {
-      console.error('Failed to approve application:', error);
+      console.error(`Failed to ${action} application:`, error);
       console.error('Error response:', error.response);
-      toast.error(error.response?.data?.detail || 'Failed to approve application');
+      toast.error(error.response?.data?.detail || `Failed to ${action} application`);
     }
   };
 
   const handleDeclineApplication = async (applicationId) => {
-    console.log('Decline button clicked for application:', applicationId);
-    const confirmed = window.confirm('Are you sure you want to decline this application?');
-    console.log('User confirmed:', confirmed);
-    if (!confirmed) return;
-    
-    try {
-      console.log('Sending decline request for application:', applicationId);
-      const response = await applicationAPI.declineApplication(applicationId);
-      console.log('Decline response:', response);
-      toast.success('Application declined');
-      // Reload applications to get updated status
-      await loadApplications();
-    } catch (error) {
-      console.error('Failed to decline application:', error);
-      console.error('Error response:', error.response);
-      toast.error(error.response?.data?.detail || 'Failed to decline application');
-    }
+    setApplicationConfirm({ applicationId, action: 'decline' });
   };
 
   const getStatusBadgeClass = (status) => {
@@ -128,6 +116,59 @@ const PositionApplications = () => {
   return (
     <>
       <Navbar />
+      {applicationConfirm && (
+        <div
+          className={styles.confirmOverlay}
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setApplicationConfirm(null)}
+        >
+          <div className={styles.confirmCard} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.confirmHeader}>
+              <h4 className={styles.confirmTitle}>
+                {applicationConfirm.action === 'approve' ? 'Confirm Approval' : 'Confirm Decline'}
+              </h4>
+              <button
+                type="button"
+                className={styles.confirmClose}
+                onClick={() => setApplicationConfirm(null)}
+              >
+                &times;
+              </button>
+            </div>
+            <div
+              className={`${styles.confirmWarning} ${
+                applicationConfirm.action === 'approve' ? styles.confirmWarningApprove : ''
+              }`}
+            >
+              <span className={styles.confirmWarningIcon}>!</span>
+              <p>
+                {applicationConfirm.action === 'approve'
+                  ? 'Are you sure you want to approve this application?'
+                  : 'Are you sure you want to decline this application?'}
+              </p>
+            </div>
+            <div className={styles.confirmActions}>
+              <button
+                type="button"
+                className={styles.confirmCancel}
+                onClick={() => setApplicationConfirm(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={`${styles.confirmDelete} ${
+                  applicationConfirm.action === 'approve' ? styles.confirmApprove : ''
+                }`}
+                onClick={confirmApplicationAction}
+              >
+                {applicationConfirm.action === 'approve' ? 'Approve Application' : 'Decline Application'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className={styles.container}>
         <div className={styles.header}>
           <div className={styles.headerContent}>

@@ -13,6 +13,7 @@ const StartupApplications = () => {
   const [startup, setStartup] = useState(null);
   const [loading, setLoading] = useState(true);
   const [groupedByPosition, setGroupedByPosition] = useState({});
+  const [applicationConfirm, setApplicationConfirm] = useState(null);
 
   useEffect(() => {
     loadApplications();
@@ -56,31 +57,31 @@ const StartupApplications = () => {
   };
 
   const handleApproveApplication = async (applicationId) => {
-    const confirmed = window.confirm('Are you sure you want to approve this application?');
-    if (!confirmed) return;
+    setApplicationConfirm({ applicationId, action: 'approve' });
+  };
 
+  const confirmApplicationAction = async () => {
+    if (!applicationConfirm) return;
+
+    const { applicationId, action } = applicationConfirm;
     try {
-      await applicationAPI.approveApplication(applicationId);
-      toast.success('Application approved successfully');
+      if (action === 'approve') {
+        await applicationAPI.approveApplication(applicationId);
+        toast.success('Application approved successfully');
+      } else {
+        await applicationAPI.declineApplication(applicationId);
+        toast.success('Application declined');
+      }
+      setApplicationConfirm(null);
       loadApplications();
     } catch (error) {
-      console.error('Failed to approve application:', error);
-      toast.error('Failed to approve application');
+      console.error(`Failed to ${action} application:`, error);
+      toast.error(`Failed to ${action} application`);
     }
   };
 
   const handleDeclineApplication = async (applicationId) => {
-    const confirmed = window.confirm('Are you sure you want to decline this application?');
-    if (!confirmed) return;
-    
-    try {
-      await applicationAPI.declineApplication(applicationId);
-      toast.success('Application declined');
-      loadApplications();
-    } catch (error) {
-      console.error('Failed to decline application:', error);
-      toast.error('Failed to decline application');
-    }
+    setApplicationConfirm({ applicationId, action: 'decline' });
   };
 
   const getStatusBadgeClass = (status) => {
@@ -120,6 +121,59 @@ const StartupApplications = () => {
   return (
     <>
       <Navbar />
+      {applicationConfirm && (
+        <div
+          className={styles.confirmOverlay}
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setApplicationConfirm(null)}
+        >
+          <div className={styles.confirmCard} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.confirmHeader}>
+              <h4 className={styles.confirmTitle}>
+                {applicationConfirm.action === 'approve' ? 'Confirm Approval' : 'Confirm Decline'}
+              </h4>
+              <button
+                type="button"
+                className={styles.confirmClose}
+                onClick={() => setApplicationConfirm(null)}
+              >
+                &times;
+              </button>
+            </div>
+            <div
+              className={`${styles.confirmWarning} ${
+                applicationConfirm.action === 'approve' ? styles.confirmWarningApprove : ''
+              }`}
+            >
+              <span className={styles.confirmWarningIcon}>!</span>
+              <p>
+                {applicationConfirm.action === 'approve'
+                  ? 'Are you sure you want to approve this application?'
+                  : 'Are you sure you want to decline this application?'}
+              </p>
+            </div>
+            <div className={styles.confirmActions}>
+              <button
+                type="button"
+                className={styles.confirmCancel}
+                onClick={() => setApplicationConfirm(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={`${styles.confirmDelete} ${
+                  applicationConfirm.action === 'approve' ? styles.confirmApprove : ''
+                }`}
+                onClick={confirmApplicationAction}
+              >
+                {applicationConfirm.action === 'approve' ? 'Approve Application' : 'Decline Application'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className={styles.container}>
         <div className={styles.header}>
           <div className={styles.headerContent}>

@@ -97,13 +97,13 @@
   margin-bottom: 1rem;
   color: #666;
 }
-.metricLabel2{
+.metricLabel2{ align-items: center; justify-content: center; gap: 0.5rem;
   display: flex;
   
 }
 .metricLabel2 img{
-padding-right: 1rem;
-width: 2rem;
+
+height: 1.5rem; object-fit: contain; width: 1.5rem;
 }
 .metricValue {
   font-weight: 600;
@@ -590,13 +590,259 @@ width: 2rem;
 .loading {
   color: #666;
 }
+.formRow {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.convertForm .formGroup {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.convertForm label {
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.convertForm input {
+  padding: 10px;
+  border: 2px solid #d1d5db;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  transition: border-color 0.3s ease;
+}
+
+.convertForm input:focus {
+  outline: none;
+  border-color: #25224A;
+}
+
+.convertForm input:disabled {
+  background: #f3f4f6;
+  cursor: not-allowed;
+}
+
+.sectionSubtitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #374151;
+  margin: 1.5rem 0 1rem 0;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.cancelButton,
+.confirmButton {
+  padding: 10px 24px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.cancelButton {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.cancelButton:hover:not(:disabled) {
+  background: #d1d5db;
+}
+
+.confirmButton {
+  background: #059669;
+  color: white;
+}
+
+.confirmButton:hover:not(:disabled) {
+  background: #047857;
+}
+
+.cancelButton:disabled,
+.confirmButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Progress Overlay for conversion */
+.progressOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+  backdrop-filter: blur(5px);
+}
+
+.progressModal {
+  background: white;
+  padding: 2rem 3rem;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  min-width: 200px;
+}
+
+.progressSpinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #e5e7eb;
+  border-radius: 50%;
+  border-top-color: #2563eb;
+  animation: spin 1s linear infinite;
+}
+
+.progressText {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Financial Chart Container */
+.chartContainer {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+.chartContainer *:focus,
+.recharts-wrapper *:focus {
+  outline: none !important;
+}
+
+.chartContainer .sectionTitle {
+  margin-bottom: 1.5rem;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+/* Charts Wrapper */
+.chartsWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+  width: 100%;
+}
+
+.chartSection {
+  width: 100%;
+  background: #f9fafb;
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.chartTitle {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.loading,
+.error {
+  text-align: center;
+  padding: 2rem;
+  font-size: 1.1rem;
+}
+
+.loading {
+  color: #666;
+}
 
 .error {
   color: #dc2626;
 }
 
+/* Icon Buttons */
+.iconBtn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+}
+.iconBtn:hover {
+  transform: scale(1.1);
+}
+.likeBtn, .dislikeBtn, .favoriteBtn { color: #9ca3af; }
+.activeLike { color: #10b981; }
+.activeDislike { color: #374151; }
+.activeFavorite { color: #f43f5e; }
+
+/* Collaboration Detail Typography */
+.collabSectionTitle {
+  font-size: 1.05rem;
+  letter-spacing: 0.05em;
+  font-weight: 800;
+  color: #0f172a;
+}
+.collabMetricLabel {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  margin-bottom: 0.6rem;
+  display: block;
+}
+.collabMetricValue {
+  font-weight: 800;
+  font-size: 1.45rem;
+  color: #0f172a;
+  margin: 0;
+  padding: 0;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
+  .container {
+    margin-top: 5rem;
+  }
+
   /* .performance {
     flex-direction: column;
   } */
@@ -614,10 +860,101 @@ width: 2rem;
   }
 }
 @media (max-width: 880px) {
-  .container , .tags , .performance{
+  .container , .performance{
     justify-content: center;
-    /* background-color: red; */
     align-items: center;
     text-align: center;
   }
+
+  .tags {
+    justify-content: flex-start;
+  }
+  
+  .headerSection {
+    align-items: flex-start;
+  }
+
+  .title {
+    text-align: left;
+    font-size: 2.2rem;
+    font-weight: 900;
+    line-height: 1.1;
+    color: #0f172a;
+  }
+
+  .description, .sectionTitle {
+    text-align: left;
+  }
+
+  .headerSection .actionButtons {
+    padding-top: 0.5rem;
+  }
+  
+  .collabSectionTitle {
+    text-align: center;
+    margin-top: 3rem;
+    margin-bottom: 2.5rem;
+  }
+  
+  .collabPerformance {
+    flex-direction: column;
+    gap: 2.5rem;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .financePerformanceContainer {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem 1rem;
+    align-items: flex-start;
+    justify-content: flex-start;
+    text-align: left;
+  }
+  
+  .fullWidthMetric {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Finance Performance Specific UI */
+.financePerformanceContainer {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2.5rem 1rem;
+  margin-bottom: 2rem;
+  align-items: flex-start;
+  justify-content: flex-start;
+  text-align: left;
+}
+.financeMetricLabel {
+  font-size: 0.70rem;
+  font-weight: 800;
+  color: #94a3b8;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+  display: inline-block;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 0.2rem;
+  min-width: 6rem;
+}
+.financeMetricValueTextOnly,
+.financeMetricValue {
+  font-weight: 900;
+  font-size: 1.15rem;
+  color: #0f172a;
+  margin: 0;
+  padding: 0;
+}
+.financeMetricContainer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.5rem;
+}
+.financeMetricContainer img {
+  width: 1.25rem;
+  height: 1.25rem;
+  object-fit: contain;
 }
