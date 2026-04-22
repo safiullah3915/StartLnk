@@ -1,4 +1,4 @@
-from django.apps import AppConfig
+﻿from django.apps import AppConfig
 import logging
 
 logger = logging.getLogger(__name__)
@@ -18,7 +18,7 @@ class ApiConfig(AppConfig):
 
     def ready(self):
         """Called when Django starts"""
-        # Enable SQLite WAL mode for all new connections —
+        # Enable SQLite WAL mode for all new connections â€”
         # this allows concurrent reads while a write is in progress,
         # preventing "database is locked" errors during signup.
         from django.db.backends.signals import connection_created
@@ -27,11 +27,3 @@ class ApiConfig(AppConfig):
         # Import signals
         import api.signals  # noqa
 
-        # Start scheduler only if not in a management command or migration
-        import sys
-        if 'runserver' in sys.argv or 'uwsgi' in sys.argv or 'gunicorn' in sys.argv:
-            try:
-                from api.scheduler import start_scheduler
-                start_scheduler()
-            except Exception as e:
-                logger.warning(f"Could not start scheduler: {e}")
