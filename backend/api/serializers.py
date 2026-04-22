@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 import bcrypt
 from .models import Startup, StartupTag, Position, Application, Notification, Favorite, Interest
 from .messaging_models import Conversation, Message, UserProfile, FileUpload
-from .recommendation_models import UserInteraction, UserOnboardingPreferences, StartupTrendingMetrics, RecommendationModel
+from .recommendation_models import UserInteraction, UserOnboardingPreferences
 
 User = get_user_model()
 
@@ -490,8 +490,9 @@ class UserProfileSerializer(serializers.ModelSerializer):
         model = UserProfile
         fields = (
             'id', 'user', 'bio', 'location', 'website', 'profile_picture',
-            'is_public', 'selected_regions', 'skills', 'experience',
-            'references', 'created_at', 'updated_at'
+            'original_profile_picture', 'profile_picture_crop',
+            'is_public', 'github_url', 'linkedin_url', 'selected_regions',
+            'skills', 'experience', 'references', 'created_at', 'updated_at'
         )
 
 
@@ -501,8 +502,10 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserProfile
         fields = (
-            'bio', 'location', 'website', 'profile_picture', 'is_public',
-            'selected_regions', 'skills', 'experience', 'references'
+            'bio', 'location', 'website', 'profile_picture',
+            'original_profile_picture', 'profile_picture_crop',
+            'is_public', 'github_url', 'linkedin_url', 'selected_regions',
+            'skills', 'experience', 'references'
         )
     
     def update(self, instance, validated_data):
@@ -510,6 +513,9 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
         if 'profile_picture' in validated_data:
             if instance.profile_picture:
                 instance.profile_picture.delete(save=False)
+        if 'original_profile_picture' in validated_data:
+            if instance.original_profile_picture:
+                instance.original_profile_picture.delete(save=False)
         return super().update(instance, validated_data)
 
 

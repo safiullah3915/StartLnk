@@ -1,15 +1,20 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSpring, animated } from 'react-spring';
-import {Navbar} from "../../components/Navbar/Navbar"
+import { Navbar } from "../../components/Navbar/Navbar"
 import { toast } from 'react-toastify';
 import { useAuth } from '../../contexts/AuthContext';
-import { userAPI, applicationAPI } from '../../utils/apiServices';
+import { userAPI, applicationAPI, uploadAPI } from '../../utils/apiServices';
+import Cropper from 'react-easy-crop';
+import getCroppedImg from '../../utils/cropImage';
 
 // This is the main component that renders the settings page.
 const App = () => {
-  const { user, isStudent, isEntrepreneur, isInvestor, logout } = useAuth();
+  const { user, isStudent, isEntrepreneur, isInvestor, logout, loading: authLoading } = useAuth();
   const [isProfilePublic, setIsProfilePublic] = useState(false);
-  const [profileDescription, setProfileDescription] = useState('');
+  const [profileDescription, setProfileDescription] = useState(null);
+  const [githubUrl, setGithubUrl] = useState('');
+  const [linkedinUrl, setLinkedinUrl] = useState('');
+  const [portfolioUrl, setPortfolioUrl] = useState('');
   const [references, setReferences] = useState([]);
   const [skills, setSkills] = useState([]);
   const [experiences, setExperiences] = useState([]);
@@ -32,6 +37,21 @@ const App = () => {
   const [interests, setInterests] = useState([]);
   const [profileStats, setProfileStats] = useState({});
   const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [bannerState, setBannerState] = useState({ type: null, message: '' });
+  const [profilePicture, setProfilePicture] = useState(null);
+  const [isUploadingPicture, setIsUploadingPicture] = useState(false);
+  const fileInputRef = useRef(null);
+
+  // Crop Modal States
+  const [isCropModalOpen, setIsCropModalOpen] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+  const [originalFileObject, setOriginalFileObject] = useState(null);
+  const [dbOriginalPicture, setDbOriginalPicture] = useState(null);
+  const [cropError, setCropError] = useState('');
   
   // Collapse/expand state for form sections
   const [isReferencesFormOpen, setIsReferencesFormOpen] = useState(false);
@@ -51,10 +71,18 @@ const App = () => {
       
       const data = profileResponse.data;
       
-      // Update profile state
-      if (data.profile) {
+        if (data.profile) {
         setIsProfilePublic(data.profile.is_public || false);
         setProfileDescription(data.profile.bio || data.profile.description || '');
+        setProfilePicture(data.profile.profile_picture || null);
+        setDbOriginalPicture(data.profile.original_profile_picture || null);
+        if (data.profile.profile_picture_crop) {
+          setCrop(data.profile.profile_picture_crop.crop || { x: 0, y: 0 });
+          setZoom(data.profile.profile_picture_crop.zoom || 1);
+        }
+        setGithubUrl(data.profile.github_url || '');
+        setLinkedinUrl(data.profile.linkedin_url || '');
+        setPortfolioUrl(data.profile.website || '');
         setSkills(data.profile.skills || []);
         setExperiences(data.profile.experience || []);
         setReferences(data.profile.references || []);
@@ -93,7 +121,7 @@ const App = () => {
     config: { duration: 500 },
   });
 
-  // Handle the toggle for making the profile public.
+  // Toggle just updates local state — persisted on Finalize Profile
   const handleToggle = () => {
     setIsProfilePublic(prev => !prev);
   };
@@ -121,22 +149,170 @@ const App = () => {
     }
   };
 
+  const formatUrl = (url) => {
+    if (!url || typeof url !== 'string' || url.trim() === '') return '';
+    const trimmed = url.trim();
+    if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+      return `https://${trimmed}`;
+    }
+    return trimmed;
+  };
+
+  const handleProfilePictureClick = () => {
+    if (!isUploadingPicture) {
+      if (dbOriginalPicture) {
+        // If an original picture exists, open the crop modal with it
+        setCropImageSrc(dbOriginalPicture.startsWith('http') ? dbOriginalPicture : `http://localhost:8000${dbOriginalPicture}`);
+        setCropError('');
+        setIsCropModalOpen(true);
+      } else {
+        // Otherwise, open file selector directly
+        fileInputRef.current?.click();
+      }
+    }
+  };
+
+  const handleFileChange = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select a valid image file');
+      return;
+    }
+
+    // Read full file to string for Cropper
+    const reader = new FileReader();
+    reader.addEventListener('load', () => {
+      setCropImageSrc(reader.result);
+      setOriginalFileObject(file);
+      setCrop({ x: 0, y: 0 });
+      setZoom(1);
+      setCropError('');
+      setIsCropModalOpen(true);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    });
+    reader.readAsDataURL(file);
+  };
+
+  const onCropComplete = useCallback((croppedArea, croppedAreaPixels) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  }, []);
+
+  const handleCropSave = async () => {
+    setIsUploadingPicture(true);
+    setCropError('');
+    try {
+      if (!croppedAreaPixels) throw new Error("Please wait for the image to load fully.");
+      // 1. Physically crop the image using canvas
+      const croppedBlob = await getCroppedImg(cropImageSrc, croppedAreaPixels);
+      if (!croppedBlob) throw new Error("Failed to process image block. Try another image.");
+      
+      // Some mobile webviews crash on `new File()`, wrap it safely:
+      let croppedFile;
+      try {
+        croppedFile = new File([croppedBlob], 'profile_cropped.jpg', { type: 'image/jpeg' });
+      } catch (e) {
+        // Fallback for older browsers: use the blob directly, uploadAPI handles formData
+        croppedFile = croppedBlob; 
+        croppedFile.name = 'profile_cropped.jpg';
+      }
+      
+      const cropData = { crop, zoom };
+      
+      const response = await uploadAPI.uploadProfilePicture(croppedFile, originalFileObject, cropData);
+      
+      if (response.data && response.data.file_url) {
+        setProfilePicture(response.data.file_url);
+        toast.success('Profile picture updated successfully');
+        loadUserData(); 
+        setIsCropModalOpen(false);
+      } else {
+        throw new Error("Invalid response from server");
+      }
+    } catch (error) {
+      console.error('Failed to crop and upload:', error);
+      let userMsg = 'An unexpected error occurred. Please try again later.';
+      const rawMsg = error.message ? error.message.toLowerCase() : '';
+      
+      if (rawMsg.includes('timeout') || error.code === 'ECONNABORTED') {
+        userMsg = 'Upload took too long due to a slow connection. Please try again.';
+      } else if (rawMsg.includes('network error') || !window.navigator.onLine) {
+        userMsg = 'Unable to connect to the server. Please check your internet connection.';
+      } else if (error.response && error.response.status >= 500) {
+        userMsg = 'Our servers are currently experiencing issues. Please try again later.';
+      } else if (error.response && error.response.status === 413) {
+        userMsg = 'The image file is too large. Please select a smaller photo.';
+      } else if (error.message && !error.response) {
+        // Safe standard Javascript errors if thrown locally
+        userMsg = error.message;
+      }
+      
+      setCropError(userMsg);
+    } finally {
+      setIsUploadingPicture(false);
+    }
+  };
+
+  const handleRemovePicture = async () => {
+    // Save a blank profile update to remove picture
+    // But since uploadAPI doesn't have a specific `deleteProfilePicture` endpoint,
+    // we can use `userAPI.updateProfileData({ profile_picture: null })`
+    // However, Django's REST framework handles wiping fields using PATCH nicely
+    try {
+      setIsUploadingPicture(true);
+      await userAPI.updateProfileData({ profile_picture: null, original_profile_picture: null, profile_picture_crop: {} });
+      setProfilePicture(null);
+      setDbOriginalPicture(null);
+      setIsCropModalOpen(false);
+      toast.success('Profile picture removed');
+    } catch (error) {
+      console.error('Failed to remove picture:', error);
+      toast.error('Failed to remove picture');
+    } finally {
+      setIsUploadingPicture(false);
+    }
+  };
+
   const handleSave = async () => {
+    if (isSaving) return;
+    setIsSaving(true);
+    setBannerState({ type: null, message: '' });
+    
     try {
       const profileData = {
         is_public: isProfilePublic,
-        bio: profileDescription,
+        bio: profileDescription || '',
+        github_url: formatUrl(githubUrl),
+        linkedin_url: formatUrl(linkedinUrl),
+        website: formatUrl(portfolioUrl),
         skills: skills,
         experience: experiences,
         references: references
       };
 
       await userAPI.updateProfileData(profileData);
-      
-      toast.success('Profile updated successfully');
+      setBannerState({ type: 'success', message: 'Profile saved successfully' });
+      setTimeout(() => setBannerState({ type: null, message: '' }), 5000);
     } catch (error) {
       console.error('Failed to update profile:', error);
-      toast.error('Failed to update profile');
+      let errMsg = 'Failed to save profile. Please check your data and try again.';
+      if (error.response && error.response.data) {
+        const data = error.response.data;
+        if (typeof data === 'object') {
+          const firstKey = Object.keys(data)[0];
+          if (firstKey && Array.isArray(data[firstKey])) {
+            errMsg = `${firstKey}: ${data[firstKey][0]}`;
+          } else if (data.detail) {
+            errMsg = data.detail;
+          }
+        }
+      }
+      setBannerState({ type: 'error', message: errMsg });
+      setTimeout(() => setBannerState({ type: null, message: '' }), 6000);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -150,7 +326,7 @@ const App = () => {
     updater(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleAddItem = async (type) => {
+  const handleAddItem = (type) => {
     const { title, description } =
       type === 'references'
         ? newReference
@@ -165,48 +341,27 @@ const App = () => {
 
     const newItem = { title: title.trim(), description: description.trim() };
 
-    let updatedReferences = references;
-    let updatedSkills = skills;
-    let updatedExperiences = experiences;
-
-    try {
     if (type === 'references') {
-        updatedReferences = [...references, newItem];
-        setReferences(updatedReferences);
-        setReferencesPage(Math.ceil(updatedReferences.length / PAGE_SIZE));
-        setNewReference({ title: '', description: '' });
+      const updated = [...references, newItem];
+      setReferences(updated);
+      setReferencesPage(Math.ceil(updated.length / PAGE_SIZE));
+      setNewReference({ title: '', description: '' });
     } else if (type === 'skills') {
-        updatedSkills = [...skills, newItem];
-        setSkills(updatedSkills);
-        setSkillsPage(Math.ceil(updatedSkills.length / PAGE_SIZE));
-        setNewSkill({ title: '', description: '' });
-      } else {
-        updatedExperiences = [...experiences, newItem];
-        setExperiences(updatedExperiences);
-        setExperiencesPage(Math.ceil(updatedExperiences.length / PAGE_SIZE));
-        setNewExperience({ title: '', description: '' });
-      }
-
-      await persistProfileCollections(updatedReferences, updatedSkills, updatedExperiences);
-      toast.success('Entry added successfully');
-    } catch (error) {
-      console.error('Failed to add entry:', error);
-      toast.error('Failed to add entry');
-      loadUserData();
+      const updated = [...skills, newItem];
+      setSkills(updated);
+      setSkillsPage(Math.ceil(updated.length / PAGE_SIZE));
+      setNewSkill({ title: '', description: '' });
+    } else {
+      const updated = [...experiences, newItem];
+      setExperiences(updated);
+      setExperiencesPage(Math.ceil(updated.length / PAGE_SIZE));
+      setNewExperience({ title: '', description: '' });
     }
+    toast.success('Entry added — press Finalize Profile to save.');
   };
 
-  const persistProfileCollections = useCallback(async (updatedReferences, updatedSkills, updatedExperiences) => {
-    const payload = {
-      is_public: isProfilePublic,
-      bio: profileDescription,
-      references: updatedReferences,
-      skills: updatedSkills,
-      experience: updatedExperiences
-    };
-
-    await userAPI.updateProfileData(payload);
-  }, [isProfilePublic]);
+  // persistProfileCollections is now a no-op — all saves go through Finalize Profile
+  const persistProfileCollections = useCallback(() => {}, []);
 
   const openDeleteConfirm = (type, index) => setDeleteConfirm({ type, index });
 
@@ -217,35 +372,21 @@ const App = () => {
     handleRemoveItem(type, index);
   };
 
-  const handleRemoveItem = async (type, index) => {
-
-    let updatedReferences = references;
-    let updatedSkills = skills;
-    let updatedExperiences = experiences;
-
-    try {
+  const handleRemoveItem = (type, index) => {
     if (type === 'references') {
-        updatedReferences = references.filter((_, i) => i !== index);
-        setReferences(updatedReferences);
-        setReferencesPage(prev => Math.min(prev, Math.max(1, Math.ceil(updatedReferences.length / 3))));
+      const updated = references.filter((_, i) => i !== index);
+      setReferences(updated);
+      setReferencesPage(prev => Math.min(prev, Math.max(1, Math.ceil(updated.length / 3))));
     } else if (type === 'skills') {
-        updatedSkills = skills.filter((_, i) => i !== index);
-        setSkills(updatedSkills);
-        setSkillsPage(prev => Math.min(prev, Math.max(1, Math.ceil(updatedSkills.length / 3))));
-      } else {
-        updatedExperiences = experiences.filter((_, i) => i !== index);
-        setExperiences(updatedExperiences);
-        setExperiencesPage(prev => Math.min(prev, Math.max(1, Math.ceil(updatedExperiences.length / 3))));
-      }
-
-      await persistProfileCollections(updatedReferences, updatedSkills, updatedExperiences);
-      toast.success('Entry removed successfully');
-    } catch (error) {
-      console.error('Failed to remove entry:', error);
-      toast.error('Failed to remove entry');
-      // Reload the latest data to keep UI in sync with the server
-      loadUserData();
+      const updated = skills.filter((_, i) => i !== index);
+      setSkills(updated);
+      setSkillsPage(prev => Math.min(prev, Math.max(1, Math.ceil(updated.length / 3))));
+    } else {
+      const updated = experiences.filter((_, i) => i !== index);
+      setExperiences(updated);
+      setExperiencesPage(prev => Math.min(prev, Math.max(1, Math.ceil(updated.length / 3))));
     }
+    toast.success('Entry removed — press Finalize Profile to save.');
   };
 
   const handleEditItem = (type, index) => {
@@ -281,67 +422,40 @@ const App = () => {
     setEditForm({ title: '', description: '' });
   };
 
-  const handleSaveEdit = async (event) => {
+  const handleSaveEdit = (event) => {
     event.preventDefault();
     if (!editingItem) return;
 
     const title = editForm.title.trim();
     const description = editForm.description.trim();
 
-    if (!title || !description) {
+    if ((editingItem.type !== 'profile_description' && !title) || !description) {
       toast.error('Both fields are required.');
       return;
     }
 
-    setIsEditSaving(true);
-
-    let updatedReferences = references;
-    let updatedSkills = skills;
-    let updatedExperiences = experiences;
-
-    try {
-      if (editingItem.type === 'profile_description') {
-        setProfileDescription(description);
-        await userAPI.updateProfileData({
-          is_public: isProfilePublic,
-          bio: description,
-          skills: skills,
-          experience: experiences,
-          references: references
-        });
-        toast.success('Description updated successfully');
-        closeEditModal();
-        setIsEditSaving(false);
-        return;
-      }
-
-      if (editingItem.type === 'references') {
-        updatedReferences = references.map((item, i) =>
-          i === editingItem.index ? { ...item, title, description } : item
-        );
-        setReferences(updatedReferences);
-      } else if (editingItem.type === 'skills') {
-        updatedSkills = skills.map((item, i) =>
-          i === editingItem.index ? { ...item, title, description } : item
-        );
-        setSkills(updatedSkills);
-      } else {
-        updatedExperiences = experiences.map((item, i) =>
-          i === editingItem.index ? { ...item, title, description } : item
-        );
-        setExperiences(updatedExperiences);
-      }
-
-      await persistProfileCollections(updatedReferences, updatedSkills, updatedExperiences);
-      toast.success('Entry updated successfully');
+    if (editingItem.type === 'profile_description') {
+      setProfileDescription(description);
+      toast.success('Bio updated — press Finalize Profile to save.');
       closeEditModal();
-    } catch (error) {
-      console.error('Failed to update entry:', error);
-      toast.error('Failed to update entry');
-      loadUserData();
-    } finally {
-      setIsEditSaving(false);
+      return;
     }
+
+    if (editingItem.type === 'references') {
+      setReferences(prev => prev.map((item, i) =>
+        i === editingItem.index ? { ...item, title, description } : item
+      ));
+    } else if (editingItem.type === 'skills') {
+      setSkills(prev => prev.map((item, i) =>
+        i === editingItem.index ? { ...item, title, description } : item
+      ));
+    } else {
+      setExperiences(prev => prev.map((item, i) =>
+        i === editingItem.index ? { ...item, title, description } : item
+      ));
+    }
+    toast.success('Entry updated — press Finalize Profile to save.');
+    closeEditModal();
   };
 
   const paginateList = useCallback((list, page) => {
@@ -896,6 +1010,52 @@ const App = () => {
           margin-top: 1rem;
           font-weight: 700;
         }
+        .finalize-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.5rem;
+        }
+        .finalize-spinner {
+          display: inline-block;
+          width: 1rem;
+          height: 1rem;
+          border: 2px solid rgba(0,0,0,0.2);
+          border-left-color: #000;
+          border-radius: 50%;
+          animation: spin 0.75s linear infinite;
+          flex-shrink: 0;
+        }
+        .save-success-banner {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          margin-top: 1rem;
+          padding: 0.6rem 1.25rem;
+          border-radius: 999px;
+          background: rgba(16, 185, 129, 0.12);
+          border: 1px solid rgba(16, 185, 129, 0.35);
+          color: #34D399;
+          font-size: 0.85rem;
+          font-weight: 600;
+          letter-spacing: 0.02em;
+          animation: fadeIn 0.3s ease;
+        }
+        .save-error-banner {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          margin-top: 1rem;
+          padding: 0.6rem 1.25rem;
+          border-radius: 999px;
+          background: rgba(239, 68, 68, 0.12);
+          border: 1px solid rgba(239, 68, 68, 0.35);
+          color: #F87171;
+          font-size: 0.85rem;
+          font-weight: 600;
+          letter-spacing: 0.02em;
+          animation: fadeIn 0.3s ease;
+        }
 
         /* ── Modals (Edit & Delete) ── */
         .modal-overlay {
@@ -952,26 +1112,187 @@ const App = () => {
           background: linear-gradient(135deg, #B91C1C, #991B1B); transform: translateY(-1px);
         }
 
+        .social-icons-row {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          gap: 1.25rem;
+          padding: 1rem 0 1.25rem 0;
+          border-top: 1px solid rgba(255,255,255,0.06);
+          margin-top: 0.5rem;
+        }
+        .social-icon-link {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 2.4rem;
+          height: 2.4rem;
+          border-radius: 50%;
+          background: rgba(255,255,255,0.05);
+          border: 1px solid rgba(255,255,255,0.08);
+          transition: all 0.2s;
+          text-decoration: none;
+        }
+        .social-icon-link--active {
+          color: #E5E7EB;
+          cursor: pointer;
+        }
+        .social-icon-link--active:hover {
+          background: rgba(255,255,255,0.12);
+          transform: translateY(-2px);
+          border-color: rgba(255,255,255,0.2);
+        }
+        .social-icon-link--disabled {
+          color: #374151;
+          cursor: default;
+          opacity: 0.4;
+        }
+
+        /* ── Crop Modal ── */
+        .crop-modal-card {
+          background: #151828; border: 1px solid #2A2F45;
+          border-radius: 1.25rem; padding: 1.75rem; width: 100%; max-width: 500px;
+          box-shadow: 0 25px 50px -12px rgba(0,0,0,0.6);
+          position: relative;
+        }
+        .crop-container {
+          position: relative;
+          width: 100%;
+          height: 300px;
+          background: #0A0C10;
+          border-radius: 0.75rem;
+          overflow: hidden;
+          margin-bottom: 1.5rem;
+        }
+        .crop-controls {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+          margin-bottom: 1.5rem;
+        }
+        .crop-controls input[type="range"] {
+          flex: 1;
+        }
+        .crop-modal-actions {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 0.5rem;
+          width: 100%;
+        }
+        .crop-btn-save, .crop-btn-remove, .crop-btn-new {
+          flex: 1; 
+          padding: 0.6rem 0.25rem; 
+          border-radius: 0.5rem;
+          font-weight: 600; 
+          cursor: pointer; 
+          transition: 0.2s;
+          font-size: 0.85rem;
+          text-align: center;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          white-space: nowrap;
+        }
+        .crop-btn-save { background: #3B82F6; color: #FFF; border: none; }
+        .crop-btn-save:hover:not(:disabled) { background: #2563EB; }
+        .crop-btn-remove { background: rgba(239, 68, 68, 0.1); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.2); }
+        .crop-btn-remove:hover:not(:disabled) { background: rgba(239, 68, 68, 0.2); }
+        .crop-btn-new { background: #1F2937; color: #E5E7EB; border: 1px solid #374151; }
+        .crop-btn-new:hover:not(:disabled) { background: #374151; }
+
+        .online-presence-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr 1fr;
+          gap: 1rem;
+        }
+        @media (max-width: 640px) {
+          .online-presence-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+        .online-presence-hint {
+          font-size: 0.78rem;
+          color: #4B5563;
+          font-style: italic;
+          text-align: center;
+          margin: 0.75rem 0 0 0;
+        }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .page-loader-overlay {
+          position: fixed;
+          inset: 0;
+          z-index: 9999;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(10, 11, 16, 0.75);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+        }
+        .page-loader-spinner {
+          width: 3.5rem;
+          height: 3.5rem;
+          border: 4px solid rgba(139, 92, 246, 0.2);
+          border-left-color: #8B5CF6;
+          border-radius: 50%;
+          animation: spin 0.9s linear infinite;
+        }
         `}
       </style>
       <Navbar />
+      {/* Page-level loader — only shown after auth resolves, so it never overlaps the global auth spinner */}
+      {!authLoading && loading && (
+        <div className="page-loader-overlay">
+          <div className="page-loader-spinner" />
+        </div>
+      )}
       <animated.div style={fade} className="container">
         <div className="main-layout">
           
           {/* ── Left Panel ── */}
           <div className="left-panel">
             <div className="profile-card">
-              <div className="profile-picture">
+              <div 
+                className="profile-picture" 
+                onClick={handleProfilePictureClick}
+                style={{ cursor: isUploadingPicture ? 'not-allowed' : 'pointer', position: 'relative' }}
+              >
                 <div className="profile-picture-inner">
-                  {user?.username?.charAt(0)?.toUpperCase() || 'U'}
+                  {isUploadingPicture ? (
+                    <span className="finalize-spinner" style={{ borderColor: 'rgba(255,255,255,0.2)', borderLeftColor: '#fff', width: '2rem', height: '2rem' }} />
+                  ) : profilePicture ? (
+                    <img 
+                      src={profilePicture.startsWith('http') ? profilePicture : `http://localhost:8000${profilePicture}`} 
+                      alt="Profile" 
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        setProfilePicture(null); // Fallback to initials if image fails to load
+                      }}
+                    />
+                  ) : (
+                    user?.username?.charAt(0)?.toUpperCase() || 'U'
+                  )}
                 </div>
-                <div className="edit-plus-badge" title="Edit Profile Picture">+</div>
+                {!isUploadingPicture && (
+                  <div className="edit-plus-badge" title="Change Profile Picture">+</div>
+                )}
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  onChange={handleFileChange} 
+                  accept="image/*" 
+                  style={{ display: 'none' }} 
+                />
               </div>
               <h2 className="profile-name">{user?.username || 'Unknown User'}</h2>
               <div className="role-badge">{user?.role || 'MEMBER'}</div>
               <p className="profile-desc">
-                {profileDescription || (user ? `${user.username} is a ${user.role} on our platform.` : 'No user information available.')}
+                {profileDescription === null
+                  ? (user ? `${user.username} is a ${user.role} on our platform.` : 'No user information available.')
+                  : profileDescription || (user ? `${user.username} is a ${user.role} on our platform.` : 'No user information available.')}
                 <button type="button" className="desc-edit-btn" title="Edit description" onClick={() => handleEditItem('profile_description', 0)}>✏️</button>
               </p>
               
@@ -1017,6 +1338,37 @@ const App = () => {
                 )}
               </div>
               
+              {/* Social / Online Presence Icons */}
+              <div className="social-icons-row">
+                {githubUrl ? (
+                  <a href={githubUrl.startsWith('http') ? githubUrl : `https://${githubUrl}`} target="_blank" rel="noopener noreferrer" className="social-icon-link social-icon-link--active" title="GitHub">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                  </a>
+                ) : (
+                  <span className="social-icon-link social-icon-link--disabled" title="Add your GitHub link">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                  </span>
+                )}
+                {linkedinUrl ? (
+                  <a href={linkedinUrl.startsWith('http') ? linkedinUrl : `https://${linkedinUrl}`} target="_blank" rel="noopener noreferrer" className="social-icon-link social-icon-link--active" title="LinkedIn" style={{color: '#0A66C2'}}>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                  </a>
+                ) : (
+                  <span className="social-icon-link social-icon-link--disabled" title="Add your LinkedIn link">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                  </span>
+                )}
+                {portfolioUrl ? (
+                  <a href={portfolioUrl.startsWith('http') ? portfolioUrl : `https://${portfolioUrl}`} target="_blank" rel="noopener noreferrer" className="social-icon-link social-icon-link--active" title="Portfolio" style={{color: '#10B981'}}>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                  </a>
+                ) : (
+                  <span className="social-icon-link social-icon-link--disabled" title="Add your portfolio link">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                  </span>
+                )}
+              </div>
+
               <button className="logout-btn-bottom" onClick={logout}>
                 Logout
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
@@ -1048,6 +1400,62 @@ const App = () => {
 
           {/* ── Right Panel ── */}
           <div className="right-panel">
+
+            {/* Online Presence Section */}
+            <div className="form-section">
+              <div className="section-header">
+                <h3 className="section-title">
+                  <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{color: '#3B82F6'}}>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                  </svg>
+                  Online Presence
+                </h3>
+              </div>
+              <div className="collection-form">
+                <div className="online-presence-grid">
+                  <div className="form-field">
+                    <label>
+                      <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" style={{marginRight:'4px',verticalAlign:'middle'}}><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                      GITHUB
+                    </label>
+                    <input
+                      type="text"
+                      className="collection-input"
+                      value={githubUrl}
+                      onChange={e => setGithubUrl(e.target.value)}
+                      placeholder="github.com/username"
+                    />
+                  </div>
+                  <div className="form-field">
+                    <label>
+                      <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" style={{marginRight:'4px',verticalAlign:'middle'}}><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                      LINKEDIN
+                    </label>
+                    <input
+                      type="text"
+                      className="collection-input"
+                      value={linkedinUrl}
+                      onChange={e => setLinkedinUrl(e.target.value)}
+                      placeholder="linkedin.com/in/username"
+                    />
+                  </div>
+                  <div className="form-field">
+                    <label>
+                      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight:'4px',verticalAlign:'middle'}}><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                      PORTFOLIO
+                    </label>
+                    <input
+                      type="text"
+                      className="collection-input"
+                      value={portfolioUrl}
+                      onChange={e => setPortfolioUrl(e.target.value)}
+                      placeholder="yourwebsite.com"
+                    />
+                  </div>
+                </div>
+                <p className="online-presence-hint">Social links are optional and help partners verify your identity and background.</p>
+              </div>
+            </div>
 
             {/* Top Skills Section */}
             <div className="form-section">
@@ -1245,7 +1653,30 @@ const App = () => {
             </div>
 
             <div className="finalize-container">
-               <button className="finalize-btn" onClick={handleSave}>Finalize Profile</button>
+               <button
+                 className="finalize-btn"
+                 onClick={handleSave}
+                 disabled={isSaving}
+                 style={{ opacity: isSaving ? 0.8 : 1, cursor: isSaving ? 'not-allowed' : 'pointer' }}
+               >
+                 {isSaving ? (
+                   <><span className="finalize-spinner" />Saving...</>
+                 ) : (
+                   'Finalize Profile'
+                 )}
+               </button>
+               {bannerState.type === 'success' && (
+                 <div className="save-success-banner">
+                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                   {bannerState.message}
+                 </div>
+               )}
+               {bannerState.type === 'error' && (
+                 <div className="save-error-banner">
+                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                   {bannerState.message}
+                 </div>
+               )}
                <div className="security-note">ALL CHANGES ARE ENCRYPTED AND SECURE</div>
             </div>
           </div>
@@ -1307,6 +1738,64 @@ const App = () => {
               <div className="modal-actions">
                 <button type="button" className="modal-btn-cancel" onClick={() => setDeleteConfirm(null)}>Cancel</button>
                 <button type="button" className="modal-btn-delete" onClick={handleConfirmDelete}>Delete Entry</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Crop Modal ── */}
+        {isCropModalOpen && (
+          <div className="modal-overlay" role="dialog" aria-modal="true">
+            <div className="crop-modal-card">
+              <div className="modal-header">
+                <h4 className="modal-title">Adjust Profile Picture</h4>
+                <button type="button" className="modal-close" onClick={() => setIsCropModalOpen(false)} disabled={isUploadingPicture}>&times;</button>
+              </div>
+
+              {cropError && (
+                <div className="save-error-banner" style={{ marginBottom: '1rem', marginTop: 0 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  <span>{cropError}</span>
+                </div>
+              )}
+
+              <div className="crop-container">
+                <Cropper
+                  image={cropImageSrc}
+                  crop={crop}
+                  zoom={zoom}
+                  aspect={1}
+                  cropShape="round"
+                  showGrid={false}
+                  onCropChange={setCrop}
+                  onZoomChange={setZoom}
+                  onCropComplete={onCropComplete}
+                />
+              </div>
+
+              <div className="crop-controls">
+                <span style={{color: '#9CA3AF', fontSize: '0.85rem'}}>Zoom</span>
+                <input
+                  type="range"
+                  value={zoom}
+                  min={1}
+                  max={3}
+                  step={0.1}
+                  aria-labelledby="Zoom"
+                  onChange={(e) => setZoom(e.target.value)}
+                />
+              </div>
+
+              <div className="crop-modal-actions">
+                <button type="button" className="crop-btn-remove" onClick={handleRemovePicture} disabled={isUploadingPicture}>
+                  Remove
+                </button>
+                <button type="button" className="crop-btn-new" onClick={() => fileInputRef.current?.click()} disabled={isUploadingPicture}>
+                  Upload New
+                </button>
+                <button type="button" className="crop-btn-save" onClick={handleCropSave} disabled={isUploadingPicture}>
+                  {isUploadingPicture ? <><span className="finalize-spinner" style={{width: '1rem', height:'1rem', borderColor: 'rgba(255,255,255,0.2)', borderLeftColor: '#fff', marginRight: '0.4rem'}}/> Saving</> : 'Save & Upload'}
+                </button>
               </div>
             </div>
           </div>
