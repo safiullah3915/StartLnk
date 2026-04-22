@@ -24,10 +24,7 @@ import StartupsWithApplications from './pages/StartupsWithApplications/StartupsW
 import StartupApplications from './pages/StartupApplications/StartupApplications';
 import InvestorDashboard from './pages/InvestorDashboard/InvestorDashboard';
 import PitchIdea from './pages/PitchIdea/PitchIdea';
-import TrendingStartups from './pages/TrendingStartups/TrendingStartups';
 import OnboardingPreferences from './pages/OnboardingPreferences/OnboardingPreferences';
-import PotentialInvestors from './pages/PotentialInvestors/PotentialInvestors';
-import MatchedDevelopers from './pages/MatchedDevelopers/MatchedDevelopers';
 import ProtectedRoute from './components/ProtectedRoute/ProtectedRoute';
 import RoleBasedRoute from './components/RoleBasedRoute/RoleBasedRoute';
 import CompleteProfile from './pages/CompleteProfile/CompleteProfile';
@@ -136,17 +133,7 @@ function AppRoutes() {
         </RoleBasedRoute>
       } />
       
-      <Route path="/potential-investors" element={
-        <RoleBasedRoute allowedRoles={['entrepreneur']}>
-          <PotentialInvestors />
-        </RoleBasedRoute>
-      } />
-      
-      <Route path="/matched-developers" element={
-        <RoleBasedRoute allowedRoles={['entrepreneur']}>
-          <MatchedDevelopers />
-        </RoleBasedRoute>
-      } />
+
 
       {/* Search routes - accessible to all authenticated users */}
       <Route path="/search" element={
@@ -155,12 +142,7 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
       
-      {/* Trending Startups - accessible to all authenticated users */}
-      <Route path="/trending-startups" element={
-        <ProtectedRoute>
-          <TrendingStartups />
-        </ProtectedRoute>
-      } />
+
       
       {/* Onboarding Preferences - accessible to all authenticated users */}
       <Route path="/onboarding-preferences" element={

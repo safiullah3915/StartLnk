@@ -9,22 +9,17 @@ const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [isMatchedDropdownOpen, setIsMatchedDropdownOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAuthenticated, logout, isEntrepreneur, isStudent, isInvestor } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
 
-  const matchedDropdownRef = useRef(null);
   const profileDropdownRef = useRef(null);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target)) {
         setIsProfileOpen(false);
-      }
-      if (matchedDropdownRef.current && !matchedDropdownRef.current.contains(event.target)) {
-        setIsMatchedDropdownOpen(false);
       }
     };
 
@@ -48,7 +43,6 @@ const Navbar = () => {
   useEffect(() => {
     setIsMenuOpen(false);
     setIsProfileOpen(false);
-    setIsMatchedDropdownOpen(false);
   }, [location]);
 
   // Prevent body scroll when menu is open
@@ -146,7 +140,6 @@ const Navbar = () => {
     if (isAuthenticated) {
       baseLinks.push(
         { path: "/dashboard", label: "Dashboard" },
-        { path: "/trending-startups", label: "Trending Startups" },
         { path: "/message", label: "Messages" }
       );
 
@@ -158,10 +151,6 @@ const Navbar = () => {
       if (isEntrepreneur()) {
         baseLinks.push(
           { path: "/collaboration", label: "Collaboration" },
-          { type: "dropdown", label: "Matched", dropdown: [
-            { path: "/matched-developers", label: "Developers" },
-            { path: "/potential-investors", label: "Investors" }
-          ]},
           { path: "/createstartup", label: "Create Startup" }
         );
       }
@@ -186,25 +175,36 @@ const Navbar = () => {
   
   const toggleProfileDropdown = () => {
     setIsProfileOpen(!isProfileOpen);
-    setIsMatchedDropdownOpen(false);
   };
-  
-  const toggleMatchedDropdown = () => {
-    setIsMatchedDropdownOpen(!isMatchedDropdownOpen);
-    setIsProfileOpen(false);
+
+  const getMobileIcon = (path) => {
+    switch(path) {
+      case '/dashboard':
+        return (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+        );
+      case '/message':
+        return (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+        );
+      case '/collaboration':
+        return (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        );
+      case '/createstartup':
+        return (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+        );
+      default:
+        return null;
+    }
   };
 
   return (
-    <nav className={`${styles.navbar} ${isScrolled ? styles.scrolled : ""}`}>
-      {isAuthenticated ? (
-        <div className={styles.logoContainer}>
-          <img src="/logo.png" alt="Logo" className={styles.logo} />
-        </div>
-      ) : (
-      <Link to="/" className={styles.logoContainer}>
+    <nav className={`${styles.navbar} ${isScrolled ? styles.scrolled : ""} ${isMenuOpen ? styles.menuOpen : ""}`}>
+      <Link to={isAuthenticated ? "/dashboard" : "/"} className={styles.logoContainer}>
           <img src="/logo.png" alt="Logo" className={styles.logo} />
       </Link>
-      )}
 
       <div className={styles.navLinks}>
         {navLinks.map((link, index) => {
@@ -297,58 +297,60 @@ const Navbar = () => {
         <div className={styles.mobileMenuHeader}>
           {isAuthenticated ? (
             <div className={styles.logoContainer}>
-              <img src="/logo.svg" alt="Logo" className={styles.logo} />
+              <img src="/logo.png" alt="Logo" className={styles.logo} />
             </div>
           ) : (
           <Link to="/" onClick={closeMenu}>
-              <img src="/logo.svg" alt="Logo" className={styles.logo} />
+              <img src="/logo.png" alt="Logo" className={styles.logo} />
           </Link>
           )}
-          <button className={styles.closeButton} onClick={closeMenu}>
-            <span></span>
-            <span></span>
-          </button>
         </div>
-        {navLinks.map((link, index) => {
-          if (link.type === "dropdown") {
+        <div className={styles.mobileNavLinks}>
+          {navLinks.map((link, index) => {
+            if (link.type === "dropdown") {
+              return (
+                <div key={index} className={styles.mobileDropdownSection}>
+                  <div className={styles.mobileDropdownLabel}>{link.label}</div>
+                  {link.dropdown.map((item) => (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      className={`${styles.navLink} ${styles.mobileDropdownItem} ${
+                        location.pathname === item.path ? styles.active : ""
+                      }`}
+                      onClick={closeMenu}
+                    >
+                      <span className={styles.mobileLinkLabel}>{item.label}</span>
+                      <div className={styles.navIcon}>{getMobileIcon(item.path)}</div>
+                    </Link>
+                  ))}
+                </div>
+              );
+            }
+            
             return (
-              <div key={index} className={styles.mobileDropdownSection}>
-                <div className={styles.mobileDropdownLabel}>{link.label}</div>
-                {link.dropdown.map((item) => (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    className={`${styles.navLink} ${styles.mobileDropdownItem} ${
-                      location.pathname === item.path ? styles.active : ""
-                    }`}
-                    onClick={closeMenu}
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-              </div>
+              <Link
+                key={link.path}
+                to={link.path}
+                className={`${styles.navLink} ${
+                  location.pathname === link.path ? styles.active : ""
+                }`}
+                onClick={closeMenu}
+              >
+                <span className={styles.mobileLinkLabel}>{link.label}</span>
+                <div className={styles.navIcon}>{getMobileIcon(link.path)}</div>
+              </Link>
             );
-          }
-          
-          return (
-            <Link
-              key={link.path}
-              to={link.path}
-              className={`${styles.navLink} ${
-                location.pathname === link.path ? styles.active : ""
-              }`}
-              onClick={closeMenu}
-            >
-              {link.label}
-            </Link>
-          );
-        })}
+          })}
+        </div>
         
         {isAuthenticated && (
           <div className={styles.mobileUserMenu}>
             <Link to="/account" className={styles.mobileProfileLink} onClick={closeMenu}>
               <div className={styles.mobileProfileAvatar}>
-                {user?.username?.charAt(0).toUpperCase() || 'U'}
+                <div className={styles.mobileProfileAvatarInner}>
+                  {user?.username?.charAt(0).toUpperCase() || 'U'}
+                </div>
               </div>
               <div className={styles.mobileProfileInfo}>
                 <div className={styles.mobileProfileName}>{user?.username}</div>

@@ -163,6 +163,36 @@
   margin-bottom: 5rem;
 }
 
+.joinNowLink {
+  width: auto;
+  display: inline-block;
+}
+
+.joinNowBtn {
+  margin-top: 2rem !important;
+  width: 14rem !important;
+}
+
+@media (max-width: 768px) {
+  .bottombanner {
+    width: 95% !important;
+    padding: 2rem 1rem !important;
+  }
+
+  .joinNowLink {
+    width: 100% !important;
+    display: block !important;
+  }
+
+  .joinNowBtn {
+    margin: 2rem auto !important;
+    display: block !important;
+    width: 85% !important;
+    margin-bottom: 2rem !important;
+    min-width: 250px !important;
+  }
+}
+
 
 /* Large screens (desktops) */
 @media (max-width: 1200px) {

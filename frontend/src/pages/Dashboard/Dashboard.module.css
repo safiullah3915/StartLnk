@@ -201,6 +201,110 @@
   background: #dc2626;
 }
 
+.confirmOverlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  z-index: 2200;
+}
+
+.confirmCard {
+  width: 100%;
+  max-width: 520px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 24px;
+  box-shadow: 0 25px 60px rgba(15, 23, 42, 0.18);
+  padding: 2rem;
+}
+
+.confirmHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.confirmTitle {
+  margin: 0;
+  color: #111827;
+  font-size: 1.45rem;
+  font-weight: 700;
+}
+
+.confirmClose {
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  font-size: 2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.confirmWarning {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  padding: 1.2rem 1.25rem;
+  border: 1px solid #fecaca;
+  border-radius: 18px;
+  background: #fff7f7;
+}
+
+.confirmWarningIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #dc2626;
+  font-weight: 800;
+}
+
+.confirmWarning p {
+  margin: 0;
+  color: #374151;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.confirmActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.85rem;
+  margin-top: 1.75rem;
+}
+
+.confirmCancel,
+.confirmDelete {
+  border-radius: 12px;
+  padding: 0.8rem 1.2rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.confirmCancel {
+  background: #ffffff;
+  border-color: #d1d5db;
+  color: #374151;
+}
+
+.confirmDelete {
+  background: #dc2626;
+  color: #ffffff;
+}
+
 .quickActions {
   background: white;
   border-radius: 12px;
@@ -454,6 +558,14 @@
 }
 
 @media (max-width: 768px) {
+  .dashboard {
+    padding: 0 0.75rem;
+  }
+
+  .section {
+    padding: 1.5rem;
+  }
+
   .welcome h1 {
     font-size: 2rem;
   }
@@ -470,6 +582,16 @@
     grid-template-columns: 1fr;
   }
 
+  .cardsGrid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem;
+  }
+
+  .startupCard {
+    min-width: 0;
+    width: 100%;
+  }
+
   .tableHeader,
   .tableRow {
     grid-template-columns: 1.5fr 1.5fr 1fr;
@@ -478,5 +600,14 @@
   .tableHeader div:nth-child(n + 4),
   .tableRow div:nth-child(n + 4) {
     display: none;
+  }
+
+  .confirmCard {
+    padding: 1.5rem;
+    border-radius: 20px;
+  }
+
+  .confirmActions {
+    flex-direction: column;
   }
 }

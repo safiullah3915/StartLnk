@@ -7,6 +7,7 @@ import styles from './Dashboard.module.css';
 import { userAPI, positionAPI } from '../../utils/apiServices';
 import apiClient from '../../utils/axiosConfig';
 import { getStartupDetailPath } from '../../utils/idUtils';
+import { toast } from 'react-toastify';
 
 const Dashboard = () => {
   const { user, isEntrepreneur, isStudent, isInvestor, loading: authLoading, isAuthenticated } = useAuth();
@@ -15,6 +16,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [myStartups, setMyStartups] = useState([]);
   const [startupIdToPositions, setStartupIdToPositions] = useState({});
+  const [startupDeleteConfirm, setStartupDeleteConfirm] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const applicationsPerPage = 3;
   const recentApplicationsRef = useRef(null);
@@ -171,55 +173,35 @@ const Dashboard = () => {
     }
   };
 
-  const handleDeleteStartup = async (startupId, startupTitle) => {
-    console.log('🗑️ Delete startup initiated:', { startupId, startupTitle });
-    
-    const confirmed = window.confirm(
-      `Are you sure you want to delete "${startupTitle}"?\n\nThis action cannot be undone and will remove all associated positions and data.`
-    );
-    
-    if (!confirmed) {
-      console.log('❌ Delete cancelled by user');
+  const handleDeleteStartup = (startupId, startupTitle) => {
+    console.log('Delete startup initiated:', { startupId, startupTitle });
+    setStartupDeleteConfirm({ startupId, startupTitle });
+  };
+
+  const confirmDeleteStartup = async () => {
+    if (!startupDeleteConfirm) {
       return;
     }
 
-    console.log('✅ User confirmed deletion, proceeding...');
+    const { startupId } = startupDeleteConfirm;
 
     try {
-      console.log('📡 Sending DELETE request to:', `/api/startups/${startupId}`);
-      
       const response = await apiClient.delete(`/api/startups/${startupId}`);
-      
-      console.log('✅ DELETE request successful:', response);
+      console.log('DELETE request successful:', response);
 
-      // Remove the startup from the local state
-      setMyStartups(prev => {
-        const updated = prev.filter(s => s.id !== startupId);
-        console.log('📊 Updated startups list. Remaining:', updated.length);
-        return updated;
-      });
-      
-      // Also remove its positions from the map
+      setMyStartups(prev => prev.filter(s => s.id !== startupId));
       setStartupIdToPositions(prev => {
         const updated = { ...prev };
         delete updated[startupId];
-        console.log('📊 Updated positions map');
         return updated;
       });
-      
-      alert('Startup deleted successfully!');
-      console.log('✅ Startup deletion completed successfully');
+
+      setStartupDeleteConfirm(null);
+      toast.success('Startup deleted successfully!');
     } catch (error) {
-      console.error('❌ Error deleting startup:', error);
-      console.error('Error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-        statusText: error.response?.statusText
-      });
-      
+      console.error('Error deleting startup:', error);
       const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Unknown error';
-      alert(`Failed to delete startup: ${errorMessage}`);
+      toast.error(`Failed to delete startup: ${errorMessage}`);
     }
   };
 
@@ -250,6 +232,51 @@ const Dashboard = () => {
 
   const renderEntrepreneurDashboard = () => (
     <div className={styles.dashboard}>
+      {startupDeleteConfirm && (
+        <div
+          className={styles.confirmOverlay}
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setStartupDeleteConfirm(null)}
+        >
+          <div className={styles.confirmCard} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.confirmHeader}>
+              <h4 className={styles.confirmTitle}>Confirm Deletion</h4>
+              <button
+                type="button"
+                className={styles.confirmClose}
+                onClick={() => setStartupDeleteConfirm(null)}
+              >
+                &times;
+              </button>
+            </div>
+            <div className={styles.confirmWarning}>
+              <span className={styles.confirmWarningIcon}>!</span>
+              <p>
+                Are you sure you want to delete "{startupDeleteConfirm.startupTitle}"? This action
+                cannot be undone.
+              </p>
+            </div>
+            <div className={styles.confirmActions}>
+              <button
+                type="button"
+                className={styles.confirmCancel}
+                onClick={() => setStartupDeleteConfirm(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={styles.confirmDelete}
+                onClick={confirmDeleteStartup}
+              >
+                Delete Startup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className={styles.welcome}>
         <h1>Welcome, {user?.username}!</h1>
         <p>Manage your startups and find team members</p>
@@ -273,10 +300,10 @@ const Dashboard = () => {
         </div>
 
         <div className={styles.statCard}>
-          <h3>Profile Views</h3>
-          <div className={styles.statNumber}>0</div>
-          <Link to="/account" className={styles.statAction}>
-            Update Profile
+          <h3>Favorites</h3>
+          <div className={styles.statNumber}>{stats?.favorites_count || 0}</div>
+          <Link to="/search" className={styles.statAction}>
+            View Favorites
           </Link>
         </div>
       </div>
@@ -480,10 +507,10 @@ const Dashboard = () => {
         </div>
 
         <div className={styles.statCard}>
-          <h3>Profile Views</h3>
-          <div className={styles.statNumber}>0</div>
-          <Link to="/account" className={styles.statAction}>
-            Update Profile
+          <h3>Favorites</h3>
+          <div className={styles.statNumber}>{stats?.favorites_count || 0}</div>
+          <Link to="/search" className={styles.statAction}>
+            View Favorites
           </Link>
         </div>
       </div>
@@ -605,10 +632,10 @@ const Dashboard = () => {
         </div>
 
         <div className={styles.statCard}>
-          <h3>Profile Views</h3>
-          <div className={styles.statNumber}>0</div>
-          <Link to="/account" className={styles.statAction}>
-            Update Profile
+          <h3>Favorites</h3>
+          <div className={styles.statNumber}>{stats?.favorites_count || 0}</div>
+          <Link to="/search" className={styles.statAction}>
+            View Favorites
           </Link>
         </div>
       </div>
@@ -682,3 +709,4 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+

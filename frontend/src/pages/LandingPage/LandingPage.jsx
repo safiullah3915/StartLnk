@@ -49,8 +49,8 @@ function LandingPage() {
 
     <div className={styles.bottombanner}>
     <h1>Join 500k+ founders and buyers already doing business on StartLink</h1>
-    <Link to="/signup">
-    <Submit btn1text={"Join Now"}/>  
+    <Link to="/signup" className={styles.joinNowLink}>
+    <Submit btn1text={"Join Now"} extraClass={styles.joinNowBtn}/>  
     </Link>
     </div>
 
