@@ -66,7 +66,7 @@ const CreateStartupProject = () => {
     ttm_profit: '',
     last_month_revenue: '',
     last_month_profit: '',
-    type: 'marketplace',
+    type: 'collaboration',
     earn_through: '',
     phase: '',
     team_size: '',
@@ -86,9 +86,9 @@ const CreateStartupProject = () => {
   const validateStep = (s) => {
     const e = {};
     if (s === 1) {
-      if (!formData.title || formData.title.length < 5)
+      if (!formData.title || formData.title.trim().length < 5)
         e.title = 'Startup name must be at least 5 characters.';
-      if (!formData.description || formData.description.length < 20)
+      if (!formData.description || formData.description.trim().length < 20)
         e.description = 'Description must be at least 20 characters.';
       if (!formData.field.trim())
         e.field = 'Field / Industry is required.';
@@ -102,7 +102,19 @@ const CreateStartupProject = () => {
         e.team_size = 'Team size is required.';
       if (!formData.earn_through.trim())
         e.earn_through = 'Please specify how you / team members earn.';
+      if (formData.website_url.trim()) {
+        try {
+          new URL(formData.website_url.trim().startsWith('http') ? formData.website_url : `https://${formData.website_url}`);
+          // Django requires proper URL scheme
+          if (!/^https?:\/\//i.test(formData.website_url.trim())) {
+             e.website_url = 'URL must start with http:// or https://';
+          }
+        } catch (_) {
+          e.website_url = 'Please enter a valid website URL.';
+        }
+      }
     }
+    /*
     if (s === 3 && formData.type === 'marketplace') {
       if (!formData.revenue.trim()) e.revenue = 'Current revenue is required.';
       if (!formData.profit.trim()) e.profit = 'Current profit is required.';
@@ -112,6 +124,7 @@ const CreateStartupProject = () => {
       if (!formData.last_month_revenue.trim()) e.last_month_revenue = 'Last month revenue is required.';
       if (!formData.last_month_profit.trim()) e.last_month_profit = 'Last month profit is required.';
     }
+    */
     return e;
   };
 
@@ -333,7 +346,8 @@ const CreateStartupProject = () => {
                 <div className="cs-section-heading">
                   <span>📋</span> Startup Type
                 </div>
-                <div className="cs-type-grid">
+                <div className="cs-type-grid" style={{ gridTemplateColumns: '1fr' }}>
+                  {/* Coming Soon: For Sale Marketplace
                   <div
                     className={`cs-type-card cs-type-card--disabled`}
                     style={{ cursor: 'not-allowed', opacity: 0.5, position: 'relative' }}
@@ -351,9 +365,10 @@ const CreateStartupProject = () => {
                       List your startup on the marketplace to find buyers or investors.
                     </div>
                   </div>
+                  */}
                   <div
-                    className={`cs-type-card${formData.type === 'collaboration' ? ' selected' : ''}`}
-                    onClick={() => set('type', 'collaboration')}
+                    className="cs-type-card selected"
+                    style={{ textAlign: 'center', cursor: 'default' }}
                   >
                     <div className="cs-type-icon">🤝</div>
                     <div className="cs-type-name">Collaboration</div>
@@ -436,7 +451,8 @@ const CreateStartupProject = () => {
           {/* ══ STEP 3: Financials (marketplace) OR Confirm (collaboration) ═ */}
           {step === 3 && (
             <div key="s3" className={`cs-card ${animClass}`}>
-              {isMarketplace ? (
+              {/* Preserved Code for Marketplace Phase 2 */}
+              {false && (
                 <>
                   <h1 className="cs-title">Financial Details</h1>
                   <p className="cs-subtitle">
@@ -488,38 +504,38 @@ const CreateStartupProject = () => {
                       placeholder="e.g., $6,000" />
                   </Field>
                 </>
-              ) : (
-                /* Collaboration — no financials, just confirm */
-                <>
-                  <h1 className="cs-title">Ready to Publish?</h1>
-                  <p className="cs-subtitle">
-                    Review your startup details and create your collaboration listing.
-                  </p>
-                  <div style={{
-                    background: '#f5f3ff', borderRadius: '12px',
-                    padding: '1.25rem 1.5rem', marginBottom: '1rem',
-                  }}>
-                    {[
-                      ['Startup', formData.title],
-                      ['Category', formData.category?.toUpperCase()],
-                      ['Stage', formData.stage],
-                      ['Phase', formData.phase],
-                      ['Team size', formData.team_size],
-                      ['Team earns via', formData.earn_through],
-                      ['Website', formData.website_url || '—'],
-                    ].map(([k, v]) => (
-                      <div key={k} style={{
-                        display: 'flex', justifyContent: 'space-between',
-                        padding: '0.4rem 0', borderBottom: '1px solid #e0e7ff',
-                        fontSize: '0.85rem',
-                      }}>
-                        <span style={{ color: '#6b7280', fontWeight: 600 }}>{k}</span>
-                        <span style={{ color: '#1f2937', fontWeight: 500 }}>{v}</span>
-                      </div>
-                    ))}
-                  </div>
-                </>
               )}
+
+              {/* Collaboration — no financials, just confirm */}
+              <>
+                <h1 className="cs-title">Ready to Publish?</h1>
+                <p className="cs-subtitle">
+                  Review your startup details and create your collaboration listing.
+                </p>
+                <div style={{
+                  background: '#f5f3ff', borderRadius: '12px',
+                  padding: '1.25rem 1.5rem', marginBottom: '1rem',
+                }}>
+                  {[
+                    ['Startup', formData.title],
+                    ['Category', formData.category?.toUpperCase()],
+                    ['Stage', formData.stage],
+                    ['Phase', formData.phase],
+                    ['Team size', formData.team_size],
+                    ['Team earns via', formData.earn_through],
+                    ['Website', formData.website_url || '—'],
+                  ].map(([k, v]) => (
+                    <div key={k} style={{
+                      display: 'flex', justifyContent: 'space-between',
+                      padding: '0.4rem 0', borderBottom: '1px solid #e0e7ff',
+                      fontSize: '0.85rem',
+                    }}>
+                      <span style={{ color: '#6b7280', fontWeight: 600 }}>{k}</span>
+                      <span style={{ color: '#1f2937', fontWeight: 500 }}>{v}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
 
               <div className="cs-nav">
                 <button type="button" className="cs-back-btn" onClick={goBack}>

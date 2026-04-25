@@ -778,7 +778,7 @@ const StartupDetails = () => {
           </div>
         )}
 
-        {/* Convert to Marketplace - Disabled for Phase 2 */}
+        {/* Convert to Marketplace - Disabled for Phase 2 
         {isEntrepreneur() && user?.id === startup?.owner?.id && startup?.type === 'collaboration' && (
           <div className={styles.entrepreneurActions}>
             <button
@@ -798,8 +798,9 @@ const StartupDetails = () => {
             </button>
           </div>
         )}
+        */ }
 
-        {/* Convert to Marketplace Modal */}
+        {/* Convert to Marketplace Modal 
         {showConvertModal && (
           <div className={styles.modalOverlay} onClick={() => !converting && setShowConvertModal(false)}>
             <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
@@ -928,7 +929,7 @@ const StartupDetails = () => {
                 </div>
               </form>
 
-              {/* Circular Progress Indicator */}
+              // Circular Progress Indicator
               {converting && (
                 <div className={styles.progressOverlay}>
                   <div className={styles.progressModal}>
@@ -940,6 +941,7 @@ const StartupDetails = () => {
             </div>
           </div>
         )}
+        */ }
       </div>
 
       <Footer />

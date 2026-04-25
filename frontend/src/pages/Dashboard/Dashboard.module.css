@@ -558,6 +558,11 @@
 }
 
 @media (max-width: 768px) {
+  .container {
+    margin-top: 0;
+    padding-top: 80px;
+  }
+
   .dashboard {
     padding: 0 0.75rem;
   }
