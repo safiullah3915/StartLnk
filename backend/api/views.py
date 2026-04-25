@@ -2157,6 +2157,75 @@ def upload_profile_picture(request):
 
 
 # Additional utility endpoints
+
+class PublicPeopleListView(generics.ListAPIView):
+	"""List all users who have made their profile public (Collaborator Network)"""
+	permission_classes = [AllowAny]
+
+	def get(self, request, *args, **kwargs):
+		from .messaging_models import UserProfile
+		q = request.query_params.get('q', '').strip().lower()
+
+		profiles = UserProfile.objects.filter(is_public=True).select_related('user')
+
+		results = []
+		for profile in profiles:
+			u = profile.user
+			username = u.username if u else ''
+			first_name = (u.first_name or '').strip() if u else ''
+			last_name  = (u.last_name  or '').strip() if u else ''
+			full_name  = f"{first_name} {last_name}".strip() or username
+			bio = profile.bio or ''
+			location = profile.location or ''
+			skills = profile.skills or []
+			experience = profile.experience or []
+			references = profile.references or []
+			github_url = getattr(profile, 'github_url', '') or ''
+			linkedin_url = getattr(profile, 'linkedin_url', '') or ''
+			website = profile.website or ''
+			profile_picture = None
+			if profile.profile_picture:
+				try:
+					profile_picture = request.build_absolute_uri(profile.profile_picture.url)
+				except Exception:
+					profile_picture = None
+			selected_regions = profile.selected_regions or []
+
+			# Search filter
+			if q:
+				haystack = ' '.join([
+					full_name.lower(),
+					username.lower(),
+					bio.lower(),
+					location.lower(),
+					' '.join([str(s.get('title', '')) for s in skills if isinstance(s, dict)]).lower()
+				])
+				if q not in haystack:
+					continue
+
+			results.append({
+				'id': str(u.id),
+				'username': username,
+				'first_name': first_name,
+				'last_name': last_name,
+				'full_name': full_name,
+				'email': u.email if u else '',
+				'role': u.role if u else '',
+				'bio': bio,
+				'location': location,
+				'skills': skills,
+				'experience': experience,
+				'references': references,
+				'github_url': github_url,
+				'linkedin_url': linkedin_url,
+				'website': website,
+				'profile_picture': profile_picture,
+				'selected_regions': selected_regions,
+			})
+
+		return Response({'results': results, 'count': len(results)})
+
+
 class ProfileDataView(generics.RetrieveUpdateAPIView):
 	"""Get and update comprehensive user profile data for account settings"""
 	permission_classes = [AllowAny]

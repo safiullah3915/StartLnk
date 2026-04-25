@@ -58,6 +58,9 @@ urlpatterns = [
 	path('api/users/startups', views.UserStartupsView.as_view(), name='user_startups'),
 	path('api/users/startups/with-applications', views.UserStartupsWithApplicationsView.as_view(), name='user_startups_with_applications'),
 	
+	# People / Collaborator Network - public profiles directory
+	path('api/people', views.PublicPeopleListView.as_view(), name='public_people_list'),
+
 	# Statistics endpoints
 	path('api/stats', views.platform_stats, name='platform_stats'),
 	
