@@ -201,8 +201,6 @@ const Collaboration = () => {
     
     try {
       const response = await userAPI.getUserApplications();
-      console.log('[Collaboration] Checking applied positions');
-      console.log('[Collaboration] Applications response:', response.data);
       
       // Handle both paginated and non-paginated responses
       const applications = response.data.results || response.data;
@@ -222,8 +220,6 @@ const Collaboration = () => {
             .map(app => app.startup.id)
         );
         
-        console.log('[Collaboration] Applied position IDs:', Array.from(appliedIds));
-        console.log('[Collaboration] Applied startup IDs:', Array.from(appliedStartupIdsSet));
         setAppliedPositionIds(appliedIds);
         setAppliedStartupIds(appliedStartupIdsSet);
       }
@@ -253,17 +249,18 @@ const Collaboration = () => {
     return [currentPage - 1, currentPage, currentPage + 1];
   };
 
-  const handlePageChange = (page) => {
-    if (page === currentPage || page < 1 || page > totalPages) return;
-    setCurrentPage(page);
+  useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentPage]);
+
+  const handlePageChange = (page) => {
+    if (page < 1 || page > totalPages) return;
+    setCurrentPage(page);
   };
 
   return (
     <>
     <div className={styles.main}>
-
-    
       <Navbar />
       <div className={styles.marketplace}>
         <div className={styles.hero}>
@@ -276,9 +273,16 @@ const Collaboration = () => {
             <button
               type="button"
               className={toolbarButtonClass(showSearch)}
-              onClick={() => setShowSearch((prev) => !prev)}
+              onClick={() => {
+                if (showSearch) {
+                  handleFilterChange('query', '');
+                }
+                setShowSearch((prev) => !prev);
+              }}
             >
-              <span className={styles.toolbarIcon} aria-hidden="true">⌕</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={styles.toolbarIcon}>
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
               {showSearch ? 'Hide Search' : 'Show Search'}
             </button>
             <button
@@ -286,7 +290,9 @@ const Collaboration = () => {
               className={toolbarButtonClass(showFilters)}
               onClick={toggleFilters}
             >
-              <span className={styles.toolbarIcon} aria-hidden="true">☷</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={styles.toolbarIcon}>
+                <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>
+              </svg>
               {showFilters ? 'Hide Filters' : 'Show Filters'}
             </button>
             <div className={styles.resultsCount}>
@@ -300,7 +306,9 @@ const Collaboration = () => {
           {showSearch && (
             <div className={styles.searchForm}>
               <div className={styles.mainSearch}>
-                <span className={styles.searchFieldIcon} aria-hidden="true">⌕</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={styles.searchFieldIcon}>
+                  <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
                 <input
                   type="text"
                   placeholder="Search jobs by title, description, or company..."
