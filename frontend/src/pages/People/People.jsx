@@ -418,14 +418,14 @@ function PersonPanel({ person, onClose }) {
           </section>
         )}
 
-        {hasSkills && (
+        {hasRefs && (
           <section className={styles.panelSection}>
             <h3 className={styles.panelSectionTitle}>
               <StarIcon /> TOP SKILLS
             </h3>
-            {person.skills.map((sk, i) => {
-              const title = typeof sk === 'string' ? sk : sk?.title;
-              const desc  = typeof sk === 'object' ? sk?.description : '';
+            {person.references.map((ref, i) => {
+              const title = typeof ref === 'string' ? ref : ref?.title;
+              const desc  = typeof ref === 'object' ? ref?.description : '';
               if (!title) return null;
               return (
                 <div key={i} className={styles.panelItem}>
@@ -437,14 +437,14 @@ function PersonPanel({ person, onClose }) {
           </section>
         )}
 
-        {hasRefs && (
+        {hasSkills && (
           <section className={styles.panelSection}>
             <h3 className={styles.panelSectionTitle}>
               <HeartIcon /> SKILLS &amp; HOBBIES
             </h3>
-            {person.references.map((ref, i) => {
-              const title = typeof ref === 'string' ? ref : ref?.title;
-              const desc  = typeof ref === 'object' ? ref?.description : '';
+            {person.skills.map((sk, i) => {
+              const title = typeof sk === 'string' ? sk : sk?.title;
+              const desc  = typeof sk === 'object' ? sk?.description : '';
               if (!title) return null;
               return (
                 <div key={i} className={styles.panelItem}>
