@@ -644,11 +644,22 @@ const App = () => {
           text-transform: uppercase;
         }
         .profile-desc {
+          margin: 0 0 1.5rem 0;
+          display: flex;
+          align-items: flex-start;
+          gap: 0.5rem;
+        }
+        .bio-text {
           font-size: 0.85rem;
           line-height: 1.5;
           color: #9CA3AF;
           font-style: italic;
-          margin: 0 0 1.5rem 0;
+          display: -webkit-box;
+          -webkit-line-clamp: 3;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          flex: 1;
         }
         .desc-edit-btn {
           background: transparent;
@@ -1298,12 +1309,18 @@ const App = () => {
               </div>
               <h2 className="profile-name">{user?.username || 'Unknown User'}</h2>
               <div className="role-badge">{user?.role || 'MEMBER'}</div>
-              <p className="profile-desc">
-                {profileDescription === null
-                  ? (user ? `${user.username} is a ${user.role} on our platform.` : 'No user information available.')
-                  : profileDescription || (user ? `${user.username} is a ${user.role} on our platform.` : 'No user information available.')}
-                <button type="button" className="desc-edit-btn" title="Edit description" onClick={() => handleEditItem('profile_description', 0)}>✏️</button>
-              </p>
+              <div className="profile-desc">
+                <span className="bio-text">
+                  {profileDescription === null
+                    ? (user ? `${user.username} is a ${user.role} on our platform.` : 'No user information available.')
+                    : profileDescription || (user ? `${user.username} is a ${user.role} on our platform.` : 'No user information available.')}
+                </span>
+                <button type="button" className="desc-edit-btn" title="Edit description" onClick={() => handleEditItem('profile_description', 0)}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                  </svg>
+                </button>
+              </div>
               
               <div className="profile-stats-list">
                 <div className="stat-item">
