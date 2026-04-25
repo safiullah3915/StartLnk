@@ -121,9 +121,19 @@ const App = () => {
     config: { duration: 500 },
   });
 
-  // Toggle just updates local state — persisted on Finalize Profile
-  const handleToggle = () => {
-    setIsProfilePublic(prev => !prev);
+  // Toggle visibility and persist directly to DB
+  const handleToggle = async () => {
+    const newValue = !isProfilePublic;
+    setIsProfilePublic(newValue);
+    try {
+      await userAPI.updateProfileData({ is_public: newValue });
+      toast.success(`Profile visibility set to ${newValue ? 'Public' : 'Private'}`);
+    } catch (err) {
+      console.error("Failed to update visibility:", err);
+      // Revert local state if API fails
+      setIsProfilePublic(!newValue);
+      toast.error("Failed to update visibility. Please try again.");
+    }
   };
 
   // Application management functions
@@ -282,7 +292,6 @@ const App = () => {
     
     try {
       const profileData = {
-        is_public: isProfilePublic,
         bio: profileDescription || '',
         github_url: formatUrl(githubUrl),
         linkedin_url: formatUrl(linkedinUrl),
