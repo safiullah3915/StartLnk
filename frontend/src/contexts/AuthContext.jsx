@@ -46,6 +46,7 @@ export const AuthProvider = ({ children }) => {
               username: profile.user?.username || profile.name || profile.username,
               email: profile.user?.email || profile.email,
               role: profile.user?.role || profile.role,
+              onboarding_completed: response.data.onboarding_completed,
               emailVerified: true
             };
             setUser(userData);
@@ -74,6 +75,7 @@ export const AuthProvider = ({ children }) => {
                 username: profile.user?.username || profile.name || profile.username,
                 email: profile.user?.email || profile.email,
                 role: profile.user?.role || profile.role,
+                onboarding_completed: response.data.onboarding_completed,
                 emailVerified: true
               };
               setUser(userData);
@@ -134,10 +136,14 @@ export const AuthProvider = ({ children }) => {
         }
         
         // Set user and authenticate
-        setUser(user);
+        const userData = {
+          ...user,
+          onboarding_completed: response.data.user?.onboarding_completed
+        };
+        setUser(userData);
         setIsAuthenticated(true);
         
-        return { success: true, user: user, auth_token: authToken };
+        return { success: true, user: userData, auth_token: authToken };
       } else {
         console.warn('No user data in login response');
         return { success: false, error: 'No user data received' };
@@ -184,7 +190,11 @@ export const AuthProvider = ({ children }) => {
         }
         
         // Simplified - automatically set as authenticated after signup
-        setUser(user);
+        const userData = {
+          ...user,
+          onboarding_completed: response.data.user?.onboarding_completed
+        };
+        setUser(userData);
         setIsAuthenticated(true);
         
         return { 
@@ -200,10 +210,27 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('Signup failed:', error);
       
-      const errorMessage = error.response?.data?.message || 
-                          error.response?.data?.error || 
-                          (typeof error.response?.data === 'string' ? error.response.data : null) ||
-                          'Signup failed';
+      let errorMessage = 'Signup failed';
+      const data = error.response?.data;
+
+      if (data) {
+        if (typeof data === 'string') {
+          errorMessage = data;
+        } else if (data.message) {
+          errorMessage = data.message;
+        } else if (data.error) {
+          errorMessage = data.error;
+        } else if (typeof data === 'object') {
+          // Handle DRF validation errors like {"email": ["..."], "username": ["..."]}
+          const fieldErrors = Object.entries(data)
+            .map(([field, errors]) => {
+              const errorText = Array.isArray(errors) ? errors[0] : errors;
+              return `${field}: ${errorText}`;
+            })
+            .join(' | ');
+          if (fieldErrors) errorMessage = fieldErrors;
+        }
+      }
                           
       return { 
         success: false, 

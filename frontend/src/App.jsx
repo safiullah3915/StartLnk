@@ -192,7 +192,11 @@ function AppRoutes() {
       <Route path="/" element={<LandingPage />} />
       <Route 
         path="/login" 
-        element={isAuthenticated ? <Navigate to="/dashboard" /> : <Login />} 
+        element={
+          isAuthenticated 
+            ? (user?.onboarding_completed ? <Navigate to="/dashboard" /> : <Navigate to="/onboarding-preferences" />)
+            : <Login />
+        } 
       />
       <Route 
         path="/signup" 

@@ -5,6 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Bounce, ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { Navbar } from "../Navbar/Navbar";
+import apiClient from "../../utils/axiosConfig";
 
 
 function Signup() {
@@ -12,6 +13,7 @@ function Signup() {
 
     const [password, setPassword] = useState("");
     const [email, setEmail] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
 
     function passwordError() {
         toast.error('Password must be at least 8 characters', {
@@ -26,7 +28,7 @@ function Signup() {
         });
     }
 
-    const handleNext = (e) => {
+    const handleNext = async (e) => {
         e.preventDefault();
 
         if (password.length < 8) {
@@ -38,11 +40,38 @@ function Signup() {
             return;
         }
 
-        // Store credentials temporarily — backend is NOT called yet
-        sessionStorage.setItem('signup_email', email.trim());
-        sessionStorage.setItem('signup_password', password);
+        setIsLoading(true);
+        try {
+            // Artificial delay for better UX (so 'Verifying...' is actually seen)
+            await new Promise(resolve => setTimeout(resolve, 800));
 
-        navigate('/complete-profile');
+            // Early email availability check
+            const response = await apiClient.get(`/check-email?email=${encodeURIComponent(email.trim())}`);
+            
+            if (response.data.available === false) {
+                toast.error(response.data.error || 'This email is already registered', {
+                    position: "top-center",
+                    autoClose: 4000
+                });
+                setIsLoading(false);
+                return;
+            }
+
+            // Store credentials temporarily
+            sessionStorage.setItem('signup_email', email.trim());
+            sessionStorage.setItem('signup_password', password);
+
+            navigate('/complete-profile');
+        } catch (error) {
+            console.error('Email check failed:', error);
+            // If the check fails for some reason (e.g. server down), we still let them proceed
+            // but we store the credentials. The final signup will still catch the error.
+            sessionStorage.setItem('signup_email', email.trim());
+            sessionStorage.setItem('signup_password', password);
+            navigate('/complete-profile');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const allFieldsFill = () => password.trim() !== "" && email.trim() !== "";
@@ -161,10 +190,10 @@ function Signup() {
                             <form onSubmit={handleNext} className="btn-form">
                                 <button
                                     type="submit"
-                                    disabled={!allFieldsFill()}
+                                    disabled={!allFieldsFill() || isLoading}
                                     className="btn"
                                 >
-                                    Next →
+                                    {isLoading ? 'Verifying...' : 'Next →'}
                                 </button>
                             </form>
 

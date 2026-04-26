@@ -96,7 +96,7 @@ function AddRow({ value, onChange, onAdd, placeholder }) {
 /* ─── Main component ─────────────────────────────────────────────────────── */
 const OnboardingPreferences = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const isInvestor = user?.role === 'investor';
 
   const [step, setStep]       = useState(1);
@@ -269,6 +269,10 @@ const OnboardingPreferences = () => {
         ...(isInvestor ? { investor_preferences: investorPreferences } : {}),
       };
       await recommendationAPI.saveOnboardingPreferences(payload);
+      
+      // Update global auth state so ProtectedRoute allows access
+      updateUser({ onboarding_completed: true });
+      
       navigate('/dashboard');
     } catch (err) {
       console.error('Error saving preferences:', err);
