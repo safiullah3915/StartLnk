@@ -9,6 +9,7 @@ urlpatterns = [
 	
 	# Authentication endpoints
 	path('check-username', views.CheckUsernameView.as_view(), name='check_username'),
+	path('check-email', views.CheckEmailView.as_view(), name='check_email'),
 	path('signup', views.SignupView.as_view(), name='signup'),
 	path('auth/login', views.LoginView.as_view(), name='login'),
 	path('auth/test', views.auth_test, name='auth_test'),
@@ -60,6 +61,7 @@ urlpatterns = [
 	
 	# People / Collaborator Network - public profiles directory
 	path('api/people', views.PublicPeopleListView.as_view(), name='public_people_list'),
+	path('api/people/<uuid:user_id>/view', views.record_profile_view, name='record_profile_view'),
 
 	# Statistics endpoints
 	path('api/stats', views.platform_stats, name='platform_stats'),

@@ -69,6 +69,7 @@ class UserProfile(models.Model):
     skills = models.JSONField(default=list, blank=True)
     experience = models.JSONField(default=list, blank=True)
     references = models.JSONField(default=list, blank=True)
+    views = models.PositiveIntegerField(default=0)
     
     # Preference fields for recommendation system
     onboarding_completed = models.BooleanField(default=False)
@@ -115,3 +116,21 @@ class FileUpload(models.Model):
     
     def __str__(self):
         return f"{self.user.username} - {self.original_name}"
+
+
+class ProfileView(models.Model):
+    """Tracks unique profile views with cooldowns"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    viewer = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='profiles_viewed')
+    viewed_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='profile_view_logs')
+    timestamp = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        db_table = 'profile_view_logs'
+        indexes = [
+            models.Index(fields=['viewer', 'viewed_profile']),
+            models.Index(fields=['timestamp']),
+        ]
+        
+    def __str__(self):
+        return f"{self.viewer.username if self.viewer else 'Guest'} viewed {self.viewed_profile.user.username}"
