@@ -178,6 +178,34 @@ class CheckUsernameView(generics.GenericAPIView):
 		return Response({'available': True}, status=200)
 
 
+@method_decorator(csrf_exempt, name='dispatch')
+class CheckEmailView(generics.GenericAPIView):
+	"""Lightweight endpoint to check email availability before signup."""
+	permission_classes = [AllowAny]
+
+	def get(self, request, *args, **kwargs):
+		email = request.query_params.get('email', '').strip().lower()
+		if not email:
+			return Response({'available': False, 'error': 'Email is required.'}, status=400)
+
+		# Simple email regex check
+		import re
+		if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+			return Response({
+				'available': False,
+				'error': 'Please enter a valid email address.'
+			}, status=200)
+
+		exists = User.objects.filter(email__iexact=email).exists()
+		if exists:
+			return Response({
+				'available': False,
+				'error': 'This email is already registered. Please sign in instead.'
+			}, status=200)
+
+		return Response({'available': True}, status=200)
+
+
 @method_decorator(ratelimit(key='ip', rate='5/m', method='POST'), name='post')
 @method_decorator(csrf_exempt, name='dispatch')
 class SignupView(generics.CreateAPIView):
@@ -249,6 +277,7 @@ class SignupView(generics.CreateAPIView):
 						"username": user.username,
 						"email": user.email,
 						"role": user.role,
+						"onboarding_completed": False,
 						"emailVerified": True,  # Simplified - no email verification
 					},
 				}
@@ -375,6 +404,10 @@ class LoginView(generics.GenericAPIView):
 					request.session['auth_token'] = auth_token
 					request.session.save()
 					
+					# Check onboarding status
+					from .recommendation_models import UserOnboardingPreferences
+					onboarding_prefs, _ = UserOnboardingPreferences.objects.get_or_create(user=user)
+					
 					response_data = {
 						"message": "Login successful",
 						"auth_token": auth_token,  # Send token to frontend
@@ -383,6 +416,7 @@ class LoginView(generics.GenericAPIView):
 							"username": user.username,
 							"email": user.email,
 							"role": user.role,
+							"onboarding_completed": onboarding_prefs.onboarding_completed,
 							"emailVerified": user.email_verified,
 						}
 					}
@@ -2158,6 +2192,45 @@ def upload_profile_picture(request):
 
 # Additional utility endpoints
 
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def record_profile_view(request, user_id):
+	"""Increment profile view count for a specific user with a 6-hour cooldown"""
+	try:
+		from .messaging_models import UserProfile, ProfileView
+		from django.utils import timezone
+		from datetime import timedelta
+		
+		profile = UserProfile.objects.get(user_id=user_id)
+		viewer = get_session_user(request)
+		
+		# 1. Self-view check
+		if viewer and str(viewer.id) == str(user_id):
+			return Response({"status": "ignored", "reason": "self_view"}, status=status.HTTP_200_OK)
+			
+		# 2. Cooldown check (6 hours)
+		cooldown_time = timezone.now() - timedelta(hours=6)
+		
+		# Filter by viewer (if logged in) or IP (if guest, though for now we focus on logged in users)
+		existing_view = ProfileView.objects.filter(
+			viewer=viewer,
+			viewed_profile=profile,
+			timestamp__gte=cooldown_time
+		).exists()
+		
+		if existing_view:
+			return Response({"status": "ignored", "reason": "cooldown_active"}, status=status.HTTP_200_OK)
+			
+		# 3. Success: Log the view and increment counter
+		ProfileView.objects.create(viewer=viewer, viewed_profile=profile)
+		profile.views += 1
+		profile.save(update_fields=['views'])
+		
+		return Response({"status": "success", "views": profile.views}, status=status.HTTP_200_OK)
+	except (UserProfile.DoesNotExist, ValueError):
+		return Response({"error": "Profile not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
 class PublicPeopleListView(generics.ListAPIView):
 	"""List all users who have made their profile public (Collaborator Network)"""
 	permission_classes = [AllowAny]
@@ -2297,8 +2370,13 @@ class ProfileDataView(generics.RetrieveUpdateAPIView):
 		
 		profile_serializer = UserProfileSerializer(profile)
 		
+		# Check onboarding status
+		from .recommendation_models import UserOnboardingPreferences
+		onboarding_prefs, _ = UserOnboardingPreferences.objects.get_or_create(user=user)
+		
 		response_data = {
 			'profile': profile_serializer.data,
+			'onboarding_completed': onboarding_prefs.onboarding_completed,
 			'startups': startups_serializer.data,
 			'applications': applications_serializer.data,
 			'favorites': favorites_serializer.data,
@@ -2308,6 +2386,7 @@ class ProfileDataView(generics.RetrieveUpdateAPIView):
 				'applications_received': applications_received,
 				'favorites_count': user_favorites.count(),
 				'interests_count': user_interests.count(),
+				'profile_views': profile.views,
 			}
 		}
 		

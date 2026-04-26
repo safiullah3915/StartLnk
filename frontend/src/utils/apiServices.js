@@ -32,6 +32,7 @@ export const userAPI = {
   getUserInterests: () => apiClient.get('/api/users/interests'),
   getPeople: (q = '') => apiClient.get('/api/people', { params: q ? { q } : {} }),
   getUserByEmail: (email) => apiClient.get(`/api/search?q=${encodeURIComponent(email)}&type=user`),
+  recordProfileView: (userId) => apiClient.post(`/api/people/${userId}/view`),
 };
 
 // Startup management endpoints

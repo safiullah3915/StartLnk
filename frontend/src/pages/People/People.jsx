@@ -37,20 +37,20 @@ const GithubIcon = () => (
 );
 const LinkedinIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/>
-    <rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/>
+    <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
+    <rect x="2" y="9" width="4" height="12" /><circle cx="4" cy="4" r="2" />
   </svg>
 );
 const GlobeIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
-    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+    <circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" />
+    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
   </svg>
 );
 const MailIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-    <polyline points="22,6 12,13 2,6"/>
+    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+    <polyline points="22,6 12,13 2,6" />
   </svg>
 );
 const BriefcaseIcon = () => (
@@ -70,26 +70,27 @@ const HeartIcon = () => (
 );
 const UserIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
   </svg>
 );
 const CloseIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
   </svg>
 );
 
 // ── People page ────────────────────────────────────────────────
 export default function People() {
-  const [people, setPeople]     = useState([]);
-  const [loading, setLoading]   = useState(true);
-  const [query, setQuery]       = useState('');
+  const [people, setPeople] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [selected, setSelected] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const peoplePerPage = 6;
-  const panelRef                = useRef(null);
-  const debounceRef             = useRef(null);
+  const panelRef = useRef(null);
+  const debounceRef = useRef(null);
+  const viewTimerRef = useRef(null);
 
   const fetchPeople = useCallback(async (q = '') => {
     try {
@@ -148,6 +149,13 @@ export default function People() {
     return () => { document.body.style.overflow = 'unset'; };
   }, [selected]);
 
+  // Clear timer on unmount
+  useEffect(() => {
+    return () => {
+      if (viewTimerRef.current) clearTimeout(viewTimerRef.current);
+    };
+  }, []);
+
   // Capture last person for smooth exit animation
   useEffect(() => {
     if (selected && panelRef.current) {
@@ -175,6 +183,28 @@ export default function People() {
   const handlePageChange = (page) => {
     if (page < 1 || page > totalPages) return;
     setCurrentPage(page);
+  };
+
+  const handlePersonClick = (person) => {
+    // Clear any existing timer if we're switching or closing
+    if (viewTimerRef.current) {
+      clearTimeout(viewTimerRef.current);
+      viewTimerRef.current = null;
+    }
+
+    if (selected?.id === person.id) {
+      // Closing the current one
+      setSelected(null);
+    } else {
+      // Opening a new one
+      setSelected(person);
+
+      // Start 3-second timer for meaningful view
+      viewTimerRef.current = setTimeout(() => {
+        userAPI.recordProfileView(person.id).catch(() => { });
+        viewTimerRef.current = null;
+      }, 3000);
+    }
   };
 
   return (
@@ -214,8 +244,8 @@ export default function People() {
             >
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                 strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8"/>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
               </svg>
             </button>
           </div>
@@ -243,14 +273,14 @@ export default function People() {
                 key={person.id}
                 person={person}
                 isSelected={selected?.id === person.id}
-                onClick={() => setSelected(prev => prev?.id === person.id ? null : person)}
+                onClick={() => handlePersonClick(person)}
               />
             ))}
           </div>
 
           {/* Detail panel with smooth transition */}
-          <div 
-            className={`${styles.panelOverlay} ${selected ? styles.overlayShow : ''}`} 
+          <div
+            className={`${styles.panelOverlay} ${selected ? styles.overlayShow : ''}`}
             onClick={() => setSelected(null)}
           />
           <aside
@@ -260,9 +290,9 @@ export default function People() {
           >
             {/* Render content if selected exists; if closing, it will still show last person */}
             {(selected || (panelRef.current && panelRef.current.lastPerson)) && (
-              <PersonPanel 
-                person={selected || panelRef.current.lastPerson} 
-                onClose={() => setSelected(null)} 
+              <PersonPanel
+                person={selected || panelRef.current.lastPerson}
+                onClose={() => setSelected(null)}
               />
             )}
           </aside>
@@ -308,10 +338,10 @@ export default function People() {
 // ── PersonCard ─────────────────────────────────────────────────
 function PersonCard({ person, isSelected, onClick }) {
   const displayName = person.full_name || person.username;
-  const hasBio     = !!person.bio?.trim();
-  const hasGit     = !!person.github_url;
-  const hasLinked  = !!person.linkedin_url;
-  const hasWeb     = !!person.website;
+  const hasBio = !!person.bio?.trim();
+  const hasGit = !!person.github_url;
+  const hasLinked = !!person.linkedin_url;
+  const hasWeb = !!person.website;
   const hasSocials = hasGit || hasLinked || hasWeb;
 
   return (
@@ -343,9 +373,9 @@ function PersonCard({ person, isSelected, onClick }) {
       {/* ── Footer: social icons + view button ── */}
       <div className={styles.cardFooter}>
         <div className={styles.socialIcons}>
-          {hasGit    && <a href={person.github_url}   target="_blank" rel="noreferrer" className={styles.socialIcon} title="GitHub"><GithubIcon /></a>}
+          {hasGit && <a href={person.github_url} target="_blank" rel="noreferrer" className={styles.socialIcon} title="GitHub"><GithubIcon /></a>}
           {hasLinked && <a href={person.linkedin_url} target="_blank" rel="noreferrer" className={styles.socialIcon} title="LinkedIn"><LinkedinIcon /></a>}
-          {hasWeb    && <a href={person.website}       target="_blank" rel="noreferrer" className={styles.socialIcon} title="Website"><GlobeIcon /></a>}
+          {hasWeb && <a href={person.website} target="_blank" rel="noreferrer" className={styles.socialIcon} title="Website"><GlobeIcon /></a>}
         </div>
         <button className={styles.viewBtn} onClick={onClick}>
           VIEW DETAILS
@@ -359,19 +389,19 @@ function PersonCard({ person, isSelected, onClick }) {
 // ── PersonPanel ────────────────────────────────────────────────
 function PersonPanel({ person, onClose }) {
   if (!person) return null;
-  const bg          = colorFor(person.username);
-  const ini         = initials(person.full_name || person.username);
+  const bg = colorFor(person.username);
+  const ini = initials(person.full_name || person.username);
   const displayName = person.full_name || person.username;
 
-  const hasBio      = !!person.bio?.trim();
-  const hasSkills   = Array.isArray(person.skills) && person.skills.some(sk => (typeof sk === 'string' ? sk.trim() : sk?.title?.trim()));
-  const hasExp      = Array.isArray(person.experience) && person.experience.some(ex => (typeof ex === 'string' ? ex.trim() : ex?.title?.trim()));
-  const hasRefs     = Array.isArray(person.references) && person.references.some(ref => (typeof ref === 'string' ? ref.trim() : ref?.title?.trim()));
-  const hasGit      = !!person.github_url;
-  const hasLinked   = !!person.linkedin_url;
-  const hasWeb      = !!person.website;
-  const hasEmail    = !!person.email;
-  const hasRegion   = Array.isArray(person.selected_regions) && person.selected_regions.length > 0;
+  const hasBio = !!person.bio?.trim();
+  const hasSkills = Array.isArray(person.skills) && person.skills.some(sk => (typeof sk === 'string' ? sk.trim() : sk?.title?.trim()));
+  const hasExp = Array.isArray(person.experience) && person.experience.some(ex => (typeof ex === 'string' ? ex.trim() : ex?.title?.trim()));
+  const hasRefs = Array.isArray(person.references) && person.references.some(ref => (typeof ref === 'string' ? ref.trim() : ref?.title?.trim()));
+  const hasGit = !!person.github_url;
+  const hasLinked = !!person.linkedin_url;
+  const hasWeb = !!person.website;
+  const hasEmail = !!person.email;
+  const hasRegion = Array.isArray(person.selected_regions) && person.selected_regions.length > 0;
 
   return (
     <div className={styles.panelInner}>
@@ -401,10 +431,10 @@ function PersonPanel({ person, onClose }) {
           </p>
         )}
         <div className={styles.panelSocial}>
-          {hasGit    && <a href={person.github_url}   target="_blank" rel="noreferrer" className={styles.panelSocialIcon} title="GitHub"><GithubIcon /></a>}
+          {hasGit && <a href={person.github_url} target="_blank" rel="noreferrer" className={styles.panelSocialIcon} title="GitHub"><GithubIcon /></a>}
           {hasLinked && <a href={person.linkedin_url} target="_blank" rel="noreferrer" className={styles.panelSocialIcon} title="LinkedIn"><LinkedinIcon /></a>}
-          {hasWeb    && <a href={person.website}       target="_blank" rel="noreferrer" className={styles.panelSocialIcon} title="Website"><GlobeIcon /></a>}
-          {hasEmail  && <a href={`mailto:${person.email}`}            className={styles.panelSocialIcon} title="Email"><MailIcon /></a>}
+          {hasWeb && <a href={person.website} target="_blank" rel="noreferrer" className={styles.panelSocialIcon} title="Website"><GlobeIcon /></a>}
+          {hasEmail && <a href={`mailto:${person.email}`} className={styles.panelSocialIcon} title="Email"><MailIcon /></a>}
         </div>
       </div>
 
@@ -425,7 +455,7 @@ function PersonPanel({ person, onClose }) {
             </h3>
             {person.references.map((ref, i) => {
               const title = typeof ref === 'string' ? ref : ref?.title;
-              const desc  = typeof ref === 'object' ? ref?.description : '';
+              const desc = typeof ref === 'object' ? ref?.description : '';
               if (!title) return null;
               return (
                 <div key={i} className={styles.panelItem}>
@@ -444,7 +474,7 @@ function PersonPanel({ person, onClose }) {
             </h3>
             {person.skills.map((sk, i) => {
               const title = typeof sk === 'string' ? sk : sk?.title;
-              const desc  = typeof sk === 'object' ? sk?.description : '';
+              const desc = typeof sk === 'object' ? sk?.description : '';
               if (!title) return null;
               return (
                 <div key={i} className={styles.panelItem}>
@@ -463,7 +493,7 @@ function PersonPanel({ person, onClose }) {
             </h3>
             {person.experience.map((ex, i) => {
               const title = typeof ex === 'string' ? ex : ex?.title;
-              const desc  = typeof ex === 'object' ? ex?.description : '';
+              const desc = typeof ex === 'object' ? ex?.description : '';
               if (!title) return null;
               return (
                 <div key={i} className={styles.panelItem}>
