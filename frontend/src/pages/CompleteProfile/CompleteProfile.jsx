@@ -123,13 +123,13 @@ function CompleteProfile() {
                     return;
                 }
 
-                // User-facing errors (email / password)
-                if (msg.includes("email") || msg.includes("password") || msg.includes("user already exists")) {
+                // If it's a specific error we got from the backend, show it directly
+                if (raw && !msg.includes("internal server error")) {
                     setError(raw);
                     return;
                 }
 
-                // Technical errors
+                // Technical fallback
                 setError("Our servers are busy right now. Please try again in a moment.");
             }
         } catch {
