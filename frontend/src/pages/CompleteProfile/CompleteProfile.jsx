@@ -9,7 +9,7 @@ import "./CompleteProfile.css";
 const ROLES = [
     { value: "entrepreneur", label: "Entrepreneur",        icon: "🚀", desc: "Building or scaling a startup" },
     { value: "student",      label: "Student / Professional", icon: "🎓", desc: "Looking for opportunities to grow" },
-    { value: "investor",     label: "Investor",             icon: "💼", desc: "Seeking startups to fund or advise" },
+    // { value: "investor",     label: "Investor",             icon: "💼", desc: "Seeking startups to fund or advise" },
 ];
 
 const TOTAL_STEPS = 2;

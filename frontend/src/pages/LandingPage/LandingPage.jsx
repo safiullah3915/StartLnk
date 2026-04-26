@@ -24,7 +24,7 @@ function LandingPage() {
             Empowering Startups Through Connection
             </p>
             <p className={styles.p2}>
-            Join a vibrant network of entrepreneurs, students, and investors. Build teams, pitch ideas, and collaborate to turn innovation into real ventures.
+            Join a vibrant network of entrepreneurs and students. Build teams, pitch ideas, and collaborate to turn innovation into real ventures.
             </p>
 
             <div className={styles.button_container}>

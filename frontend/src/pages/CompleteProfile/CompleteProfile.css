@@ -161,9 +161,9 @@
 .cp-locked {
     background: #f3f4f6;
     color: #6b7280;
-    cursor: default;
+    cursor: not-allowed;
     border-color: #e5e7eb;
-    pointer-events: none;
+    pointer-events: auto;
     user-select: none;
 }
 
