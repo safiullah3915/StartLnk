@@ -13,6 +13,7 @@ const Message = () => {
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [onlineUsers, setOnlineUsers] = useState([]);
+  const [presenceByUser, setPresenceByUser] = useState({});
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('conversations');
   const [error, setError] = useState(null);
@@ -44,10 +45,14 @@ const Message = () => {
       // Poll for new messages every 5 seconds
       const interval = setInterval(async () => {
         try {
-          const conversationsData = await MessageService.getConversations();
+          const [conversationsData, onlineUsersData] = await Promise.all([
+            MessageService.getConversations(),
+            MessageService.getOnlineUsers()
+          ]);
           const allConversations = Array.isArray(conversationsData)
             ? conversationsData.filter(c => !!c?.last_message)
             : [];
+          setOnlineUsers(Array.isArray(onlineUsersData) ? onlineUsersData.filter(u => u.id !== user.id) : []);
           
           // Sort conversations by last_message timestamp (newest first)
           const sortedConversations = [...allConversations].sort((a, b) => {
@@ -85,6 +90,37 @@ const Message = () => {
       };
     }
   }, [user, searchParams, currentConversation]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const getDirectParticipantIds = () => {
+      const ids = conversations
+        .map(conv => {
+          if (!Array.isArray(conv.participants) || conv.participants.length !== 2) return null;
+          return MessageService.getOtherParticipant(conv, user.id)?.id;
+        })
+        .filter(Boolean);
+
+      if (currentConversation?.participants?.length === 2) {
+        const activeUserId = MessageService.getOtherParticipant(currentConversation, user.id)?.id;
+        if (activeUserId) ids.push(activeUserId);
+      }
+
+      return Array.from(new Set(ids));
+    };
+
+    const refreshPresence = async (force = false) => {
+      const ids = getDirectParticipantIds();
+      if (!ids.length) return;
+      const presence = await MessageService.refreshPresenceForUsers(ids, { force });
+      setPresenceByUser(prev => ({ ...prev, ...presence }));
+    };
+
+    refreshPresence();
+    const interval = setInterval(() => refreshPresence(true), 30000);
+    return () => clearInterval(interval);
+  }, [user, conversations, currentConversation]);
 
   // Handle user from navigation state when component is already initialized (for subsequent navigations)
   useEffect(() => {
@@ -756,6 +792,8 @@ const Message = () => {
                       const title = MessageService.getConversationTitle(conversation, user?.id);
                       const isUnread = unreadConversations.has(conversation.id);
                       const isActive = currentConversation?.id === conversation.id;
+                      const presence = otherUser?.id ? presenceByUser[String(otherUser.id)] : null;
+                      const presenceLabel = presence ? MessageService.formatPresenceLabel(presence) : '';
                       return (
                         <div 
                           key={conversation.id} 
@@ -778,6 +816,11 @@ const Message = () => {
                               }}></span>
                             )}
                           </div>
+                          {presenceLabel && (
+                            <div style={{ fontSize: '0.75em', color: presence?.is_online ? '#10b981' : '#666', marginTop: '4px' }}>
+                              {presenceLabel}
+                            </div>
+                          )}
                           {conversation.last_message && (
                             <div style={{ fontSize: '0.8em', color: '#666', marginTop: '4px' }}>
                               {conversation.last_message.content.substring(0, 50)}{conversation.last_message.content.length > 50 ? '...' : ''}
