@@ -1,4 +1,4 @@
-import { messageAPI } from '../utils/apiServices';
+import { messageAPI, presenceAPI } from '../utils/apiServices';
 
 class MessageService {
   constructor() {
@@ -6,17 +6,78 @@ class MessageService {
     this.currentConversation = null;
     this.messages = {};
     this.onlineUsers = [];
+    this.presenceCache = {};
+    this.presenceFetchedAt = {};
+    this.presenceCacheTtl = 30000;
   }
 
   async getOnlineUsers() {
     try {
-      const response = await messageAPI.getOnlineUsers();
+      const response = await presenceAPI.getOnlineUsers();
       this.onlineUsers = response.data;
       return this.onlineUsers;
     } catch (error) {
       console.error('Failed to get online users:', error);
       throw error;
     }
+  }
+
+  async getUserPresence(userId, options = {}) {
+    if (!userId) return { is_online: false, last_seen: null };
+
+    const id = String(userId);
+    const now = Date.now();
+    const cached = this.presenceCache[id];
+    const fetchedAt = this.presenceFetchedAt[id] || 0;
+
+    if (!options.force && cached && now - fetchedAt < this.presenceCacheTtl) {
+      return cached;
+    }
+
+    const response = await presenceAPI.getUserPresence(id);
+    const previous = this.presenceCache[id];
+    const presence = response.data || { is_online: false, last_seen: null };
+    if (!presence.last_seen && previous?.last_seen) {
+      presence.last_seen = previous.last_seen;
+    }
+    this.presenceCache[id] = presence;
+    this.presenceFetchedAt[id] = now;
+    return presence;
+  }
+
+  async refreshPresenceForUsers(userIds, options = {}) {
+    const uniqueIds = Array.from(new Set((userIds || []).filter(Boolean).map(String)));
+    const results = await Promise.all(
+      uniqueIds.map(async (id) => {
+        try {
+          return [id, await this.getUserPresence(id, options)];
+        } catch (error) {
+          console.error('Failed to get user presence:', error);
+          return [id, this.presenceCache[id] || { is_online: false, last_seen: null }];
+        }
+      })
+    );
+    return Object.fromEntries(results);
+  }
+
+  formatPresenceLabel(presence) {
+    if (!presence) return '';
+    if (presence.is_online) return 'Online';
+    if (!presence.last_seen) return 'Offline';
+
+    const lastSeenEpoch = Number(presence.last_seen);
+    const nowEpoch = Math.floor(Date.now() / 1000);
+    const diffSeconds = Math.max(0, nowEpoch - lastSeenEpoch);
+    const diffMinutes = Math.floor(diffSeconds / 60);
+
+    if (diffMinutes < 15) {
+      if (diffMinutes < 1) {
+        return 'Last seen recently just now';
+      }
+      return `Last seen recently ${diffMinutes} minute${diffMinutes === 1 ? '' : 's'} ago`;
+    }
+    
+    return 'Offline';
   }
 
   async getConversations() {
@@ -152,7 +213,7 @@ class MessageService {
 
   // Helper method to get other participant in a conversation
   getOtherParticipant(conversation, currentUserId) {
-    return conversation.participants.find(p => p.id !== currentUserId);
+    return conversation.participants.find(p => String(p.id) !== String(currentUserId));
   }
 
   // Format conversation title for display
