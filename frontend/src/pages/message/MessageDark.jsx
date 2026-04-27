@@ -12,6 +12,7 @@ const MessageDark = () => {
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [onlineUsers, setOnlineUsers] = useState([]);
+  const [presenceByUser, setPresenceByUser] = useState({});
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('chats'); // 'chats', 'people', 'teams'
   const [sidebarSearch, setSidebarSearch] = useState('');
@@ -40,6 +41,60 @@ const MessageDark = () => {
       setConversations(prev => prev.filter(c => !!c?.last_message));
     };
   }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const refreshOnlineUsers = async () => {
+      try {
+        const onlineUsersData = await MessageService.getOnlineUsers();
+        const safeUsers = Array.isArray(onlineUsersData) ? onlineUsersData : [];
+        setOnlineUsers(safeUsers.filter(u => u.id !== user.id));
+      } catch (error) {
+        console.error('Failed to refresh online users:', error);
+      }
+    };
+
+    const interval = setInterval(refreshOnlineUsers, 5000);
+    return () => clearInterval(interval);
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const getDirectParticipantIds = () => {
+      const ids = conversations
+        .map(conv => {
+          if (!Array.isArray(conv.participants) || conv.participants.length !== 2) return null;
+          return MessageService.getOtherParticipant(conv, user.id)?.id;
+        })
+        .filter(Boolean);
+
+      if (currentConversation?.participants?.length === 2) {
+        const activeUserId = MessageService.getOtherParticipant(currentConversation, user.id)?.id;
+        if (activeUserId) ids.push(activeUserId);
+      }
+
+      return Array.from(new Set(ids));
+    };
+
+    const refreshPresence = async (force = false) => {
+      const ids = getDirectParticipantIds();
+      if (!ids.length) return;
+      const presence = await MessageService.refreshPresenceForUsers(ids, { force });
+      setPresenceByUser(prev => ({ ...prev, ...presence }));
+    };
+
+    refreshPresence();
+    const interval = setInterval(() => refreshPresence(true), 30000);
+    return () => clearInterval(interval);
+  }, [user, conversations, currentConversation]);
+
+  const getConversationPresence = (conversation) => {
+    if (!conversation?.participants || conversation.participants.length !== 2) return null;
+    const otherUser = MessageService.getOtherParticipant(conversation, user?.id);
+    return otherUser?.id ? presenceByUser[String(otherUser.id)] : null;
+  };
 
   useEffect(() => {
     const loadStartupPositions = async () => {
@@ -487,6 +542,11 @@ const MessageDark = () => {
           background: #10b981;
         }
 
+        .status-dot.offline {
+          background: #64748b;
+        }
+
+
         .chat-info {
           flex: 1;
           min-width: 0;
@@ -623,6 +683,11 @@ const MessageDark = () => {
           color: #10b981;
           font-weight: 500;
         }
+
+        .header-status.offline {
+          color: #64748b;
+        }
+
 
         .message-viewport {
           flex: 1;
@@ -1308,6 +1373,7 @@ const MessageDark = () => {
                     .map(conv => {
                       const title = MessageService.getConversationTitle(conv, user?.id);
                       const lastMsg = conv.last_message?.content || "No messages yet";
+                      const presence = getConversationPresence(conv);
                       return (
                         <div
                           key={conv.id}
@@ -1316,7 +1382,7 @@ const MessageDark = () => {
                         >
                           <div className="avatar">
                             {title.charAt(0).toUpperCase()}
-                            <div className="status-dot"></div>
+                            {presence && <div className={`status-dot ${presence.is_online ? '' : 'offline'}`}></div>}
                           </div>
                           <div className="chat-info">
                             <div className="chat-name-row">
@@ -1419,6 +1485,12 @@ const MessageDark = () => {
               </div>
             ) : currentConversation ? (
               <>
+                {(() => {
+                  const activePresence = getConversationPresence(currentConversation);
+                  const activeStatus = activePresence
+                    ? MessageService.formatPresenceLabel(activePresence)
+                    : '';
+                  return (
                 <header className="chat-header" style={{ position: 'relative', zIndex: 1100 }}>
                   <button className="hamburger-menu" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
                     <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1430,9 +1502,11 @@ const MessageDark = () => {
                   </div>
                   <div className="header-info">
                     <span className="header-name">{MessageService.getConversationTitle(currentConversation, user?.id)}</span>
-                    <span className="header-status">Online</span>
+                    {activeStatus && <span className={`header-status ${activeStatus === 'Online' ? '' : 'offline'}`}>{activeStatus}</span>}
                   </div>
                 </header>
+                  );
+                })()}
 
                 <div className="message-viewport" ref={chatAreaRef}>
                   <div className="beginning-indicator">
