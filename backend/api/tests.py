@@ -1,5 +1,8 @@
 from django.test import TestCase
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
 from django.urls import reverse
@@ -9,6 +12,7 @@ from .models import Startup, StartupTag, Position, Application
 from .messaging_models import Conversation
 from .recommendation_models import UserOnboardingPreferences
 from .serializers import UserOnboardingPreferencesSerializer
+from .services.presence_service import PresenceService
 
 User = get_user_model()
 
@@ -329,6 +333,105 @@ class MessagingTestCase(BcryptUserMixin, APITestCase):
         self.assertIn('id', response.data)
         self.assertEqual(response.data['content'], payload['content'])
         self.assertEqual(response.data['sender']['id'], str(self.user.id))
+
+
+class PresenceTestCase(BcryptUserMixin, APITestCase):
+    """Tests for cache-backed online presence."""
+
+    def setUp(self):
+        cache.clear()
+        self.user = self.create_bcrypt_user(
+            username='presence-user',
+            email='presence@example.com',
+            password='securepassword123'
+        )
+        self.matching_user = self.create_bcrypt_user(
+            username='matching-user',
+            email='matching@example.com',
+            password='securepassword123'
+        )
+        self.non_matching_user = self.create_bcrypt_user(
+            username='non-matching-user',
+            email='nonmatching@example.com',
+            password='securepassword123'
+        )
+        self.client.force_login(self.user)
+        UserOnboardingPreferences.objects.create(
+            user=self.user,
+            selected_fields=['fintech'],
+            selected_categories=['saas'],
+            onboarding_completed=True,
+        )
+        UserOnboardingPreferences.objects.create(
+            user=self.matching_user,
+            selected_fields=['fintech'],
+            selected_categories=['marketplace'],
+            onboarding_completed=True,
+        )
+        UserOnboardingPreferences.objects.create(
+            user=self.non_matching_user,
+            selected_fields=['healthcare'],
+            selected_categories=['crypto'],
+            onboarding_completed=True,
+        )
+
+    def test_heartbeat_marks_user_online_with_epoch_timestamp(self):
+        response = self.client.post(reverse('presence_heartbeat'))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['ok'])
+        self.assertIsInstance(response.data['last_seen'], float)
+        self.assertTrue(PresenceService.is_online(self.user.id))
+
+    def test_user_presence_false_when_cache_key_missing(self):
+        response = self.client.get(reverse('presence_user', kwargs={'user_id': self.matching_user.id}))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(response.data['is_online'])
+        self.assertIsNone(response.data['last_seen'])
+
+    def test_online_users_prunes_expired_registry_and_filters_preferences(self):
+        PresenceService.mark_seen(self.matching_user)
+        PresenceService.mark_seen(self.non_matching_user)
+        stale_id = str(self.create_bcrypt_user(
+            username='stale-user',
+            email='stale@example.com',
+            password='securepassword123'
+        ).id)
+        registry = PresenceService._read_registry()
+        registry.add(stale_id)
+        PresenceService._write_registry(registry)
+
+        response = self.client.get(reverse('presence_online_users'))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        returned_ids = {item['id'] for item in response.data}
+        self.assertSetEqual(returned_ids, {str(self.matching_user.id)})
+        self.assertNotIn(stale_id, PresenceService._read_registry())
+
+    def test_no_preference_requester_receives_all_online_candidates(self):
+        UserOnboardingPreferences.objects.filter(user=self.user).delete()
+        PresenceService.mark_seen(self.matching_user)
+        PresenceService.mark_seen(self.non_matching_user)
+
+        response = self.client.get(reverse('presence_online_users'))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        returned_ids = {item['id'] for item in response.data}
+        self.assertSetEqual(returned_ids, {str(self.matching_user.id), str(self.non_matching_user.id)})
+
+    def test_legacy_online_users_endpoint_matches_presence_endpoint(self):
+        PresenceService.mark_seen(self.matching_user)
+        presence_response = self.client.get(reverse('presence_online_users'))
+        legacy_response = self.client.get(reverse('online_users'))
+        self.assertEqual(legacy_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(legacy_response.data, presence_response.data)
+
+    def test_preference_filtering_bulk_loads_candidate_preferences(self):
+        PresenceService.mark_seen(self.matching_user)
+        PresenceService.mark_seen(self.non_matching_user)
+
+        with CaptureQueriesContext(connection) as queries:
+            returned_ids = {str(user.id) for user in PresenceService.get_online_users_for_user(self.user)}
+
+        self.assertSetEqual(returned_ids, {str(self.matching_user.id)})
+        self.assertLessEqual(len(queries), 3)
 
 
 class MessagingAPITestCase(BcryptUserMixin, APITestCase):
