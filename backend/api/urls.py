@@ -101,5 +101,6 @@ urlpatterns = [
 	path('api/startups/<uuid:pk>/unlike', views.unlike_startup, name='unlike_startup'),
 	path('api/startups/<uuid:pk>/dislike', views.dislike_startup, name='dislike_startup'),
 	path('api/startups/<uuid:pk>/undislike', views.undislike_startup, name='undislike_startup'),
+	path('api/startups/<uuid:pk>/interaction-status', views.startup_interaction_status, name='startup_interaction_status'),
 ]
 

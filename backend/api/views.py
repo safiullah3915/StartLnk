@@ -2699,3 +2699,55 @@ def undislike_startup(request, pk):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def startup_interaction_status(request, pk):
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def startup_interaction_status(request, pk):
+	"""Get user's interaction status for a startup"""
+	user = get_session_user(request)
+	if not user:
+		return Response(
+			{"error": "Authentication required"},
+			status=status.HTTP_401_UNAUTHORIZED
+		)
+	
+	try:
+		print(f"?? [startup_interaction_status] Checking status for startup: {pk}, user: {user.id}")
+		startup = Startup.objects.get(pk=pk)
+	except Startup.DoesNotExist:
+		print(f"? [startup_interaction_status] Startup not found: {pk}")
+		return Response(
+			{"error": "Startup not found"},
+			status=status.HTTP_404_NOT_FOUND
+		)
+	
+	from .recommendation_models import UserInteraction
+	
+	# Check for various interactions
+	has_like = UserInteraction.objects.filter(
+		user=user,
+		startup=startup,
+		interaction_type='like'
+	).exists()
+	
+	has_dislike = UserInteraction.objects.filter(
+		user=user,
+		startup=startup,
+		interaction_type='dislike'
+	).exists()
+	
+	has_favorite = Favorite.objects.filter(user=user, startup=startup).exists()
+	has_interest = Interest.objects.filter(user=user, startup=startup).exists()
+	
+	print(f"? [startup_interaction_status] Status - Like: {has_like}, Dislike: {has_dislike}, Favorite: {has_favorite}, Interest: {has_interest}")
+	has_application = Application.objects.filter(applicant=user, startup=startup).exists()
+	
+	serializer = StartupInteractionStatusSerializer({
+		'has_like': has_like,
+		'has_dislike': has_dislike,
+		'has_favorite': has_favorite,
+		'has_interest': has_interest,
+		'has_application': has_application
+	})
+	
+	return Response(serializer.data, status=status.HTTP_200_OK)
