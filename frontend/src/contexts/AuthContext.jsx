@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import apiClient from '../utils/axiosConfig';
 import Cookies from 'js-cookie';
+import { presenceAPI } from '../utils/apiServices';
 
 const AuthContext = createContext();
 
@@ -19,6 +20,56 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    if (!isAuthenticated || !user) return;
+
+    let intervalId = null;
+    let inFlight = false;
+
+    const sendHeartbeat = async () => {
+      if (document.visibilityState !== 'visible' || inFlight) return;
+      inFlight = true;
+      try {
+        await presenceAPI.heartbeat();
+      } catch (error) {
+        console.warn('Presence heartbeat failed:', error.response?.status || error.message);
+      } finally {
+        inFlight = false;
+      }
+    };
+
+    const stopHeartbeat = () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    };
+
+    const startHeartbeat = () => {
+      if (document.visibilityState !== 'visible') return;
+      sendHeartbeat();
+      if (!intervalId) {
+        intervalId = setInterval(sendHeartbeat, 25000);
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        startHeartbeat();
+      } else {
+        stopHeartbeat();
+      }
+    };
+
+    startHeartbeat();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      stopHeartbeat();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [isAuthenticated, user]);
 
   // Check if user is authenticated on page load/refresh
   useEffect(() => {
