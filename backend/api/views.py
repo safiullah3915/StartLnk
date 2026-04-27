@@ -30,6 +30,7 @@ from .serializers import (
 	UserOnboardingPreferencesSerializer, UserInteractionSerializer, StartupInteractionStatusSerializer
 )
 from .services.cache_service import RecommendationCacheService
+from .services.presence_service import PresenceService
 
 User = get_user_model()
 
@@ -2021,12 +2022,62 @@ class MessageListView(generics.ListCreateAPIView):
 @permission_classes([AllowAny])
 @csrf_exempt
 def get_online_users(request):
-	"""Get list of online users for messaging"""
-	# This is a simplified version - in production you'd use WebSockets
-	# For now, return all active users
-	online_users = User.objects.filter(is_active=True)[:50]
+	"""Backward-compatible messaging endpoint backed by cache presence."""
+	user = get_presence_user(request)
+	if not user:
+		return Response({"error": "Authentication required"}, status=status.HTTP_401_UNAUTHORIZED)
+	online_users = PresenceService.get_online_users_for_user(user)
 	serializer = UserSerializer(online_users, many=True)
 	return Response(serializer.data)
+
+
+def get_presence_user(request):
+	"""Resolve auth for frequent presence calls without unnecessary session scans."""
+	if hasattr(request, 'user') and request.user.is_authenticated and hasattr(request.user, 'id'):
+		return request.user
+	if hasattr(request, 'session') and request.session.get('is_authenticated') and 'user_id' in request.session:
+		try:
+			return User.objects.get(id=request.session['user_id'], is_active=True)
+		except (User.DoesNotExist, ValueError):
+			return None
+	return get_session_user(request)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+@csrf_exempt
+def presence_heartbeat(request):
+	"""Record current user's presence heartbeat in Django cache."""
+	user = get_presence_user(request)
+	if not user:
+		return Response({"error": "Authentication required"}, status=status.HTTP_401_UNAUTHORIZED)
+	last_seen = PresenceService.mark_seen(user)
+	return Response({"ok": True, "last_seen": last_seen}, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+@csrf_exempt
+def presence_online_users(request):
+	"""Return currently online users, internally filtered by preference overlap."""
+	user = get_presence_user(request)
+	if not user:
+		return Response({"error": "Authentication required"}, status=status.HTTP_401_UNAUTHORIZED)
+	online_users = PresenceService.get_online_users_for_user(user)
+	serializer = UserSerializer(online_users, many=True)
+	return Response(serializer.data)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+@csrf_exempt
+def presence_user(request, user_id):
+	"""Return cache-derived online state for a single user."""
+	last_seen = PresenceService.get_last_seen(user_id)
+	return Response({
+		"is_online": PresenceService.is_online(user_id),
+		"last_seen": last_seen,
+	}, status=status.HTTP_200_OK)
 
 
 # User Profile Management Views
@@ -2648,55 +2699,3 @@ def undislike_startup(request, pk):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def startup_interaction_status(request, pk):
-	"""Get user's interaction status for a startup"""
-	user = get_session_user(request)
-	if not user:
-		return Response(
-			{"error": "Authentication required"},
-			status=status.HTTP_401_UNAUTHORIZED
-		)
-	
-	try:
-		print(f"🔍 [startup_interaction_status] Checking status for startup: {pk}, user: {user.id}")
-		startup = Startup.objects.get(pk=pk)
-	except Startup.DoesNotExist:
-		print(f"❌ [startup_interaction_status] Startup not found: {pk}")
-		return Response(
-			{"error": "Startup not found"},
-			status=status.HTTP_404_NOT_FOUND
-		)
-	
-	from .recommendation_models import UserInteraction
-	
-	# Check for various interactions
-	has_like = UserInteraction.objects.filter(
-		user=user,
-		startup=startup,
-		interaction_type='like'
-	).exists()
-	
-	has_dislike = UserInteraction.objects.filter(
-		user=user,
-		startup=startup,
-		interaction_type='dislike'
-	).exists()
-	
-	has_favorite = Favorite.objects.filter(user=user, startup=startup).exists()
-	has_interest = Interest.objects.filter(user=user, startup=startup).exists()
-	
-	print(f"✅ [startup_interaction_status] Status - Like: {has_like}, Dislike: {has_dislike}, Favorite: {has_favorite}, Interest: {has_interest}")
-	has_application = Application.objects.filter(applicant=user, startup=startup).exists()
-	
-	serializer = StartupInteractionStatusSerializer({
-		'has_like': has_like,
-		'has_dislike': has_dislike,
-		'has_favorite': has_favorite,
-		'has_interest': has_interest,
-		'has_application': has_application
-	})
-	
-	return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-	return Response(serializer.data, status=status.HTTP_200_OK)
-

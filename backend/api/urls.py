@@ -76,6 +76,11 @@ urlpatterns = [
 	path('api/messages/<uuid:pk>', views.ConversationDetailView.as_view(), name='conversation_detail'),
 	path('api/messages/<uuid:conversation_id>/messages', views.MessageListView.as_view(), name='messages_list'),
 	path('api/messages/users/online', views.get_online_users, name='online_users'),
+
+	# Presence endpoints
+	path('api/presence/heartbeat', views.presence_heartbeat, name='presence_heartbeat'),
+	path('api/presence/online-users', views.presence_online_users, name='presence_online_users'),
+	path('api/presence/user/<uuid:user_id>', views.presence_user, name='presence_user'),
 	
 	# User profile management
 	path('api/users/profile', views.UserProfileView.as_view(), name='user_profile'),
@@ -96,5 +101,5 @@ urlpatterns = [
 	path('api/startups/<uuid:pk>/unlike', views.unlike_startup, name='unlike_startup'),
 	path('api/startups/<uuid:pk>/dislike', views.dislike_startup, name='dislike_startup'),
 	path('api/startups/<uuid:pk>/undislike', views.undislike_startup, name='undislike_startup'),
-	path('api/startups/<uuid:pk>/interaction-status', views.startup_interaction_status, name='startup_interaction_status'),
 ]
+
