@@ -80,6 +80,7 @@ urlpatterns = [
 	# Presence endpoints
 	path('api/presence/heartbeat', views.presence_heartbeat, name='presence_heartbeat'),
 	path('api/presence/online-users', views.presence_online_users, name='presence_online_users'),
+	path('api/presence/all-users', views.presence_all_users, name='presence_all_users'),
 	path('api/presence/user/<uuid:user_id>', views.presence_user, name='presence_user'),
 	
 	# User profile management

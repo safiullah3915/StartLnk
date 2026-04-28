@@ -26,8 +26,8 @@ const SearchStartups = () => {
   });
   const [searchInput, setSearchInput] = useState(initialQuery);
   const [totalResults, setTotalResults] = useState(0);
-  const [showSearch, setShowSearch] = useState(true);
-  const [showFilters, setShowFilters] = useState(true);
+  const [showSearch, setShowSearch] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
   const categories = [
     { value: '', label: 'All Categories' },

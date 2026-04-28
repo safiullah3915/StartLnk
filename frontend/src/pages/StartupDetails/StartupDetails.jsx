@@ -35,6 +35,7 @@ const StartupDetails = () => {
     last_month_revenue: '',
     last_month_profit: ''
   });
+  const [imgError, setImgError] = useState(false);
 
   useEffect(() => {
     loadStartupDetails();
@@ -43,6 +44,7 @@ const StartupDetails = () => {
     checkInterestStatus();
     checkAppliedPositions();
     checkInteractionStatus();
+    setImgError(false);
   }, [id]);
 
   const loadStartupDetails = async () => {
@@ -103,7 +105,7 @@ const StartupDetails = () => {
   };
 
   const checkFavoriteStatus = async () => {
-    if (!user || !isInvestor()) return;
+    if (!user) return;
 
     try {
       const response = await userAPI.getUserFavorites();
@@ -587,6 +589,30 @@ const StartupDetails = () => {
                 </button>
               </>
             )}
+          </div>
+        </div>
+
+        {/* Founder Info */}
+        <div className={styles.founderRow}>
+          <div className={styles.founderAvatarWrapper}>
+            <div className={styles.founderAvatar}>
+              {startup.owner?.profile_picture && !imgError ? (
+                <img 
+                  src={startup.owner.profile_picture} 
+                  alt={startup.owner.full_name} 
+                  onError={() => setImgError(true)}
+                />
+              ) : (
+                <div className={styles.avatarPlaceholder}>
+                  {startup.owner?.full_name?.charAt(0).toUpperCase() || 'F'}
+                </div>
+              )}
+            </div>
+          </div>
+          <div className={styles.founderInfo}>
+            <span className={styles.founderNameLabel}>{startup.owner?.full_name?.toUpperCase() || 'FOUNDER'}</span>
+            <span className={styles.founderRoleSeparator}>|</span>
+            <span className={styles.founderRoleLabel}>FOUNDER</span>
           </div>
         </div>
 

@@ -29,6 +29,7 @@ import ProtectedRoute from './components/ProtectedRoute/ProtectedRoute';
 import RoleBasedRoute from './components/RoleBasedRoute/RoleBasedRoute';
 import CompleteProfile from './pages/CompleteProfile/CompleteProfile';
 import People from './pages/People/People';
+import Favorites from './pages/Favorites/Favorites';
 
 // Component to scroll to top on route change
 function ScrollToTop() {
@@ -264,9 +265,13 @@ function AppRoutes() {
           <SearchStartups />
         </ProtectedRoute>
       } />
-      
 
-      
+      <Route path="/favorites" element={
+        <ProtectedRoute>
+          <Favorites />
+        </ProtectedRoute>
+      } />
+
       {/* Onboarding Preferences - accessible to all authenticated users */}
       <Route path="/onboarding-preferences" element={
         <ProtectedRoute>

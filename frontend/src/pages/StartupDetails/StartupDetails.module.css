@@ -23,7 +23,7 @@
   margin-bottom: 0;
   flex: 1;
 }
- 
+
 .headerSection .actionButtons {
   display: flex;
   gap: 0.5rem;
@@ -92,19 +92,27 @@
 }
 
 .metricLabel {
-  font-size: 0.85rem;
+  font-size: 0.78rem;
   text-decoration: underline;
   margin-bottom: 1rem;
   color: #666;
 }
-.metricLabel2{ align-items: center; justify-content: center; gap: 0.5rem;
-  display: flex;
-  
-}
-.metricLabel2 img{
 
-height: 1.5rem; object-fit: contain; width: 1.5rem;
+.metricLabel2 {
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  display: flex;
+
 }
+
+.metricLabel2 img {
+
+  height: 1.5rem;
+  object-fit: contain;
+  width: 1.5rem;
+}
+
 .metricValue {
   font-weight: 600;
   font-size: 1.1rem;
@@ -138,7 +146,8 @@ height: 1.5rem; object-fit: contain; width: 1.5rem;
   background-color: #ded8ff;
   color: #2b254d;
 }
-.btn2:hover{
+
+.btn2:hover {
   margin-right: 2rem;
   width: 100%;
 }
@@ -590,6 +599,7 @@ height: 1.5rem; object-fit: contain; width: 1.5rem;
 .loading {
   color: #666;
 }
+
 .formRow {
   display: flex;
   gap: 1rem;
@@ -806,13 +816,28 @@ height: 1.5rem; object-fit: contain; width: 1.5rem;
   justify-content: center;
   transition: transform 0.2s ease;
 }
+
 .iconBtn:hover {
   transform: scale(1.1);
 }
-.likeBtn, .dislikeBtn, .favoriteBtn { color: #9ca3af; }
-.activeLike { color: #10b981; }
-.activeDislike { color: #374151; }
-.activeFavorite { color: #f43f5e; }
+
+.likeBtn,
+.dislikeBtn,
+.favoriteBtn {
+  color: #9ca3af;
+}
+
+.activeLike {
+  color: #10b981;
+}
+
+.activeDislike {
+  color: #374151;
+}
+
+.activeFavorite {
+  color: #f43f5e;
+}
 
 /* Collaboration Detail Typography */
 .collabSectionTitle {
@@ -820,15 +845,18 @@ height: 1.5rem; object-fit: contain; width: 1.5rem;
   letter-spacing: 0.05em;
   font-weight: 800;
   color: #0f172a;
+  margin-bottom: 2rem;
 }
+
 .collabMetricLabel {
-  font-size: 0.85rem;
+  font-size: 0.78rem;
   font-weight: 700;
   color: #94a3b8;
   text-transform: uppercase;
   margin-bottom: 0.6rem;
   display: block;
 }
+
 .collabMetricValue {
   font-weight: 800;
   font-size: 1.45rem;
@@ -859,8 +887,11 @@ height: 1.5rem; object-fit: contain; width: 1.5rem;
     width: 100%;
   }
 }
+
 @media (max-width: 880px) {
-  .container , .performance{
+
+  .container,
+  .performance {
     justify-content: center;
     align-items: center;
     text-align: center;
@@ -869,7 +900,7 @@ height: 1.5rem; object-fit: contain; width: 1.5rem;
   .tags {
     justify-content: flex-start;
   }
-  
+
   .headerSection {
     align-items: flex-start;
   }
@@ -882,20 +913,21 @@ height: 1.5rem; object-fit: contain; width: 1.5rem;
     color: #0f172a;
   }
 
-  .description, .sectionTitle {
+  .description,
+  .sectionTitle {
     text-align: left;
   }
 
   .headerSection .actionButtons {
     padding-top: 0.5rem;
   }
-  
+
   .collabSectionTitle {
     text-align: center;
     margin-top: 3rem;
     margin-bottom: 2.5rem;
   }
-  
+
   .collabPerformance {
     flex-direction: column;
     gap: 2.5rem;
@@ -912,7 +944,7 @@ height: 1.5rem; object-fit: contain; width: 1.5rem;
     justify-content: flex-start;
     text-align: left;
   }
-  
+
   .fullWidthMetric {
     grid-column: 1 / -1;
   }
@@ -928,6 +960,7 @@ height: 1.5rem; object-fit: contain; width: 1.5rem;
   justify-content: flex-start;
   text-align: left;
 }
+
 .financeMetricLabel {
   font-size: 0.70rem;
   font-weight: 800;
@@ -939,6 +972,7 @@ height: 1.5rem; object-fit: contain; width: 1.5rem;
   padding-bottom: 0.2rem;
   min-width: 6rem;
 }
+
 .financeMetricValueTextOnly,
 .financeMetricValue {
   font-weight: 900;
@@ -947,14 +981,106 @@ height: 1.5rem; object-fit: contain; width: 1.5rem;
   margin: 0;
   padding: 0;
 }
+
 .financeMetricContainer {
   display: flex;
   align-items: center;
   justify-content: flex-start;
   gap: 0.5rem;
 }
+
 .financeMetricContainer img {
   width: 1.25rem;
   height: 1.25rem;
   object-fit: contain;
+}
+
+.founderRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: -1.25rem;
+  margin-bottom: 2rem;
+}
+
+.founderAvatar {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  overflow: hidden;
+  background-color: #4f46e5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.founderAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatarPlaceholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.founderInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.founderNameLabel {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #1f2937;
+  letter-spacing: 0.02em;
+}
+
+.founderRoleSeparator {
+  color: #d1d5db;
+  font-weight: 300;
+}
+
+.founderRoleLabel {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #94a3b8;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.founderAvatarWrapper {
+  position: relative;
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #EC4899, #8B5CF6, #3B82F6);
+  padding: 1.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.founderAvatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  overflow: hidden;
+  background-color: #151828;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  font-size: 0.9rem;
+  border: 1px solid #151828;
 }

@@ -12,12 +12,11 @@ logger = logging.getLogger(__name__)
 def create_apply_interaction(sender, instance, created, **kwargs):
     """Create UserInteraction when Application is created"""
     if created:
-        UserInteraction.objects.create(
+        UserInteraction.objects.update_or_create(
             user=instance.applicant,
             startup=instance.startup,
-            position=instance.position,
             interaction_type='apply',
-            weight=3.0
+            defaults={'position': instance.position, 'weight': 3.0}
         )
 
 
@@ -25,11 +24,11 @@ def create_apply_interaction(sender, instance, created, **kwargs):
 def create_favorite_interaction(sender, instance, created, **kwargs):
     """Create UserInteraction when Favorite is created"""
     if created:
-        UserInteraction.objects.create(
+        UserInteraction.objects.update_or_create(
             user=instance.user,
             startup=instance.startup,
             interaction_type='favorite',
-            weight=2.5
+            defaults={'weight': 2.5}
         )
 
 
@@ -37,10 +36,10 @@ def create_favorite_interaction(sender, instance, created, **kwargs):
 def create_interest_interaction(sender, instance, created, **kwargs):
     """Create UserInteraction when Interest is created"""
     if created:
-        UserInteraction.objects.create(
+        UserInteraction.objects.update_or_create(
             user=instance.user,
             startup=instance.startup,
             interaction_type='interest',
-            weight=3.5
+            defaults={'weight': 3.5}
         )
 

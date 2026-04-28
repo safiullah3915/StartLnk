@@ -2067,6 +2067,21 @@ def presence_online_users(request):
 	serializer = UserSerializer(online_users, many=True)
 	return Response(serializer.data)
 
+@api_view(['GET'])
+@permission_classes([AllowAny])
+@csrf_exempt
+def presence_all_users(request):
+	"Return all platform users (excluding self) for team/group creation."
+	from django.contrib.auth import get_user_model
+	UserModel = get_user_model()
+	user = get_presence_user(request)
+	if not user:
+		return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+	all_users = UserModel.objects.exclude(id=user.id).order_by('username')
+	serializer = UserSerializer(all_users, many=True, context={'request': request})
+	return Response(serializer.data)
+
+
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -2419,7 +2434,7 @@ class ProfileDataView(generics.RetrieveUpdateAPIView):
 		# Calculate total applications received by all user's startups
 		applications_received = Application.objects.filter(startup__owner=user).count()
 		
-		profile_serializer = UserProfileSerializer(profile)
+		profile_serializer = UserProfileSerializer(profile, context={'request': request})
 		
 		# Check onboarding status
 		from .recommendation_models import UserOnboardingPreferences
@@ -2696,9 +2711,6 @@ def undislike_startup(request, pk):
 	}, status=status.HTTP_200_OK)
 
 
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def startup_interaction_status(request, pk):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])

@@ -118,6 +118,7 @@ export const messageAPI = {
 export const presenceAPI = {
   heartbeat: () => apiClient.post('/api/presence/heartbeat'),
   getOnlineUsers: () => apiClient.get('/api/presence/online-users'),
+  getAllUsers: () => apiClient.get('/api/presence/all-users'),
   getUserPresence: (id) => apiClient.get(`/api/presence/user/${id}`),
 };
 

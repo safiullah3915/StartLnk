@@ -233,7 +233,7 @@ const Dashboard = () => {
       <div className={styles.quickActions}>
         <h2>Quick Actions</h2>
         <div className={styles.actionGrid}>
-          <Link to="/search" className={styles.actionCard}>
+          <Link to="/favorites" className={styles.actionCard}>
             <h3>Favorites</h3>
             <p>View your saved startups and opportunities</p>
           </Link>
@@ -347,7 +347,7 @@ const Dashboard = () => {
         <div className={styles.statCard}>
           <h3>Favorites</h3>
           <div className={styles.statNumber}>{stats?.favorites_count || 0}</div>
-          <Link to="/search" className={styles.statAction}>View Favorites</Link>
+          <Link to="/favorites" className={styles.statAction}>View Favorites</Link>
         </div>
         <div className={styles.statCard}>
           <h3>Profile Views</h3>
@@ -391,7 +391,7 @@ const Dashboard = () => {
     <div className={styles.dashboard}>
       <div className={styles.welcome}><h1>Welcome, {user?.username}!</h1><p>Discover and invest in startups</p></div>
       <div className={styles.statsGrid}>
-        <div className={styles.statCard}><h3>Favorites</h3><div className={styles.statNumber}>{stats?.favorites_count || 0}</div><Link to="/search" className={styles.statAction}>View Favorites</Link></div>
+        <div className={styles.statCard}><h3>Favorites</h3><div className={styles.statNumber}>{stats?.favorites_count || 0}</div><Link to="/favorites" className={styles.statAction}>View Favorites</Link></div>
         <div className={styles.statCard}><h3>Interests</h3><div className={styles.statNumber}>{stats?.interests_count || 0}</div><Link to="/investor-dashboard" className={styles.statAction}>View Interests</Link></div>
       </div>
     </div>
