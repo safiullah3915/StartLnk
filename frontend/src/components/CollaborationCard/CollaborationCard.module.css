@@ -46,6 +46,13 @@
   flex: 1;
 }
 
+.titleInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
 .iconBadge {
   display: flex;
   align-items: center;
@@ -69,6 +76,15 @@
   font-weight: 700;
   line-height: 1.25;
   overflow-wrap: break-word;
+}
+
+.founderName {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .headerRight {

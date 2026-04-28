@@ -1324,7 +1324,7 @@ const MessageDark = () => {
           >
             <div className="sidebar-header">
               <button className="mobile-sidebar-close" onClick={() => setIsSidebarOpen(false)}>
-                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg width="24" height="24" fill="none" style={{ visibility: 'hidden' }} stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
@@ -1433,7 +1433,15 @@ const MessageDark = () => {
                       Team Building
                     </div>
                     <p className="team-card-desc">Create a team associated with your startup and collaborate in real-time.</p>
-                    <button className="create-btn" onClick={() => setIsTeamModalOpen(true)}>
+                    <button className="create-btn" onClick={async () => {
+                      setIsTeamModalOpen(true);
+                      try {
+                        const users = await MessageService.getAllUsers();
+                        setAllUsersForSearch(users.filter(u => u.id !== user?.id));
+                      } catch (e) {
+                        console.error('Failed to load users for team modal:', e);
+                      }
+                    }}>
                       <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                       </svg>
@@ -1491,20 +1499,20 @@ const MessageDark = () => {
                     ? MessageService.formatPresenceLabel(activePresence)
                     : '';
                   return (
-                <header className="chat-header" style={{ position: 'relative', zIndex: 1100 }}>
-                  <button className="hamburger-menu" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
-                    <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-                    </svg>
-                  </button>
-                  <div className="avatar header-avatar">
-                    {MessageService.getConversationTitle(currentConversation, user?.id).charAt(0).toUpperCase()}
-                  </div>
-                  <div className="header-info">
-                    <span className="header-name">{MessageService.getConversationTitle(currentConversation, user?.id)}</span>
-                    {activeStatus && <span className={`header-status ${activeStatus === 'Online' ? '' : 'offline'}`}>{activeStatus}</span>}
-                  </div>
-                </header>
+                    <header className="chat-header" style={{ position: 'relative', zIndex: 1100 }}>
+                      <button className="hamburger-menu" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
+                        <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                      </button>
+                      <div className="avatar header-avatar">
+                        {MessageService.getConversationTitle(currentConversation, user?.id).charAt(0).toUpperCase()}
+                      </div>
+                      <div className="header-info">
+                        <span className="header-name">{MessageService.getConversationTitle(currentConversation, user?.id)}</span>
+                        {activeStatus && <span className={`header-status ${activeStatus === 'Online' ? '' : 'offline'}`}>{activeStatus}</span>}
+                      </div>
+                    </header>
                   );
                 })()}
 
@@ -1710,8 +1718,8 @@ const MessageDark = () => {
                 </div>
 
                 <div className="member-list-scroll">
-                  {onlineUsers
-                    .filter(u => u.username.toLowerCase().includes(memberSearch.toLowerCase()) || u.email.toLowerCase().includes(memberSearch.toLowerCase()))
+                  {allUsersForSearch
+                    .filter(u => u.username.toLowerCase().includes(memberSearch.toLowerCase()) || (u.email || '').toLowerCase().includes(memberSearch.toLowerCase()))
                     .map(u => {
                       const isSelected = selectedMembers.some(m => m.id === u.id);
                       const assignment = memberAssignments[u.id] || { role: '', customRole: '' };
@@ -1768,7 +1776,7 @@ const MessageDark = () => {
                                   </svg>
                                 </div>
                                 {openRoleDropdownId === u.id && (
-                                  <div className="custom-dropdown-list" style={{ top: 'calc(100% + 4px)', zIndex: 1000}}>
+                                  <div className="custom-dropdown-list" style={{ top: 'calc(100% + 4px)', zIndex: 1000 }}>
                                     {positionOptions.map((title) => (
                                       <div
                                         key={title}

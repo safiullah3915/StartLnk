@@ -18,12 +18,12 @@ const CollaborationCard = ({
   phase, 
   team_size, 
   category, 
-  type 
+  type, owner, ...rest 
 }) => {
   const [showPositions, setShowPositions] = useState(false);
   
   // Use startup object if provided, otherwise use legacy props
-  const startupData = startup || { id, title, description, earn_through, phase, team_size, category, type };
+  const startupData = startup || { id, title, description, earn_through, phase, team_size, category, type, owner, ...rest };
   const startupId = startupData.id;
   const normalizedStartupId = normalizeId(startupId);
   
@@ -54,7 +54,14 @@ const CollaborationCard = ({
               <div className={styles.iconBadge}>
                 <img src="/Decentralized Network.svg" alt="" className={styles.iconImage} />
               </div>
-              <h3>{startupData.title || 'Startup Name'}</h3>
+              <div className={styles.titleInfo}>
+                <h3>{startupData.title || 'Startup Name'}</h3>
+                {startupData.owner?.full_name && (
+                  <p className={styles.founderName}>
+                    FOUNDED BY {startupData.owner.full_name.toUpperCase()}
+                  </p>
+                )}
+              </div>
             </div>
             <div className={styles.headerRight}>
               <span className={styles.tag}>{startupData.category || 'Collaboration'}</span>

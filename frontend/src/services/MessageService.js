@@ -22,6 +22,16 @@ class MessageService {
     }
   }
 
+
+  async getAllUsers() {
+    try {
+      const response = await presenceAPI.getAllUsers();
+      return Array.isArray(response.data) ? response.data : [];
+    } catch (error) {
+      console.error('Failed to get all users:', error);
+      return [];
+    }
+  }
   async getUserPresence(userId, options = {}) {
     if (!userId) return { is_online: false, last_seen: null };
 
@@ -233,3 +243,4 @@ class MessageService {
 
 // Export singleton instance
 export default new MessageService();
+
