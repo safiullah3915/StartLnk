@@ -63,7 +63,14 @@ const MarketPlaceCard = ({
           <div className={styles.iconBadge}>
             <img src="/Decentralized Network.svg" alt="" className={styles.iconImage} />
           </div>
-          <h3>{startupData.title || 'Startup Name'}</h3>
+          <div className={styles.titleInfo}>
+            <h3>{startupData.title || 'Startup Name'}</h3>
+            {startupData.owner?.full_name && (
+              <p className={styles.founderName}>
+                FOUNDED BY {startupData.owner.full_name.toUpperCase()}
+              </p>
+            )}
+          </div>
         </div>
         <span className={styles.tag}>{startupData.category || 'Marketplace'}</span>
       </div>
