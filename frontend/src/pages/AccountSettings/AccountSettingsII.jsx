@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { Country, City } from 'country-state-city';
+import Select from 'react-select';
 import { useSpring, animated } from 'react-spring';
 import { Navbar } from "../../components/Navbar/Navbar"
 import { toast } from 'react-toastify';
@@ -18,6 +20,13 @@ const App = () => {
   const [references, setReferences] = useState([]);
   const [skills, setSkills] = useState([]);
   const [experiences, setExperiences] = useState([]);
+  
+  // Personal Info State
+  const [savedFullName, setSavedFullName] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [country, setCountry] = useState('');
+  const [city, setCity] = useState('');
+
   const [referencesPage, setReferencesPage] = useState(1);
   const [skillsPage, setSkillsPage] = useState(1);
   const [experiencesPage, setExperiencesPage] = useState(1);
@@ -86,6 +95,25 @@ const App = () => {
         setSkills(data.profile.skills || []);
         setExperiences(data.profile.experience || []);
         setReferences(data.profile.references || []);
+        
+        if (data.profile.user?.full_name) {
+          setFullName(data.profile.user.full_name);
+          setSavedFullName(data.profile.user.full_name);
+        } else if (data.profile.full_name) {
+          setFullName(data.profile.full_name);
+          setSavedFullName(data.profile.full_name);
+        }
+        
+        if (data.profile.location) {
+          const parts = data.profile.location.split(',').map(s => s.trim());
+          if (parts.length > 1) {
+            setCity(parts[0]);
+            setCountry(parts[1]);
+          } else {
+            setCountry(parts[0]);
+          }
+        }
+
         setReferencesPage(1);
         setSkillsPage(1);
         setExperiencesPage(1);
@@ -113,6 +141,56 @@ const App = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const customSelectStyles = {
+    control: (provided) => ({
+      ...provided,
+      backgroundColor: 'rgba(15, 23, 42, 0.4)',
+      borderColor: '#1E293B',
+      borderRadius: '0.85rem',
+      padding: '0.1rem 0',
+      minHeight: '48px',
+      boxShadow: 'none',
+      '&:hover': {
+        borderColor: '#3B82F6'
+      }
+    }),
+    valueContainer: (provided) => ({
+      ...provided,
+      padding: '0 1rem',
+    }),
+    indicatorSeparator: () => ({
+      display: 'none',
+    }),
+    menu: (provided) => ({
+      ...provided,
+      backgroundColor: '#0F172A',
+      border: '1px solid #1E293B',
+      borderRadius: '0.5rem',
+      zIndex: 9999
+    }),
+    option: (provided, state) => ({
+      ...provided,
+      backgroundColor: state.isFocused ? '#1E293B' : 'transparent',
+      color: '#F8FAFC',
+      cursor: 'pointer',
+      '&:active': {
+        backgroundColor: '#3B82F6'
+      }
+    }),
+    singleValue: (provided) => ({
+      ...provided,
+      color: '#F8FAFC'
+    }),
+    input: (provided) => ({
+      ...provided,
+      color: '#F8FAFC'
+    }),
+    placeholder: (provided) => ({
+      ...provided,
+      color: '#6B7280'
+    })
   };
 
   const fade = useSpring({
@@ -298,10 +376,13 @@ const App = () => {
         website: formatUrl(portfolioUrl),
         skills: skills,
         experience: experiences,
-        references: references
+        references: references,
+        full_name: fullName,
+        location: [city, country].filter(Boolean).join(', ')
       };
 
       await userAPI.updateProfileData(profileData);
+      setSavedFullName(fullName);
       setBannerState({ type: 'success', message: 'Profile saved successfully' });
       setTimeout(() => setBannerState({ type: null, message: '' }), 5000);
     } catch (error) {
@@ -484,12 +565,14 @@ const App = () => {
     const goNext = () => setPage(prev => Math.min(totalPages, prev + 1));
 
     return (
-      <div className="table-pagination">
-        <button type="button" className="pagination-button" onClick={goPrev} disabled={page === 1}>
+      <div className="pagination-container">
+        <button type="button" className="page-btn" onClick={goPrev} disabled={page === 1}>
           ‹
         </button>
-        <span className="pagination-status">{page} / {totalPages}</span>
-        <button type="button" className="pagination-button" onClick={goNext} disabled={page === totalPages}>
+        <span style={{ fontSize: '0.9rem', color: '#9CA3AF', fontWeight: '600', minWidth: '40px', textAlign: 'center', letterSpacing: '0.05em' }}>
+          {page} <span style={{ opacity: 0.5, margin: '0 2px' }}>/</span> {totalPages}
+        </span>
+        <button type="button" className="page-btn" onClick={goNext} disabled={page === totalPages}>
           ›
         </button>
       </div>
@@ -848,6 +931,17 @@ const App = () => {
             grid-template-columns: 1fr 1.5fr;
           }
         }
+        .location-grid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 1rem;
+          margin-top: 1.25rem;
+        }
+        @media (min-width: 640px) {
+          .location-grid {
+            grid-template-columns: 1fr 1fr;
+          }
+        }
         .form-field {
           display: flex;
           flex-direction: column;
@@ -869,7 +963,7 @@ const App = () => {
           background-color: #0F172A !important;
           border: 1px solid #1E293B !important;
           color: #F8FAFC !important;
-          border-radius: 0.5rem !important;
+          border-radius: 0.85rem !important;
           padding: 0.75rem 1rem !important;
           font-size: 0.9rem !important;
           transition: all 0.2s ease !important;
@@ -994,6 +1088,9 @@ const App = () => {
           width: 32px; height: 32px; border-radius: 50%;
           background: #1F2937; color: white; border: none;
           font-weight: bold; cursor: pointer; transition: 0.2s;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 1.4rem; padding: 0; padding-bottom: 2px;
+          user-select: none; outline: none; -webkit-user-select: none;
         }
         .page-btn:hover:not(:disabled) { background: #3B82F6; }
         .page-btn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -1307,8 +1404,12 @@ const App = () => {
                   style={{ display: 'none' }} 
                 />
               </div>
-              <h2 className="profile-name">{user?.username || 'Unknown User'}</h2>
-              <div className="role-badge">{user?.role || 'MEMBER'}</div>
+              <h2 className="profile-name" style={{ marginBottom: '4px' }}>{savedFullName || user?.username || 'Unknown User'}</h2>
+              <div className="username-role-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '16px' }}>
+                <span className="username-text" style={{ color: '#9CA3AF', fontSize: '0.9rem' }}>@{user?.username}</span>
+                <span className="bullet-separator" style={{ color: '#4B5563', fontSize: '0.8rem' }}>•</span>
+                <div className="role-badge" style={{ margin: 0 }}>{user?.role || 'MEMBER'}</div>
+              </div>
               <div className="profile-desc">
                 <span className="bio-text">
                   {profileDescription === null
@@ -1426,6 +1527,69 @@ const App = () => {
 
           {/* ── Right Panel ── */}
           <div className="right-panel">
+
+            {/* Personal Information Section */}
+            <div className="form-section">
+              <div className="section-header">
+                <h3 className="section-title">
+                  <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{color: '#8B5CF6'}}>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  Personal Information
+                </h3>
+              </div>
+              <div className="collection-form">
+                <div className="form-field">
+                  <label>FULL NAME</label>
+                  <input
+                    type="text"
+                    className="collection-input"
+                    value={fullName}
+                    onChange={e => setFullName(e.target.value)}
+                    placeholder="E.g. Ahsan Ali"
+                  />
+                </div>
+                <div className="location-grid">
+                  <div className="form-field">
+                    <label>COUNTRY</label>
+                    <Select
+                      options={Country.getAllCountries().map(c => ({ value: c.name, label: c.name, isoCode: c.isoCode }))}
+                      value={country ? { value: country, label: country } : null}
+                      onChange={option => {
+                        setCountry(option ? option.value : '');
+                        setCity('');
+                      }}
+                      styles={customSelectStyles}
+                      menuPlacement="bottom"
+                      placeholder="Select Country"
+                      isSearchable={false}
+                      isClearable
+                    />
+                  </div>
+                  <div className="form-field">
+                    <label>CITY</label>
+                    <Select
+                      options={
+                        country && Country.getAllCountries().find(c => c.name === country)
+                          ? City.getCitiesOfCountry(Country.getAllCountries().find(c => c.name === country).isoCode).map(c => ({ value: c.name, label: c.name }))
+                          : []
+                      }
+                      value={city ? { value: city, label: city } : null}
+                      onChange={option => setCity(option ? option.value : '')}
+                      styles={customSelectStyles}
+                      menuPlacement="bottom"
+                      placeholder="Select City"
+                      isDisabled={!country}
+                      isSearchable={false}
+                      isClearable
+                    />
+                  </div>
+                </div>
+                <p className="online-presence-hint" style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+                  Your location and full name are used for networking and establishing local presence.
+                </p>
+              </div>
+            </div>
 
             {/* Online Presence Section */}
             <div className="form-section">
