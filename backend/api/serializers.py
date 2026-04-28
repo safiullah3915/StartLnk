@@ -51,10 +51,29 @@ class UserLoginSerializer(serializers.Serializer):
 class UserSerializer(serializers.ModelSerializer):
 	"""Serializer for user data"""
 	stats = serializers.SerializerMethodField()
+	full_name = serializers.SerializerMethodField()
+	profile_picture = serializers.SerializerMethodField()
 	
 	class Meta:
 		model = User
-		fields = ('id', 'username', 'email', 'created_at', 'stats', 'role', 'email_verified')
+		fields = ('id', 'username', 'full_name', 'profile_picture', 'email', 'created_at', 'stats', 'role', 'email_verified')
+	
+	def get_full_name(self, obj):
+		if obj.first_name or obj.last_name:
+			return f"{obj.first_name} {obj.last_name}".strip()
+		return obj.username
+		
+	def get_profile_picture(self, obj):
+		try:
+			if hasattr(obj, 'profile') and obj.profile.profile_picture:
+				url = obj.profile.profile_picture.url
+				request = self.context.get('request')
+				if request:
+					return request.build_absolute_uri(url)
+				return url
+		except Exception:
+			pass
+		return None
 	
 	def get_stats(self, obj):
 		return {
@@ -485,7 +504,9 @@ class MessageCreateSerializer(serializers.ModelSerializer):
 class UserProfileSerializer(serializers.ModelSerializer):
     """Serializer for user profile"""
     user = UserSerializer(read_only=True)
-    
+    profile_picture = serializers.SerializerMethodField()
+    original_profile_picture = serializers.SerializerMethodField()
+
     class Meta:
         model = UserProfile
         fields = (
@@ -495,9 +516,29 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'skills', 'experience', 'references', 'created_at', 'updated_at'
         )
 
+    def _build_absolute_url(self, field_value):
+        if not field_value:
+            return None
+        url = field_value.url if hasattr(field_value, 'url') else str(field_value)
+        request = self.context.get('request')
+        if request:
+            return request.build_absolute_uri(url)
+        # Fallback: prepend backend base URL
+        if url and not url.startswith('http'):
+            return f"http://localhost:8000{url}"
+        return url
+
+    def get_profile_picture(self, obj):
+        return self._build_absolute_url(obj.profile_picture)
+
+    def get_original_profile_picture(self, obj):
+        return self._build_absolute_url(obj.original_profile_picture)
+
 
 class UserProfileUpdateSerializer(serializers.ModelSerializer):
     """Serializer for updating user profile"""
+    
+    full_name = serializers.CharField(write_only=True, required=False, allow_blank=True)
     
     class Meta:
         model = UserProfile
@@ -505,7 +546,7 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
             'bio', 'location', 'website', 'profile_picture',
             'original_profile_picture', 'profile_picture_crop',
             'is_public', 'github_url', 'linkedin_url', 'selected_regions',
-            'skills', 'experience', 'references'
+            'skills', 'experience', 'references', 'full_name'
         )
     
     def update(self, instance, validated_data):
@@ -516,6 +557,18 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
         if 'original_profile_picture' in validated_data:
             if instance.original_profile_picture:
                 instance.original_profile_picture.delete(save=False)
+        # Handle full_name update on the User model
+        full_name = validated_data.pop('full_name', None)
+        if full_name is not None:
+            user = instance.user
+            parts = full_name.strip().split(' ', 1)
+            user.first_name = parts[0]
+            if len(parts) > 1:
+                user.last_name = parts[1]
+            else:
+                user.last_name = ''
+            user.save(update_fields=['first_name', 'last_name'])
+
         return super().update(instance, validated_data)
 
 
