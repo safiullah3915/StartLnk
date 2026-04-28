@@ -13,8 +13,27 @@ const Navbar = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated, logout, isEntrepreneur, isStudent, isInvestor } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [profilePicture, setProfilePicture] = useState(null);
+  const [profilePicError, setProfilePicError] = useState(false);
 
   const profileDropdownRef = useRef(null);
+
+  // Fetch profile picture when authenticated
+  useEffect(() => {
+    if (!isAuthenticated || !user) {
+      setProfilePicture(null);
+      return;
+    }
+    import('../../utils/apiServices').then(({ userAPI }) => {
+      userAPI.getProfileData()
+        .then(res => {
+          const pic = res?.data?.profile?.profile_picture;
+          setProfilePicture(pic || null);
+          setProfilePicError(false);
+        })
+        .catch(() => setProfilePicture(null));
+    });
+  }, [isAuthenticated, user?.id]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -262,8 +281,19 @@ const Navbar = () => {
         <div className={styles.userMenu}>
           <div className={styles.profileContainer} ref={profileDropdownRef}>
             <button onClick={toggleProfileDropdown} className={styles.profileButton}>
-              <div className={styles.profileAvatar}>
-                {user?.username?.charAt(0).toUpperCase() || 'U'}
+              <div className={styles.profileAvatarRing}>
+                <div className={styles.profileAvatar}>
+                  {profilePicture && !profilePicError ? (
+                    <img
+                      src={profilePicture}
+                      alt={user?.username}
+                      className={styles.profileAvatarImg}
+                      onError={() => setProfilePicError(true)}
+                    />
+                  ) : (
+                    user?.username?.charAt(0).toUpperCase() || 'U'
+                  )}
+                </div>
               </div>
             </button>
             {isProfileOpen && (
@@ -354,7 +384,16 @@ const Navbar = () => {
             <Link to="/account" className={styles.mobileProfileLink} onClick={closeMenu}>
               <div className={styles.mobileProfileAvatar}>
                 <div className={styles.mobileProfileAvatarInner}>
-                  {user?.username?.charAt(0).toUpperCase() || 'U'}
+                  {profilePicture && !profilePicError ? (
+                    <img
+                      src={profilePicture}
+                      alt={user?.username}
+                      className={styles.mobileProfileAvatarImg}
+                      onError={() => setProfilePicError(true)}
+                    />
+                  ) : (
+                    user?.username?.charAt(0).toUpperCase() || 'U'
+                  )}
                 </div>
               </div>
               <div className={styles.mobileProfileInfo}>
