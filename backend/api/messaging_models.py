@@ -10,6 +10,7 @@ class Conversation(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     participants = models.ManyToManyField(User, related_name='conversations')
     title = models.CharField(max_length=200, blank=True)
+    team = models.ForeignKey('api.Team', on_delete=models.SET_NULL, null=True, blank=True, related_name='conversations')
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -29,7 +30,7 @@ class Message(models.Model):
     """Messages within conversations"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name='messages')
-    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_messages')
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_messages', null=True, blank=True)
     content = models.TextField()
     message_type = models.CharField(max_length=20, default='text', choices=[
         ('text', 'Text'),
@@ -38,6 +39,8 @@ class Message(models.Model):
     ])
     attachment = models.FileField(upload_to='messages/', blank=True, null=True)
     is_read = models.BooleanField(default=False)
+    is_system = models.BooleanField(default=False)
+    event_type = models.CharField(max_length=50, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:

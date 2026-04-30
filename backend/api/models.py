@@ -281,3 +281,36 @@ class Interest(models.Model):
 
     def __str__(self):
         return f"{self.user.username} -> {self.startup.title}"
+
+
+class Team(models.Model):
+    """Team associated with a startup"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    startup = models.OneToOneField(Startup, on_delete=models.CASCADE, related_name='team')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'teams'
+
+    def __str__(self):
+        return f"{self.startup.title} Team"
+
+
+class TeamMember(models.Model):
+    """Members of a startup team"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='team_memberships')
+    team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name='members')
+    role = models.CharField(max_length=255)
+    joined_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'team_members'
+        unique_together = ['user', 'team']
+        indexes = [
+            models.Index(fields=['user']),
+            models.Index(fields=['team']),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} - {self.role}"
