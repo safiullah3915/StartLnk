@@ -116,11 +116,13 @@ class MessageService {
     }
   }
 
-  async createConversation(participantIds, title = '') {
+  async createConversation(participantIds, title = '', startupId = null, memberRoles = {}) {
     try {
       const response = await messageAPI.createConversation({
         participant_ids: participantIds,
-        title
+        title,
+        startup_id: startupId,
+        member_roles: memberRoles
       });
       const newConversation = response.data;
       this.conversations.unshift(newConversation);
@@ -138,6 +140,21 @@ class MessageService {
       return response.data;
     } catch (error) {
       console.error('Failed to get messages:', error);
+      throw error;
+    }
+  }
+
+  async removeTeamConversation(conversationId) {
+    try {
+      await messageAPI.removeTeamConversation(conversationId);
+      this.conversations = this.conversations.filter(c => c.id !== conversationId);
+      if (this.currentConversation?.id === conversationId) {
+        this.currentConversation = null;
+      }
+      delete this.messages[conversationId];
+      return true;
+    } catch (error) {
+      console.error('Failed to remove team conversation:', error);
       throw error;
     }
   }
@@ -169,7 +186,6 @@ class MessageService {
       throw error;
     }
   }
-
   async getOrCreateConversation(userId) {
     try {
       // Normalize userId to string for comparison

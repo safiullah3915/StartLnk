@@ -109,6 +109,7 @@ export const messageAPI = {
   getConversations: () => apiClient.get('/api/messages'),
   createConversation: (data) => apiClient.post('/api/messages', data),
   getConversation: (id) => apiClient.get(`/api/messages/${id}`),
+  removeTeamConversation: (id) => apiClient.delete(`/api/messages/${id}`),
   getMessages: (conversationId) => apiClient.get(`/api/messages/${conversationId}/messages`),
   sendMessage: (conversationId, messageData) => apiClient.post(`/api/messages/${conversationId}/messages`, messageData),
   getOnlineUsers: () => apiClient.get('/api/messages/users/online'),
