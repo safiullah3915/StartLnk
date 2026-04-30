@@ -2,11 +2,102 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Navbar } from '../../components/Navbar/Navbar';
 import { useAuth } from '../../contexts/AuthContext';
 import MessageService from '../../services/MessageService';
-import { userAPI, startupAPI, positionAPI } from '../../utils/apiServices';
+import { userAPI, positionAPI } from '../../utils/apiServices';
 import { toast } from 'react-toastify';
 
+const TeamMemberRow = React.memo(({
+  member,
+  isSelected,
+  assignment,
+  isDropdownOpen,
+  positionOptions,
+  onToggleMember,
+  onToggleRoleDropdown,
+  onSelectRole,
+  onCustomRoleChange
+}) => (
+  <div className="member-item-wrapper">
+    <div
+      className={`member-item ${isSelected ? 'selected' : ''}`}
+      onClick={() => onToggleMember(member)}
+    >
+      <div className="member-avatar">{member.username.charAt(0).toUpperCase()}</div>
+      <div className="member-info">
+        <div className="member-name">{member.username}</div>
+        <div className="member-email">{member.email}</div>
+      </div>
+      <div className="select-btn">
+        {isSelected ? (
+          <svg width="10" height="10" fill="none" stroke="white" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        ) : (
+          <svg width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+          </svg>
+        )}
+      </div>
+    </div>
+    {isSelected && (
+      <div className="inline-role-row">
+        <span className="inline-role-label">POSITION:</span>
+        <div className="custom-dropdown-container" style={{ flex: 1 }}>
+          <div
+            className="custom-dropdown-header"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleRoleDropdown(member.id);
+            }}
+            style={{ border: '1px solid rgba(79, 70, 229, 0.55)', background: '#020617', padding: '0.45rem 0.75rem', minHeight: 'auto', borderRadius: '0.6rem' }}
+          >
+            <span style={{ fontSize: '0.85rem' }}>{assignment.role === '__other__' ? 'Other' : assignment.role || 'Select position...'}</span>
+            <svg className="dropdown-chevron" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ transform: isDropdownOpen ? 'rotate(180deg)' : 'none', margin: 0 }}>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+          {isDropdownOpen && (
+            <div className="custom-dropdown-list" style={{ top: 'calc(100% + 4px)', zIndex: 1000 }}>
+              {positionOptions.map((title) => (
+                <div
+                  key={title}
+                  className={`custom-dropdown-item ${assignment.role === title ? 'selected' : ''}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSelectRole(member.id, title);
+                  }}
+                >
+                  {title}
+                </div>
+              ))}
+              <div
+                className={`custom-dropdown-item ${assignment.role === '__other__' ? 'selected' : ''}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelectRole(member.id, '__other__');
+                }}
+              >
+                Other
+              </div>
+            </div>
+          )}
+        </div>
+        {assignment.role === '__other__' && (
+          <input
+            type="text"
+            className="inline-role-custom-input"
+            placeholder="Custom title"
+            value={assignment.customRole}
+            onChange={(e) => onCustomRoleChange(member.id, e.target.value)}
+            onClick={(e) => e.stopPropagation()}
+          />
+        )}
+      </div>
+    )}
+  </div>
+));
+
 const MessageDark = () => {
-  const { user } = useAuth();
+  const { user, isEntrepreneur } = useAuth();
   const [conversations, setConversations] = useState([]);
   const [currentConversation, setCurrentConversation] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -18,11 +109,24 @@ const MessageDark = () => {
   const [sidebarSearch, setSidebarSearch] = useState('');
   const [userStartups, setUserStartups] = useState([]);
   const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [isEditTeamLoading, setIsEditTeamLoading] = useState(false);
+  const [editingConversation, setEditingConversation] = useState(null);
+  const [isRemoveTeamConfirmOpen, setIsRemoveTeamConfirmOpen] = useState(false);
   const [isStartupDropdownOpen, setIsStartupDropdownOpen] = useState(false);
   const [openRoleDropdownId, setOpenRoleDropdownId] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [error, setError] = useState(null);
+  const [customNotification, setCustomNotification] = useState(null);
   const chatAreaRef = useRef(null);
+
+  useEffect(() => {
+    if (customNotification) {
+      const timer = setTimeout(() => {
+        setCustomNotification(null);
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [customNotification]);
 
   // Team Modal States
   const [selectedStartup, setSelectedStartup] = useState(null);
@@ -31,6 +135,28 @@ const MessageDark = () => {
   const [startupPositions, setStartupPositions] = useState([]);
   const [memberAssignments, setMemberAssignments] = useState({});
   const [allUsersForSearch, setAllUsersForSearch] = useState([]);
+
+  // Memoized filtered members to prevent lag during search
+  const filteredMembers = React.useMemo(() => {
+    const search = memberSearch.toLowerCase();
+    return allUsersForSearch.filter(u =>
+      u.username.toLowerCase().includes(search) ||
+      (u.email || '').toLowerCase().includes(search)
+    );
+  }, [allUsersForSearch, memberSearch]);
+
+  const activeTeamStartupIds = React.useMemo(() => new Set(
+    conversations
+      .filter(conv => conv.team_id && conv.startup_id)
+      .map(conv => String(conv.startup_id))
+  ), [conversations]);
+
+  const createTeamStartupOptions = React.useMemo(() => (
+    userStartups.filter(startup =>
+      !startup.team_conversation_exists &&
+      !activeTeamStartupIds.has(String(startup.id))
+    )
+  ), [userStartups, activeTeamStartupIds]);
 
   useEffect(() => {
     if (user) {
@@ -96,6 +222,16 @@ const MessageDark = () => {
     return otherUser?.id ? presenceByUser[String(otherUser.id)] : null;
   };
 
+  const isStartupFounderForConversation = (conversation) => {
+    if (!conversation?.team_id || !user?.id) return false;
+    if (conversation.startup_owner_id) {
+      return String(conversation.startup_owner_id) === String(user.id);
+    }
+
+    const startup = userStartups.find(s => String(s.id) === String(conversation.startup_id));
+    return startup?.owner?.id && String(startup.owner.id) === String(user.id);
+  };
+
   useEffect(() => {
     const loadStartupPositions = async () => {
       if (!selectedStartup?.id) {
@@ -131,10 +267,9 @@ const MessageDark = () => {
     }
   }, [messages, currentConversation]);
 
-  const initializeMessaging = async () => {
+  const initializeMessaging = async ({ autoSelectFirst = true } = {}) => {
     try {
       setLoading(true);
-      setError(null);
 
       // Load conversations, online users, and user's startups in parallel
       const [conversationsData, onlineUsersData, startupsData] = await Promise.all([
@@ -168,12 +303,11 @@ const MessageDark = () => {
       setUserStartups(safeStartups);
 
       // Select first conversation if exists and none selected
-      if (safeConversations.length > 0 && !currentConversation) {
+      if (autoSelectFirst && safeConversations.length > 0 && !currentConversation) {
         await selectConversation(safeConversations[0]);
       }
     } catch (error) {
       console.error('Failed to initialize messaging:', error);
-      setError('Failed to load messaging data');
     } finally {
       setLoading(false);
     }
@@ -181,6 +315,7 @@ const MessageDark = () => {
 
   const selectConversation = async (conversation) => {
     try {
+      setIsSidebarOpen(false); // Close sidebar immediately on mobile before loading messages
       setCurrentConversation(conversation);
       MessageService.setCurrentConversation(conversation);
 
@@ -195,11 +330,9 @@ const MessageDark = () => {
         )
         : [];
       setMessages(uniqueById);
-      setIsSidebarOpen(false); // Close sidebar on mobile after selection
       // We don't automatically switch tab to 'chats' anymore to allow staying in People/Teams while selecting
     } catch (error) {
       console.error('Failed to load conversation messages:', error);
-      setError('Failed to load messages');
     }
   };
 
@@ -247,47 +380,196 @@ const MessageDark = () => {
     }
 
     try {
+      // Show loading and close modal IMMEDIATELY for instant feedback
       setLoading(true);
+      setIsTeamModalOpen(false);
+      setActiveTab('chats');
+      setIsSidebarOpen(false);
+
       const participantIds = selectedMembers.map(m => m.id);
-      const title = `${selectedStartup.title} Team`;
+      const title = selectedStartup.title;
 
-      const conversation = await MessageService.createConversation(participantIds, title);
+      const memberRoles = {};
+      selectedMembers.forEach(member => {
+        const assignment = memberAssignments[member.id];
+        memberRoles[member.id] = assignment.role === '__other__'
+          ? assignment.customRole.trim()
+          : assignment.role;
+      });
 
-      setConversations(prev => [conversation, ...prev]);
-      await selectConversation(conversation);
-
-      const assignmentSummary = selectedMembers
-        .map((member) => {
-          const assignment = memberAssignments[member.id];
-          const roleTitle = assignment.role === '__other__'
-            ? assignment.customRole.trim()
-            : assignment.role;
-          return `- ${member.username}: ${roleTitle}`;
-        })
-        .join('\n');
-
-      await MessageService.sendMessage(
-        conversation.id,
-        `Team setup for ${selectedStartup.title}:\n${assignmentSummary}`
+      const conversation = await MessageService.createConversation(
+        participantIds,
+        title,
+        selectedStartup.id,
+        memberRoles
       );
 
-      setIsTeamModalOpen(false);
+      // Refresh the entire state from backend
+      await initializeMessaging({ autoSelectFirst: false });
+      await selectConversation(conversation);
+      setActiveTab('chats');
+      setIsSidebarOpen(false);
+
       setSelectedStartup(null);
       setSelectedMembers([]);
       setStartupPositions([]);
       setMemberAssignments({});
-      setActiveTab('chats');
-      toast.success('Team chat launched!');
+      setEditingConversation(null);
+
+      // Determine specialized success message for better UX
+      let successMsg = isEditMode ? 'Team updated successfully!' : 'Team chat launched!';
+      if (isEditMode) {
+        const removedName = conversation.removed_member_names?.[0];
+
+        if (conversation.member_added && conversation.member_removed) {
+          successMsg = 'Team members updated successfully!';
+        } else if (conversation.member_added) {
+          successMsg = 'New member added successfully!';
+        } else if (conversation.member_removed) {
+          successMsg = removedName
+            ? `${removedName} removed successfully!`
+            : 'Member removed successfully!';
+        }
+      }
+
+      setCustomNotification({
+        type: 'success',
+        message: successMsg
+      });
     } catch (error) {
       console.error('Failed to launch team chat:', error);
-      toast.error('Failed to launch team chat');
+
+      // Even if API fails, we refresh to ensure state is clean and spinner finishes
+      await initializeMessaging();
+
+      let backendError = error.response?.data?.member_roles || error.response?.data?.detail;
+
+      // Handle server busy scenario
+      if (!backendError && error.response?.status >= 500) {
+        backendError = "Server is busy, try again later.";
+      }
+
+      // Handle DRF array errors
+      if (Array.isArray(backendError)) {
+        backendError = backendError[0];
+      }
+
+      // Show floating error message after the indicator is done
+      setCustomNotification({
+        type: 'error',
+        message: typeof backendError === 'string' ? backendError : 'Failed to launch team chat'
+      });
+    } finally {
+      // Ensure loading is off in case initializeMessaging didn't handle it
+      setLoading(false);
+    }
+  };
+
+  const handleEditTeamClick = async (conversation) => {
+    try {
+      setIsEditTeamLoading(true);
+      setIsSidebarOpen(false);
+      setIsEditMode(true);
+      setEditingConversation(conversation);
+
+      // Prefer the backend relationship over title matching. Older chats may have titles like "Name Team".
+      const normalizedConversationTitle = (conversation.startup_title || conversation.title || '')
+        .replace(/\s+Team$/i, '')
+        .trim()
+        .toLowerCase();
+      const startup = userStartups.find(s => String(s.id) === String(conversation.startup_id))
+        || userStartups.find(s => s.title?.trim().toLowerCase() === normalizedConversationTitle)
+        || (conversation.startup_id ? {
+          id: conversation.startup_id,
+          title: conversation.startup_title || conversation.title?.replace(/\s+Team$/i, '') || conversation.title
+        } : null);
+      if (!startup) {
+        setCustomNotification({ type: 'error', message: "Could not find associated startup" });
+        return;
+      }
+
+      setSelectedStartup(startup);
+
+      const users = await MessageService.getAllUsers();
+      const filteredUsers = users.filter(u => u.id !== user?.id);
+
+      // Pre-populate members and roles
+      const teamRoles = conversation.team_roles || {};
+      const selectedMems = [];
+      const assignments = {};
+
+      Object.keys(teamRoles).forEach(userId => {
+        const memberUser = users.find(u => u.id === userId);
+        if (memberUser && userId !== user?.id) {
+          selectedMems.push(memberUser);
+          assignments[userId] = {
+            role: teamRoles[userId],
+            customRole: ''
+          };
+        }
+      });
+
+      // Sort users: selected first
+      const sortedUsers = [...filteredUsers].sort((a, b) => {
+        const aSelected = Object.keys(teamRoles).includes(a.id);
+        const bSelected = Object.keys(teamRoles).includes(b.id);
+        if (aSelected && !bSelected) return -1;
+        if (!aSelected && bSelected) return 1;
+        return a.username.localeCompare(b.username);
+      });
+
+      setAllUsersForSearch(sortedUsers);
+      setSelectedMembers(selectedMems);
+      setMemberAssignments(assignments);
+      setIsTeamModalOpen(true);
+    } catch (error) {
+      console.error("Failed to setup edit mode:", error);
+      setCustomNotification({ type: 'error', message: "Failed to load team data" });
+    } finally {
+      setIsEditTeamLoading(false);
+    }
+  };
+
+  const closeTeamModal = () => {
+    setIsTeamModalOpen(false);
+    setIsEditMode(false);
+    setEditingConversation(null);
+    setIsRemoveTeamConfirmOpen(false);
+  };
+
+  const handleRemoveTeamChat = async () => {
+    if (!editingConversation?.id) return;
+
+    try {
+      setLoading(true);
+      await MessageService.removeTeamConversation(editingConversation.id);
+
+      setConversations(prev => prev.filter(conv => conv.id !== editingConversation.id));
+      if (currentConversation?.id === editingConversation.id) {
+        setCurrentConversation(null);
+        setMessages([]);
+        MessageService.setCurrentConversation(null);
+      }
+
+      closeTeamModal();
+      await initializeMessaging();
+      setCustomNotification({
+        type: 'success',
+        message: 'Team chat removed from messages'
+      });
+    } catch (error) {
+      console.error('Failed to remove team chat:', error);
+      setCustomNotification({
+        type: 'error',
+        message: error.response?.data?.error || 'Failed to remove team chat'
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const handleSendMessage = async () => {
-    if (inputMessage.trim() !== '' && currentConversation && user) {
+    if (inputMessage.trim() !== '' && currentConversation?.can_send !== false && user) {
       try {
         const newMessage = await MessageService.sendMessage(currentConversation.id, inputMessage.trim());
         // Append safely without creating duplicates (by id)
@@ -307,20 +589,24 @@ const MessageDark = () => {
         ));
       } catch (error) {
         console.error('Failed to send message:', error);
-        setError('Failed to send message');
       }
     }
   };
 
-  const positionOptions = Array.from(
+  const selectedMemberIds = React.useMemo(
+    () => new Set(selectedMembers.map(member => member.id)),
+    [selectedMembers]
+  );
+
+  const positionOptions = React.useMemo(() => Array.from(
     new Set(
       startupPositions
         .map((position) => position?.title?.trim())
         .filter(Boolean)
     )
-  );
+  ), [startupPositions]);
 
-  const updateMemberAssignment = (memberId, updates) => {
+  const updateMemberAssignment = React.useCallback((memberId, updates) => {
     setMemberAssignments((prev) => ({
       ...prev,
       [memberId]: {
@@ -330,7 +616,42 @@ const MessageDark = () => {
         ...updates
       }
     }));
-  };
+  }, []);
+
+  const handleToggleMember = React.useCallback((member) => {
+    setSelectedMembers(prev => {
+      const isSelected = prev.some(selected => selected.id === member.id);
+      return isSelected
+        ? prev.filter(selected => selected.id !== member.id)
+        : [...prev, member];
+    });
+
+    setMemberAssignments(prev => {
+      if (prev[member.id]) {
+        const updated = { ...prev };
+        delete updated[member.id];
+        return updated;
+      }
+
+      return {
+        ...prev,
+        [member.id]: { role: '', customRole: '' }
+      };
+    });
+  }, []);
+
+  const handleToggleRoleDropdown = React.useCallback((memberId) => {
+    setOpenRoleDropdownId(prev => prev === memberId ? null : memberId);
+  }, []);
+
+  const handleSelectRole = React.useCallback((memberId, role) => {
+    updateMemberAssignment(memberId, { role, customRole: '' });
+    setOpenRoleDropdownId(null);
+  }, [updateMemberAssignment]);
+
+  const handleCustomRoleChange = React.useCallback((memberId, customRole) => {
+    updateMemberAssignment(memberId, { customRole });
+  }, [updateMemberAssignment]);
 
   return (
     <>
@@ -1295,11 +1616,47 @@ const MessageDark = () => {
             font-size: 1.1rem;
           }
         }
+
+        @keyframes slideDown {
+          from { transform: translate(-50%, -20px); opacity: 0; }
+          to { transform: translate(-50%, 0); opacity: 1; }
+        }
+        
         `}
       </style>
       <Navbar />
 
       <div className="app-container" id="messaging-root-container">
+        {customNotification && (
+          <div style={{
+            position: 'fixed',
+            top: '24px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 9999,
+            padding: '12px 24px',
+            borderRadius: '12px',
+            backgroundColor: '#0f172a',
+            color: customNotification.type === 'error' ? '#f87171' : '#4ade80',
+            border: `1px solid ${customNotification.type === 'error' ? 'rgba(248, 113, 113, 0.2)' : 'rgba(74, 222, 128, 0.2)'}`,
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            fontSize: '0.9rem',
+            fontWeight: '600',
+            animation: 'slideDown 0.3s ease-out forwards',
+            pointerEvents: 'none',
+            whiteSpace: 'nowrap'
+          }}>
+            {customNotification.type === 'error' ? (
+              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            ) : (
+              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            )}
+            {customNotification.message}
+          </div>
+        )}
         <div className="main-wrapper">
           {/* Mobile Sidebar Overlay */}
           <div
@@ -1401,7 +1758,7 @@ const MessageDark = () => {
 
               {!loading && activeTab === 'people' && (
                 <>
-                  <div className="list-section-title">ONLINE USERS ONLY</div>
+                  <div className="list-section-title">RELEVANT ONLINE USERS ONLY</div>
                   {onlineUsers
                     .filter(u => u.username.toLowerCase().includes(sidebarSearch.toLowerCase()))
                     .map(u => (
@@ -1425,33 +1782,55 @@ const MessageDark = () => {
 
               {!loading && activeTab === 'teams' && (
                 <>
-                  <div className="team-building-card">
-                    <div className="team-card-title">
-                      <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--primary)' }}>
-                        <path d="M12.876 1.104l-11.75 3.518a.75.75 0 00-.518.898l2.673 8.91c.048.16.14.3.262.405l7.91 6.843a.75.75 0 001.129 0l7.91-6.843a.75.75 0 00.262-.405l2.673-8.91a.75.75 0 00-.518-.898l-10-3zM12 2.375L20.25 4.85l-2.008 6.691L12 17.5l-6.242-5.959L3.75 4.85 12 2.375z" />
-                      </svg>
-                      Team Building
+                  {isEntrepreneur && isEntrepreneur() && (
+                    <div className="team-building-card">
+                      <div className="team-card-title">
+                        <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--primary)' }}>
+                          <path d="M12.876 1.104l-11.75 3.518a.75.75 0 00-.518.898l2.673 8.91c.048.16.14.3.262.405l7.91 6.843a.75.75 0 001.129 0l7.91-6.843a.75.75 0 00.262-.405l2.673-8.91a.75.75 0 00-.518-.898l-10-3zM12 2.375L20.25 4.85l-2.008 6.691L12 17.5l-6.242-5.959L3.75 4.85 12 2.375z" />
+                        </svg>
+                        Team Building
+                      </div>
+                      <p className="team-card-desc">Create a team associated with your startup and collaborate in real-time.</p>
+                      <button className="create-btn" onClick={async () => {
+                        setIsEditMode(false);
+                        setEditingConversation(null);
+                        setSelectedStartup(null);
+                        setSelectedMembers([]);
+                        setMemberAssignments({});
+                        setIsTeamModalOpen(true);
+                        try {
+                          const users = await MessageService.getAllUsers();
+                          setAllUsersForSearch(users.filter(u => u.id !== user?.id));
+                        } catch (e) {
+                          console.error('Failed to load users for team modal:', e);
+                        }
+                      }}>
+                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        Create New Team
+                      </button>
                     </div>
-                    <p className="team-card-desc">Create a team associated with your startup and collaborate in real-time.</p>
-                    <button className="create-btn" onClick={async () => {
-                      setIsTeamModalOpen(true);
-                      try {
-                        const users = await MessageService.getAllUsers();
-                        setAllUsersForSearch(users.filter(u => u.id !== user?.id));
-                      } catch (e) {
-                        console.error('Failed to load users for team modal:', e);
-                      }
+                  )}
+
+                  {userStartups.some(s => s.has_approved_applications && (!s.team_exists || !s.team_conversation_exists)) && (
+                    <div style={{
+                      backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                      color: 'var(--accent)',
+                      padding: '0.75rem',
+                      borderRadius: '8px',
+                      fontSize: '0.8rem',
+                      marginBottom: '1rem',
+                      border: '1px solid rgba(239, 68, 68, 0.2)',
+                      textAlign: 'center'
                     }}>
-                      <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                      </svg>
-                      Create New Team
-                    </button>
-                  </div>
+                      No team created yet. Create a team to start collaboration.
+                    </div>
+                  )}
 
                   <div className="list-section-title">YOUR STARTUP TEAMS</div>
                   {conversations
-                    .filter(c => c.title && c.title.toLowerCase().includes('team'))
+                    .filter(c => c.team_id && String(c.startup_owner_id) === String(user?.id))
                     .map(conv => (
                       <div
                         key={conv.id}
@@ -1463,11 +1842,42 @@ const MessageDark = () => {
                             <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
                           </svg>
                         </div>
-                        <div className="chat-info">
-                          <div className="chat-name">{conv.title}</div>
-                          <div className="chat-snippet" style={{ textTransform: 'uppercase', fontSize: '0.65rem' }}>
-                            {conv.title.replace(' Team', '')}
+                        <div className="chat-info" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', overflow: 'hidden' }}>
+                          <div style={{ minWidth: 0 }}>
+                            <div className="chat-name">{conv.title}</div>
+                            <div className="chat-snippet" style={{ textTransform: 'uppercase', fontSize: '0.65rem' }}>
+                              {conv.title}
+                            </div>
                           </div>
+                          {isStartupFounderForConversation(conv) && (
+                            <button
+                              className="edit-team-dots"
+                              type="button"
+                              onMouseDown={(e) => e.stopPropagation()}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleEditTeamClick(conv);
+                              }}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: 'rgba(255,255,255,0.5)',
+                                padding: '8px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                borderRadius: '50%',
+                                transition: 'background 0.2s'
+                              }}
+                              onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                              onMouseOut={(e) => e.currentTarget.style.background = 'none'}
+                            >
+                              <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
+                              </svg>
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -1478,7 +1888,7 @@ const MessageDark = () => {
 
           {/* Chat Main Area */}
           <main className="chat-main">
-            {loading ? (
+            {loading || isEditTeamLoading ? (
               <div className="loader-container" style={{ position: 'relative' }}>
                 <button
                   className="hamburger-menu"
@@ -1517,17 +1927,46 @@ const MessageDark = () => {
                 })()}
 
                 <div className="message-viewport" ref={chatAreaRef}>
-                  <div className="beginning-indicator">
-                    <span style={{ fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.1em', color: 'var(--text-muted)' }}>
-                      BEGINNING OF CONVERSATION WITH {MessageService.getConversationTitle(currentConversation, user?.id).toUpperCase()}
-                    </span>
-                  </div>
-
                   {messages.map((msg, idx) => {
-                    const isSelf = msg.sender.id === user?.id;
+                    if (msg.is_system) {
+                      const previousIsSystem = messages[idx - 1]?.is_system;
+                      const nextIsSystem = messages[idx + 1]?.is_system;
+                      return (
+                        <div key={msg.id || idx} className="system-message-container" style={{
+                          display: 'flex',
+                          justifyContent: 'center',
+                          marginTop: previousIsSystem ? '0.35rem' : '1.5rem',
+                          marginBottom: nextIsSystem ? '0.35rem' : '1.5rem',
+                          width: '100%'
+                        }}>
+                          <span style={{
+                            fontSize: '0.65rem',
+                            fontWeight: 800,
+                            letterSpacing: '0.15em',
+                            color: 'var(--text-muted)',
+                            textTransform: 'uppercase',
+                            textAlign: 'center',
+                            backgroundColor: 'rgba(255,255,255,0.05)',
+                            padding: '6px 16px',
+                            borderRadius: '20px',
+                            border: '1px solid rgba(255,255,255,0.05)'
+                          }}>
+                            {msg.content}
+                          </span>
+                        </div>
+                      );
+                    }
+
+                    const senderId = msg.sender?.id || msg.sender;
+                    const isSelf = senderId === user?.id;
+                    const role = currentConversation?.team_roles?.[senderId];
+                    const senderName = msg.sender?.username || (isSelf ? user?.username : null) || 'User';
+                    const displayName = role ? `${senderName} (${role})` : senderName;
+
                     return (
                       <div key={msg.id || idx} className={`msg-bubble-container ${isSelf ? 'self' : 'other'}`}>
-                        <span className="msg-sender-name">{msg.sender.username}</span>
+                        {!isSelf && <span className="msg-sender-name">{displayName}</span>}
+                        {isSelf && <span className="msg-sender-name" style={{ textAlign: 'right' }}>You</span>}
                         <div className={`msg-bubble ${isSelf ? 'self' : 'other'}`}>
                           {msg.content}
                           <div className="msg-footer">
@@ -1543,18 +1982,25 @@ const MessageDark = () => {
                   <div className="message-input-wrapper bg-[#020617] !bg-[#020617]" style={{ background: '#020617' }}>
                     <input
                       type="text"
-                      placeholder="Type a message..."
+                      placeholder={currentConversation?.can_send === false ? 'You were removed from this team' : 'Type a message...'}
                       className="bg-transparent text-white !text-white"
-                      style={{ background: 'transparent', color: '#ffffff' }}
+                      style={{
+                        background: 'transparent',
+                        color: '#ffffff',
+                        opacity: currentConversation?.can_send === false ? 0.55 : 1,
+                        cursor: currentConversation?.can_send === false ? 'not-allowed' : 'text'
+                      }}
                       value={inputMessage}
                       onChange={(e) => setInputMessage(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                      onKeyPress={(e) => e.key === 'Enter' && currentConversation?.can_send !== false && handleSendMessage()}
+                      disabled={currentConversation?.can_send === false}
                     />
                   </div>
                   <button
                     className="send-btn-circle"
                     onClick={handleSendMessage}
-                    disabled={!inputMessage.trim()}
+                    disabled={!inputMessage.trim() || currentConversation?.can_send === false}
+                    title={currentConversation?.can_send === false ? 'You were removed from this team' : 'Send message'}
                   >
                     <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.917H12.75a.75.75 0 010 1.5H4.984l-2.432 7.918a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
@@ -1585,7 +2031,7 @@ const MessageDark = () => {
       </div>
 
       {isTeamModalOpen && (
-        <div className="modal-overlay" onClick={() => setIsTeamModalOpen(false)}>
+        <div className="modal-overlay" onClick={closeTeamModal}>
           <div
             className="modal-content"
             id="team-modal-root"
@@ -1598,7 +2044,7 @@ const MessageDark = () => {
           >
             {/* CLOSE BUTTON - FORCED VISIBILITY */}
             <button
-              onClick={() => setIsTeamModalOpen(false)}
+              onClick={closeTeamModal}
               className="unique-team-modal-close-btn"
               style={{
                 position: 'absolute',
@@ -1654,7 +2100,7 @@ const MessageDark = () => {
                     <path d="M12.876 1.104l-11.75 3.518a.75.75 0 00-.518.898l2.673 8.91c.048.16.14.3.262.405l7.91 6.843a.75.75 0 001.129 0l7.91-6.843a.75.75 0 00.262-.405l2.673-8.91a.75.75 0 00-.518-.898l-10-3z" />
                   </svg>
                 </div>
-                Build Your Team
+                {isEditMode ? 'Edit Team' : 'Build Your Team'}
               </div>
             </div>
 
@@ -1663,11 +2109,13 @@ const MessageDark = () => {
                 <label className="modal-label">SELECT STARTUP</label>
                 <div className="custom-dropdown-container">
                   <div
-                    className="custom-dropdown-header"
+                    className={`custom-dropdown-header ${isEditMode ? 'disabled' : ''}`}
                     onClick={(e) => {
+                      if (isEditMode) return;
                       e.stopPropagation();
                       setIsStartupDropdownOpen(!isStartupDropdownOpen);
                     }}
+                    style={isEditMode ? { opacity: 0.7, cursor: 'not-allowed', background: 'rgba(255,255,255,0.05)' } : {}}
                   >
                     <span>{selectedStartup ? selectedStartup.title : 'Choose a startup...'}</span>
                     <svg className="dropdown-chevron" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ transform: isStartupDropdownOpen ? 'rotate(180deg)' : 'none' }}>
@@ -1676,12 +2124,12 @@ const MessageDark = () => {
                   </div>
                   {isStartupDropdownOpen && (
                     <div className="custom-dropdown-list">
-                      {userStartups.length === 0 ? (
+                      {(isEditMode ? userStartups : createTeamStartupOptions).length === 0 ? (
                         <div className="custom-dropdown-item" style={{ opacity: 0.6, cursor: 'default' }}>
-                          No startups created...
+                          {isEditMode ? 'No startups created...' : 'All eligible startups already have teams...'}
                         </div>
                       ) : (
-                        userStartups.map(s => (
+                        (isEditMode ? userStartups : createTeamStartupOptions).map(s => (
                           <div
                             key={s.id}
                             className={`custom-dropdown-item ${selectedStartup?.id === s.id ? 'selected' : ''}`}
@@ -1718,118 +2166,127 @@ const MessageDark = () => {
                 </div>
 
                 <div className="member-list-scroll">
-                  {allUsersForSearch
-                    .filter(u => u.username.toLowerCase().includes(memberSearch.toLowerCase()) || (u.email || '').toLowerCase().includes(memberSearch.toLowerCase()))
-                    .map(u => {
-                      const isSelected = selectedMembers.some(m => m.id === u.id);
-                      const assignment = memberAssignments[u.id] || { role: '', customRole: '' };
-                      return (
-                        <div key={u.id} className="member-item-wrapper">
-                          <div
-                            className={`member-item ${isSelected ? 'selected' : ''}`}
-                            onClick={() => {
-                              if (isSelected) {
-                                setSelectedMembers(prev => prev.filter(m => m.id !== u.id));
-                                setMemberAssignments(prev => {
-                                  const updated = { ...prev };
-                                  delete updated[u.id];
-                                  return updated;
-                                });
-                              } else {
-                                setSelectedMembers(prev => [...prev, u]);
-                                updateMemberAssignment(u.id, { role: '', customRole: '' });
-                              }
-                            }}
-                          >
-                            <div className="member-avatar">{u.username.charAt(0).toUpperCase()}</div>
-                            <div className="member-info">
-                              <div className="member-name">{u.username}</div>
-                              <div className="member-email">{u.email}</div>
-                            </div>
-                            <div className="select-btn">
-                              {isSelected ? (
-                                <svg width="10" height="10" fill="none" stroke="white" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                              ) : (
-                                <svg width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-                                </svg>
-                              )}
-                            </div>
-                          </div>
-                          {isSelected && (
-                            <div className="inline-role-row">
-                              <span className="inline-role-label">POSITION:</span>
-                              <div className="custom-dropdown-container" style={{ flex: 1 }}>
-                                <div
-                                  className="custom-dropdown-header"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setOpenRoleDropdownId(openRoleDropdownId === u.id ? null : u.id);
-                                  }}
-                                  style={{ border: '1px solid rgba(79, 70, 229, 0.55)', background: '#020617', padding: '0.45rem 0.75rem', minHeight: 'auto', borderRadius: '0.6rem' }}
-                                >
-                                  <span style={{ fontSize: '0.85rem' }}>{assignment.role === '__other__' ? 'Other' : assignment.role || 'Select position...'}</span>
-                                  <svg className="dropdown-chevron" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ transform: openRoleDropdownId === u.id ? 'rotate(180deg)' : 'none', margin: 0 }}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                                  </svg>
-                                </div>
-                                {openRoleDropdownId === u.id && (
-                                  <div className="custom-dropdown-list" style={{ top: 'calc(100% + 4px)', zIndex: 1000 }}>
-                                    {positionOptions.map((title) => (
-                                      <div
-                                        key={title}
-                                        className={`custom-dropdown-item ${assignment.role === title ? 'selected' : ''}`}
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          updateMemberAssignment(u.id, { role: title, customRole: '' });
-                                          setOpenRoleDropdownId(null);
-                                        }}
-                                      >
-                                        {title}
-                                      </div>
-                                    ))}
-                                    <div
-                                      className={`custom-dropdown-item ${assignment.role === '__other__' ? 'selected' : ''}`}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        updateMemberAssignment(u.id, { role: '__other__', customRole: '' });
-                                        setOpenRoleDropdownId(null);
-                                      }}
-                                    >
-                                      Other
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                              {assignment.role === '__other__' && (
-                                <input
-                                  type="text"
-                                  className="inline-role-custom-input"
-                                  placeholder="Custom title"
-                                  value={assignment.customRole}
-                                  onChange={(e) => updateMemberAssignment(u.id, { customRole: e.target.value })}
-                                  onClick={(e) => e.stopPropagation()}
-                                />
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
+                  {filteredMembers.map(member => (
+                    <TeamMemberRow
+                      key={member.id}
+                      member={member}
+                      isSelected={selectedMemberIds.has(member.id)}
+                      assignment={memberAssignments[member.id] || { role: '', customRole: '' }}
+                      isDropdownOpen={openRoleDropdownId === member.id}
+                      positionOptions={positionOptions}
+                      onToggleMember={handleToggleMember}
+                      onToggleRoleDropdown={handleToggleRoleDropdown}
+                      onSelectRole={handleSelectRole}
+                      onCustomRoleChange={handleCustomRoleChange}
+                    />
+                  ))}
                 </div>
               </div>
             </div>
 
             <div className="modal-footer">
-              <button className="cancel-btn" onClick={() => setIsTeamModalOpen(false)}>Cancel</button>
+              {isEditMode && (
+                <button
+                  className="cancel-btn"
+                  onClick={() => setIsRemoveTeamConfirmOpen(true)}
+                  style={{
+                    marginRight: 'auto',
+                    borderColor: 'rgba(248, 113, 113, 0.45)',
+                    color: '#f87171',
+                    background: 'rgba(248, 113, 113, 0.08)',
+                    whiteSpace: 'nowrap',
+                    fontSize: '0.82rem',
+                    padding: '0.75rem 1.4rem',
+                    minWidth: '150px',
+                    height: '44px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  Remove Team Chat
+                </button>
+              )}
+              {!isEditMode && <button className="cancel-btn" onClick={closeTeamModal}>Cancel</button>}
               <button
                 className="launch-btn"
                 onClick={handleLaunchTeamChat}
                 disabled={!selectedStartup || selectedMembers.length === 0}
+                style={isEditMode ? {
+                  whiteSpace: 'nowrap',
+                  fontSize: '0.82rem',
+                  padding: '0.75rem 1.4rem',
+                  minWidth: '150px',
+                  height: '44px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                } : {}}
               >
-                Launch Team Chat
+                {isEditMode ? 'Save Changes' : 'Launch Team Chat'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isRemoveTeamConfirmOpen && (
+        <div
+          className="modal-overlay"
+          onClick={() => setIsRemoveTeamConfirmOpen(false)}
+          style={{ zIndex: 1000000 }}
+        >
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: 'min(420px, calc(100vw - 32px))',
+              padding: '1.5rem',
+              border: '1px solid rgba(248, 113, 113, 0.25)'
+            }}
+          >
+            <div className="modal-title" style={{ marginBottom: '0.75rem' }}>
+              Remove Team Chat
+            </div>
+            <p style={{
+              margin: 0,
+              color: 'var(--text-muted)',
+              lineHeight: 1.6,
+              fontSize: '0.95rem'
+            }}>
+              Are you sure to remove this startup?
+            </p>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: '0.75rem',
+              paddingTop: '1.25rem',
+              background: 'transparent'
+            }}>
+              <button
+                className="launch-btn"
+                onClick={handleRemoveTeamChat}
+                style={{
+                  background: '#dc2626',
+                  boxShadow: '0 10px 20px rgba(220, 38, 38, 0.25)',
+                  minWidth: '110px',
+                  height: '42px',
+                  padding: '0 1.2rem'
+                }}
+              >
+                Remove
+              </button>
+              <button
+                className="cancel-btn"
+                onClick={() => setIsRemoveTeamConfirmOpen(false)}
+                style={{
+                  minWidth: '110px',
+                  height: '42px',
+                  padding: '0 1.2rem',
+                  border: '1px solid rgba(255,255,255,0.12)'
+                }}
+              >
+                Cancel
               </button>
             </div>
           </div>
