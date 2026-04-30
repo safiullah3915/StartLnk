@@ -18,7 +18,7 @@ import logging
 import json
 import hashlib
 from copy import deepcopy
-from .models import Startup, StartupTag, Position, Application, Notification, Favorite, Interest
+from .models import Startup, StartupTag, Position, Application, Notification, Favorite, Interest, Team
 from .messaging_models import Conversation, Message, UserProfile, FileUpload
 from .serializers import (
 	UserRegistrationSerializer, UserLoginSerializer, UserSerializer, 
@@ -981,7 +981,14 @@ class UserStartupsWithApplicationsView(generics.ListAPIView):
 		for startup_data in startups_data:
 			startup_id = startup_data['id']
 			app_count = Application.objects.filter(startup_id=startup_id).count()
+			has_approved = Application.objects.filter(startup_id=startup_id, status='approved').exists()
+			team_exists = Team.objects.filter(startup_id=startup_id).exists()
+			team_conv_exists = Conversation.objects.filter(team__startup_id=startup_id, is_active=True).exists()
+			
 			startup_data['applications_count'] = app_count
+			startup_data['has_approved_applications'] = has_approved
+			startup_data['team_exists'] = team_exists
+			startup_data['team_conversation_exists'] = team_conv_exists
 		
 		return Response({
 			"results": startups_data,
@@ -1086,12 +1093,20 @@ class ApproveApplicationView(generics.GenericAPIView):
 				f"Let's schedule a time to chat!"
 			)
 			
-			Message.objects.create(
+			# Ensure no duplicate messages are created
+			message_exists = Message.objects.filter(
 				conversation=conversation,
 				sender=user,
-				content=default_message,
-				message_type='text'
-			)
+				content=default_message
+			).exists()
+			
+			if not message_exists:
+				Message.objects.create(
+					conversation=conversation,
+					sender=user,
+					content=default_message,
+					message_type='text'
+				)
 			
 		except Exception as e:
 			print(f"⚠️ Failed to create conversation/message for approved application: {e}")
@@ -1930,8 +1945,9 @@ class ConversationListView(generics.ListCreateAPIView):
 		serializer = self.get_serializer(data=request.data)
 		serializer.is_valid(raise_exception=True)
 		participant_ids = serializer.validated_data.get('participant_ids', [])
+		startup_id = serializer.validated_data.get('startup_id')
 		# If this is a direct chat (single other participant), reuse existing conversation when available
-		if participant_ids and len(participant_ids) == 1:
+		if not startup_id and participant_ids and len(participant_ids) == 1:
 			target_id = str(participant_ids[0])
 			if target_id != str(user.id):
 				existing = Conversation.objects.filter(
@@ -1939,11 +1955,11 @@ class ConversationListView(generics.ListCreateAPIView):
 					is_active=True
 				).filter(participants__id=target_id).order_by('-updated_at').first()
 				if existing:
-					read_serializer = ConversationSerializer(existing, context={'request': request})
+					read_serializer = ConversationSerializer(existing, context={'request': request, 'current_user': user})
 					return Response(read_serializer.data, status=status.HTTP_200_OK)
 		conversation = serializer.save()
 		conversation.refresh_from_db()
-		read_serializer = ConversationSerializer(conversation, context={'request': request})
+		read_serializer = ConversationSerializer(conversation, context={'request': request, 'current_user': user})
 		headers = self.get_success_headers(read_serializer.data)
 		return Response(read_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
@@ -1962,6 +1978,26 @@ class ConversationDetailView(generics.RetrieveAPIView):
 			is_active=True
 		)
 
+	def get_serializer_context(self):
+		context = super().get_serializer_context()
+		context['current_user'] = get_session_user(self.request)
+		return context
+
+	def delete(self, request, *args, **kwargs):
+		user = get_session_user(request)
+		if not user:
+			return Response({"error": "Authentication required"}, status=status.HTTP_401_UNAUTHORIZED)
+
+		conversation = self.get_object()
+		if not conversation.team:
+			return Response({"error": "Only team chats can be removed"}, status=status.HTTP_400_BAD_REQUEST)
+		if conversation.team.startup.owner_id != user.id:
+			return Response({"error": "Only the founder can remove this team chat"}, status=status.HTTP_403_FORBIDDEN)
+
+		conversation.is_active = False
+		conversation.save(update_fields=['is_active', 'updated_at'])
+		return Response({"message": "Team chat removed"}, status=status.HTTP_200_OK)
+
 
 class MessageListView(generics.ListCreateAPIView):
 	"""List messages in conversation or send new message"""
@@ -1973,10 +2009,23 @@ class MessageListView(generics.ListCreateAPIView):
 		user = get_session_user(self.request)
 		if not user:
 			return Message.objects.none()
-		return Message.objects.filter(
+		queryset = Message.objects.filter(
 			conversation_id=conversation_id,
-			conversation__participants=user
+			conversation__participants=user,
+			conversation__is_active=True
 		).select_related('sender').order_by('created_at')
+		conversation = queryset.first().conversation if queryset.exists() else None
+		if conversation and conversation.team:
+			is_founder = conversation.team.startup.owner_id == user.id
+			is_team_member = conversation.team.members.filter(user=user).exists()
+			if not is_founder and not is_team_member:
+				removal_message = queryset.filter(
+					event_type="user_removed",
+					content=f"{user.username} is removed"
+				).order_by('-created_at').first()
+				if removal_message:
+					queryset = queryset.filter(created_at__lte=removal_message.created_at)
+		return queryset
 	
 	def get_serializer_class(self):
 		if self.request.method == 'POST':
@@ -2009,6 +2058,14 @@ class MessageListView(generics.ListCreateAPIView):
 			)
 		except Conversation.DoesNotExist:
 			raise PermissionDenied("Conversation not found")
+		if conversation.team:
+			is_founder = conversation.team.startup.owner_id == user.id
+			is_team_member = conversation.team.members.filter(user=user).exists()
+			if not is_founder and not is_team_member:
+				return Response(
+					{"error": "You were removed from this team and cannot send messages."},
+					status=status.HTTP_403_FORBIDDEN
+				)
 		serializer = self.get_serializer(data=request.data)
 		serializer.is_valid(raise_exception=True)
 		message = serializer.save(conversation=conversation, sender=user)

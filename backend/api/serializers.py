@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 import bcrypt
-from .models import Startup, StartupTag, Position, Application, Notification, Favorite, Interest
+from .models import Startup, StartupTag, Position, Application, Notification, Favorite, Interest, Team, TeamMember
 from .messaging_models import Conversation, Message, UserProfile, FileUpload
 from .recommendation_models import UserInteraction, UserOnboardingPreferences
 
@@ -355,11 +355,33 @@ class UserStartupSerializer(serializers.ModelSerializer):
 			'revenue', 'profit', 'asking_price', 'ttm_revenue', 'ttm_profit',
 			'last_month_revenue', 'last_month_profit', 'earn_through', 
 			'phase', 'team_size', 'field', 'website_url', 'applications', 
-			'views', 'created_at'
+			'views', 'created_at', 'has_approved_applications', 'team_exists', 'team_conversation_exists'
 		)
 	
+	has_approved_applications = serializers.SerializerMethodField()
+	team_exists = serializers.SerializerMethodField()
+	team_conversation_exists = serializers.SerializerMethodField()
+
 	def get_applications(self, obj):
 		return obj.applications.count()
+
+	def get_has_approved_applications(self, obj):
+		try:
+			return obj.applications.filter(status='approved').exists()
+		except Exception:
+			return False
+
+	def get_team_exists(self, obj):
+		try:
+			return hasattr(obj, 'team') and obj.team is not None
+		except Exception:
+			return False
+
+	def get_team_conversation_exists(self, obj):
+		try:
+			return hasattr(obj, 'team') and obj.team.conversations.filter(is_active=True).exists()
+		except Exception:
+			return False
 
 
 class SearchResultSerializer(serializers.ModelSerializer):
@@ -414,7 +436,22 @@ class MessageSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Message
-        fields = ('id', 'sender', 'content', 'message_type', 'attachment', 'is_read', 'created_at')
+        fields = ('id', 'sender', 'content', 'message_type', 'attachment', 'is_read', 'is_system', 'event_type', 'created_at')
+    
+    is_system = serializers.SerializerMethodField()
+    event_type = serializers.SerializerMethodField()
+
+    def get_is_system(self, obj):
+        try:
+            return getattr(obj, 'is_system', False)
+        except Exception:
+            return False
+
+    def get_event_type(self, obj):
+        try:
+            return getattr(obj, 'event_type', None)
+        except Exception:
+            return None
 
 
 class ConversationSerializer(serializers.ModelSerializer):
@@ -422,22 +459,119 @@ class ConversationSerializer(serializers.ModelSerializer):
     participants = UserMiniSerializer(many=True, read_only=True)
     last_message = serializers.SerializerMethodField()
     unread_count = serializers.SerializerMethodField()
+    team_roles = serializers.SerializerMethodField()
     
     class Meta:
         model = Conversation
-        fields = ('id', 'participants', 'title', 'is_active', 'last_message', 'unread_count', 'created_at', 'updated_at')
+        fields = ('id', 'participants', 'title', 'is_active', 'last_message', 'unread_count', 'team_roles', 'team_id', 'startup_id', 'startup_title', 'startup_owner_id', 'can_send', 'member_added', 'member_removed', 'added_member_names', 'removed_member_names', 'created_at', 'updated_at')
+    
+    team_id = serializers.SerializerMethodField()
+    startup_id = serializers.SerializerMethodField()
+    startup_title = serializers.SerializerMethodField()
+    startup_owner_id = serializers.SerializerMethodField()
+    can_send = serializers.SerializerMethodField()
+    member_added = serializers.SerializerMethodField()
+    member_removed = serializers.SerializerMethodField()
+    added_member_names = serializers.SerializerMethodField()
+    removed_member_names = serializers.SerializerMethodField()
+    
+    def get_team_id(self, obj):
+        try:
+            return str(obj.team.id) if obj.team else None
+        except Exception:
+            return None
+
+    def get_startup_id(self, obj):
+        try:
+            return str(obj.team.startup_id) if obj.team else None
+        except Exception:
+            return None
+
+    def get_startup_title(self, obj):
+        try:
+            return obj.team.startup.title if obj.team else None
+        except Exception:
+            return None
+
+    def get_startup_owner_id(self, obj):
+        try:
+            return str(obj.team.startup.owner_id) if obj.team else None
+        except Exception:
+            return None
+
+    def get_can_send(self, obj):
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        if not getattr(user, 'is_authenticated', False):
+            user = self.context.get('current_user')
+        if not user or not getattr(user, 'is_authenticated', False):
+            return False
+        if not obj.team:
+            return True
+        if obj.team.startup.owner_id == user.id:
+            return True
+        return TeamMember.objects.filter(team=obj.team, user=user).exists()
+
+    def get_member_added(self, obj):
+        return getattr(obj, '_member_added', False)
+
+    def get_member_removed(self, obj):
+        return getattr(obj, '_member_removed', False)
+
+    def get_added_member_names(self, obj):
+        return getattr(obj, '_added_member_names', [])
+
+    def get_removed_member_names(self, obj):
+        return getattr(obj, '_removed_member_names', [])
+
+    def _get_context_user(self):
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        if not getattr(user, 'is_authenticated', False):
+            user = self.context.get('current_user')
+        return user if user and getattr(user, 'is_authenticated', False) else None
+
+    def _get_removed_member_cutoff(self, obj):
+        user = self._get_context_user()
+        if not user or not obj.team:
+            return None
+        if obj.team.startup.owner_id == user.id:
+            return None
+        if TeamMember.objects.filter(team=obj.team, user=user).exists():
+            return None
+
+        removal_message = obj.messages.filter(
+            event_type="user_removed",
+            content=f"{user.username} is removed"
+        ).order_by('-created_at').first()
+        return removal_message.created_at if removal_message else None
     
     def get_last_message(self, obj):
-        last_msg = obj.messages.last()
+        messages = obj.messages.all()
+        cutoff = self._get_removed_member_cutoff(obj)
+        if cutoff:
+            messages = messages.filter(created_at__lte=cutoff)
+        last_msg = messages.last()
         if last_msg:
             return MessageSerializer(last_msg).data
         return None
     
     def get_unread_count(self, obj):
-        request = self.context.get('request')
-        if request and request.user.is_authenticated:
-            return obj.messages.filter(is_read=False).exclude(sender=request.user).count()
+        user = self._get_context_user()
+        if user:
+            messages = obj.messages.filter(is_read=False).exclude(sender=user)
+            cutoff = self._get_removed_member_cutoff(obj)
+            if cutoff:
+                messages = messages.filter(created_at__lte=cutoff)
+            return messages.count()
         return 0
+        
+    def get_team_roles(self, obj):
+        if obj.team:
+            roles = {str(member.user.id): member.role for member in obj.team.members.all()}
+            roles[str(obj.team.startup.owner_id)] = 'FOUNDER'
+            return roles
+        return {}
 
 
 class ConversationCreateSerializer(serializers.ModelSerializer):
@@ -446,13 +580,18 @@ class ConversationCreateSerializer(serializers.ModelSerializer):
 		child=serializers.UUIDField(),
 		write_only=True
 	)
+	startup_id = serializers.UUIDField(write_only=True, required=False, allow_null=True)
+	member_roles = serializers.DictField(child=serializers.CharField(), write_only=True, required=False)
 
 	class Meta:
 		model = Conversation
-		fields = ('title', 'participant_ids')
+		fields = ('title', 'participant_ids', 'startup_id', 'member_roles')
 
 	def create(self, validated_data):
 		participant_ids = set(str(pid) for pid in validated_data.pop('participant_ids', []))
+		startup_id = validated_data.pop('startup_id', None)
+		member_roles = validated_data.pop('member_roles', {})
+		
 		request = self.context.get('request')
 		current_user = self.context.get('current_user')
 		if not current_user and request is not None:
@@ -461,14 +600,116 @@ class ConversationCreateSerializer(serializers.ModelSerializer):
 				current_user = candidate
 		if not current_user or not getattr(current_user, 'is_authenticated', False):
 			raise serializers.ValidationError({'participant_ids': 'Authentication required'})
+		
 		participant_ids.add(str(current_user.id))
 		if len(participant_ids) <= 1:
 			raise serializers.ValidationError({'participant_ids': 'Please include at least one other participant'})
+		
 		participants = User.objects.filter(id__in=participant_ids, is_active=True)
 		if participants.count() != len(participant_ids):
 			raise serializers.ValidationError({'participant_ids': 'One or more participants are invalid'})
+			
+		team = None
+		conversation = None
+		
+		if startup_id:
+			try:
+				startup = Startup.objects.get(id=startup_id)
+				# Ensure only one team per startup
+				team, _ = Team.objects.get_or_create(startup=startup)
+				
+				# Fetch existing conversation early so we can add system messages and flags
+				conversation = Conversation.objects.filter(team=team, is_active=True).first()
+				
+				# 1. Validate unique roles in the request
+				# We only care about roles that are explicitly assigned (not current_user's implicit role usually)
+				assigned_roles = {}
+				for uid, r in member_roles.items():
+					r_strip = r.strip() if r else ""
+					if r_strip:
+						if r_strip in assigned_roles.values():
+							raise serializers.ValidationError({
+								'member_roles': f"Cannot reassign the position '{r_strip}'. Create new position for him or deassign the previous one to assign this position to new."
+							})
+						assigned_roles[uid] = r_strip
+
+				added_member_names = []
+				removed_member_names = []
+
+				# 2. Reconcile TeamMembers (Remove those no longer selected)
+				existing_members_qs = TeamMember.objects.filter(team=team)
+				for em in list(existing_members_qs):
+					if str(em.user.id) not in participant_ids and em.user != current_user:
+						removed_user = em.user
+						removed_member_names.append(removed_user.username)
+						# Generate removal message
+						if conversation:
+							Message.objects.create(
+								conversation=conversation,
+								content=f"{removed_user.username} is removed",
+								is_system=True,
+								event_type="user_removed"
+							)
+							setattr(conversation, '_member_removed', True)
+						em.delete()
+
+				# 3. Add/Update roles
+				for user_id_str, role in member_roles.items():
+					if role and role.strip() and user_id_str in participant_ids:
+						user_obj = participants.get(id=user_id_str)
+						
+						# Check if new
+						if not TeamMember.objects.filter(team=team, user=user_obj).exists():
+							added_member_names.append(user_obj.username)
+							if conversation:
+								Message.objects.create(
+									conversation=conversation,
+									content=f"{user_obj.username} is added",
+									is_system=True,
+									event_type="user_added"
+								)
+								setattr(conversation, '_member_added', True)
+						
+						TeamMember.objects.update_or_create(
+							user=user_obj,
+							team=team,
+							defaults={'role': role.strip()}
+						)
+				
+				# Set team name as startup title
+				validated_data['title'] = startup.title
+				
+				if conversation:
+					# Reuse existing conversation
+					existing_participants = set(conversation.participants.values_list('id', flat=True))
+					new_participants = [p for p in participants if p.id not in existing_participants]
+					
+					if new_participants:
+						conversation.participants.add(*new_participants)
+					if added_member_names:
+						setattr(conversation, '_added_member_names', added_member_names)
+					if removed_member_names:
+						setattr(conversation, '_removed_member_names', removed_member_names)
+					conversation.save() # Update updated_at
+					return conversation
+					
+			except Startup.DoesNotExist:
+				pass
+
+		# Create new conversation (either for team or direct)
+		validated_data['team'] = team
 		conversation = Conversation.objects.create(**validated_data)
 		conversation.participants.set(participants)
+		
+		# If it's a team conversation, add the "BEGINNING" system message
+		if team:
+			Message.objects.create(
+				conversation=conversation,
+				content=f"BEGINNING OF CONVERSATION WITH {team.startup.title}",
+				is_system=True,
+				event_type="conversation_start"
+			)
+			
 		conversation.save(update_fields=['updated_at'])
 		return conversation
 
