@@ -63,7 +63,10 @@
 }
 
 .statAction {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
   background: #667eea;
   color: white;
   padding: 0.5rem 1rem;
@@ -456,9 +459,16 @@
 .tableHeader,
 .tableRow {
   display: grid;
-  grid-template-columns: 2fr 2fr 1fr 1fr 1fr;
+  grid-template-columns: 2fr 2fr 1fr 1fr 1.2fr;
   gap: 1rem;
   align-items: center;
+}
+
+.tableHeader div:nth-child(3),
+.tableHeader div:nth-child(4),
+.tableRow div:nth-child(3),
+.tableRow div:nth-child(4) {
+  text-align: center;
 }
 
 .tableHeader {
@@ -482,7 +492,7 @@
 }
 
 .tableRow div:last-child {
-  justify-self: start;
+  justify-self: end;
 }
 
 .statusBadge {
@@ -510,7 +520,6 @@
   background: rgba(248, 113, 113, 0.15);
   color: #b91c1c;
 }
-
 .statusWithdrawn {
   background: rgba(156, 163, 175, 0.15);
   color: #4b5563;
@@ -520,35 +529,49 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 1rem;
+  gap: 1.5rem;
   margin-top: 2rem;
   padding: 1rem;
 }
 
 .paginationButton {
-  background-color: #25224A;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  padding: 0.5rem 1rem;
+  background-color: white;
+  color: #374151;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
   cursor: pointer;
-  font-size: 1.2rem;
-  transition: background-color 0.3s ease;
-  min-width: 40px;
-  height: 40px;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
+  user-select: none;
+  outline: none;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.startupPagination {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  margin-top: 1.5rem;
 }
 
 .paginationButton:hover:not(:disabled) {
-  background-color: #312c69;
+  background-color: #f8fafc;
+  border-color: #cbd5e1;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .paginationButton:disabled {
-  background-color: #ccc;
+  background-color: #f1f5f9;
+  border-color: #e2e8f0;
+  color: #94a3b8;
   cursor: not-allowed;
-  opacity: 0.6;
+  opacity: 0.7;
 }
 
 .paginationInfo {
@@ -614,5 +637,14 @@
 
   .confirmActions {
     flex-direction: column;
+  }
+
+  .statAction {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.85rem;
+    line-height: 1;
   }
 }

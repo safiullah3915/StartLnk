@@ -106,6 +106,28 @@ const MessageDark = () => {
   const [presenceByUser, setPresenceByUser] = useState({});
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('chats'); // 'chats', 'people', 'teams'
+
+  const getDateLabel = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const messageDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+    if (messageDate.getTime() === today.getTime()) {
+      return 'Today';
+    } else if (messageDate.getTime() === yesterday.getTime()) {
+      return 'Yesterday';
+    } else {
+      return date.toLocaleDateString(undefined, {
+        month: 'long',
+        day: 'numeric',
+        year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+      });
+    }
+  };
   const [sidebarSearch, setSidebarSearch] = useState('');
   const [userStartups, setUserStartups] = useState([]);
   const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
@@ -217,7 +239,8 @@ const MessageDark = () => {
   }, [user, conversations, currentConversation]);
 
   const getConversationPresence = (conversation) => {
-    if (!conversation?.participants || conversation.participants.length !== 2) return null;
+    // Presence should only be shown for one-to-one conversations (2 participants, no team_id)
+    if (!conversation?.participants || conversation.participants.length !== 2 || conversation.team_id) return null;
     const otherUser = MessageService.getOtherParticipant(conversation, user?.id);
     return otherUser?.id ? presenceByUser[String(otherUser.id)] : null;
   };
@@ -282,7 +305,7 @@ const MessageDark = () => {
         ? conversationsData
         : (conversationsData && Array.isArray(conversationsData.results) ? conversationsData.results : []);
 
-      const safeConversations = safeConversationsRaw.filter(c => !!c?.last_message);
+      const safeConversations = safeConversationsRaw.filter(c => !!c?.last_message || !!c?.team_id);
       const safeUsers = Array.isArray(onlineUsersData) ? onlineUsersData : [];
 
       // Robust extraction of startups body from axios response
@@ -454,10 +477,13 @@ const MessageDark = () => {
         backendError = backendError[0];
       }
 
-      // Show floating error message after the indicator is done
+      // Show professional error message for the end user
+      const isBusy = error.response?.status >= 500;
       setCustomNotification({
         type: 'error',
-        message: typeof backendError === 'string' ? backendError : 'Failed to launch team chat'
+        message: isBusy
+          ? 'Server is busy. Please try again later.'
+          : 'Unable to process your request. Please try again.'
       });
     } finally {
       // Ensure loading is off in case initializeMessaging didn't handle it
@@ -539,29 +565,42 @@ const MessageDark = () => {
 
   const handleRemoveTeamChat = async () => {
     if (!editingConversation?.id) return;
+    const conversationId = editingConversation.id;
 
     try {
-      setLoading(true);
-      await MessageService.removeTeamConversation(editingConversation.id);
+      // Close popups immediately for instant feedback
+      setIsRemoveTeamConfirmOpen(false);
+      setIsTeamModalOpen(false);
 
-      setConversations(prev => prev.filter(conv => conv.id !== editingConversation.id));
-      if (currentConversation?.id === editingConversation.id) {
+      setLoading(true);
+      await MessageService.removeTeamConversation(conversationId);
+
+      setConversations(prev => prev.filter(conv => conv.id !== conversationId));
+      if (currentConversation?.id === conversationId) {
         setCurrentConversation(null);
         setMessages([]);
         MessageService.setCurrentConversation(null);
       }
 
-      closeTeamModal();
+      // Final cleanup
+      setIsEditMode(false);
+      setEditingConversation(null);
+
       await initializeMessaging();
       setCustomNotification({
         type: 'success',
-        message: 'Team chat removed from messages'
+        message: 'Team and associated chat removed successfully'
       });
     } catch (error) {
       console.error('Failed to remove team chat:', error);
+
+      // Professional error messaging for the end user
+      const isBusy = error.response?.status >= 500;
       setCustomNotification({
         type: 'error',
-        message: error.response?.data?.error || 'Failed to remove team chat'
+        message: isBusy
+          ? 'Server is busy. Please try again in a moment.'
+          : 'Unable to process your request. Please try again.'
       });
     } finally {
       setLoading(false);
@@ -1813,7 +1852,7 @@ const MessageDark = () => {
                     </div>
                   )}
 
-                  {userStartups.some(s => s.has_approved_applications && (!s.team_exists || !s.team_conversation_exists)) && (
+                  {/* {userStartups.some(s => s.has_approved_applications && (!s.team_exists || !s.team_conversation_exists)) && (
                     <div style={{
                       backgroundColor: 'rgba(239, 68, 68, 0.1)',
                       color: 'var(--accent)',
@@ -1824,13 +1863,13 @@ const MessageDark = () => {
                       border: '1px solid rgba(239, 68, 68, 0.2)',
                       textAlign: 'center'
                     }}>
-                      No team created yet. Create a team to start collaboration.
+                     No team created yet. Create a team to start collaboration.
                     </div>
-                  )}
+                  )}*/}
 
-                  <div className="list-section-title">YOUR STARTUP TEAMS</div>
+                  <div className="list-section-title">STARTUP TEAMS</div>
                   {conversations
-                    .filter(c => c.team_id && String(c.startup_owner_id) === String(user?.id))
+                    .filter(c => c.team_id)
                     .map(conv => (
                       <div
                         key={conv.id}
@@ -1845,9 +1884,9 @@ const MessageDark = () => {
                         <div className="chat-info" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', overflow: 'hidden' }}>
                           <div style={{ minWidth: 0 }}>
                             <div className="chat-name">{conv.title}</div>
-                            <div className="chat-snippet" style={{ textTransform: 'uppercase', fontSize: '0.65rem' }}>
+                            {/*<div className="chat-snippet" style={{ textTransform: 'uppercase', fontSize: '0.65rem' }}>
                               {conv.title}
-                            </div>
+                            </div>*/}
                           </div>
                           {isStartupFounderForConversation(conv) && (
                             <button
@@ -1928,32 +1967,64 @@ const MessageDark = () => {
 
                 <div className="message-viewport" ref={chatAreaRef}>
                   {messages.map((msg, idx) => {
+                    const msgDateLabel = getDateLabel(msg.created_at);
+                    const prevMsgDateLabel = idx > 0 ? getDateLabel(messages[idx - 1].created_at) : null;
+                    const showDateSeparator = msgDateLabel !== prevMsgDateLabel;
+
+                    const dateSeparator = showDateSeparator && (
+                      <div className="system-message-container" style={{
+                        display: 'flex',
+                        justifyContent: 'center',
+                        marginTop: '0.5rem',
+                        marginBottom: '0.5rem',
+                        width: '100%'
+                      }}>
+                        <span style={{
+                          fontSize: '0.65rem',
+                          fontWeight: 800,
+                          letterSpacing: '0.15em',
+                          color: 'var(--text-muted)',
+                          textTransform: 'uppercase',
+                          textAlign: 'center',
+                          backgroundColor: 'rgba(255,255,255,0.05)',
+                          padding: '6px 16px',
+                          borderRadius: '20px',
+                          border: '1px solid rgba(255,255,255,0.05)'
+                        }}>
+                          {msgDateLabel}
+                        </span>
+                      </div>
+                    );
+
                     if (msg.is_system) {
                       const previousIsSystem = messages[idx - 1]?.is_system;
                       const nextIsSystem = messages[idx + 1]?.is_system;
                       return (
-                        <div key={msg.id || idx} className="system-message-container" style={{
-                          display: 'flex',
-                          justifyContent: 'center',
-                          marginTop: previousIsSystem ? '0.35rem' : '1.5rem',
-                          marginBottom: nextIsSystem ? '0.35rem' : '1.5rem',
-                          width: '100%'
-                        }}>
-                          <span style={{
-                            fontSize: '0.65rem',
-                            fontWeight: 800,
-                            letterSpacing: '0.15em',
-                            color: 'var(--text-muted)',
-                            textTransform: 'uppercase',
-                            textAlign: 'center',
-                            backgroundColor: 'rgba(255,255,255,0.05)',
-                            padding: '6px 16px',
-                            borderRadius: '20px',
-                            border: '1px solid rgba(255,255,255,0.05)'
+                        <React.Fragment key={msg.id || idx}>
+                          {dateSeparator}
+                          <div className="system-message-container" style={{
+                            display: 'flex',
+                            justifyContent: 'center',
+                            marginTop: '0.5rem',
+                            marginBottom: '0.5rem',
+                            width: '100%'
                           }}>
-                            {msg.content}
-                          </span>
-                        </div>
+                            <span style={{
+                              fontSize: '0.65rem',
+                              fontWeight: 800,
+                              letterSpacing: '0.15em',
+                              color: 'var(--text-muted)',
+                              textTransform: 'uppercase',
+                              textAlign: 'center',
+                              backgroundColor: 'rgba(255,255,255,0.05)',
+                              padding: '6px 16px',
+                              borderRadius: '20px',
+                              border: '1px solid rgba(255,255,255,0.05)'
+                            }}>
+                              {msg.content}
+                            </span>
+                          </div>
+                        </React.Fragment>
                       );
                     }
 
@@ -1964,16 +2035,19 @@ const MessageDark = () => {
                     const displayName = role ? `${senderName} (${role})` : senderName;
 
                     return (
-                      <div key={msg.id || idx} className={`msg-bubble-container ${isSelf ? 'self' : 'other'}`}>
-                        {!isSelf && <span className="msg-sender-name">{displayName}</span>}
-                        {isSelf && <span className="msg-sender-name" style={{ textAlign: 'right' }}>You</span>}
-                        <div className={`msg-bubble ${isSelf ? 'self' : 'other'}`}>
-                          {msg.content}
-                          <div className="msg-footer">
-                            <span className="msg-time">{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      <React.Fragment key={msg.id || idx}>
+                        {dateSeparator}
+                        <div className={`msg-bubble-container ${isSelf ? 'self' : 'other'}`}>
+                          {!isSelf && <span className="msg-sender-name">{displayName}</span>}
+                          {isSelf && <span className="msg-sender-name" style={{ textAlign: 'right' }}>You</span>}
+                          <div className={`msg-bubble ${isSelf ? 'self' : 'other'}`}>
+                            {msg.content}
+                            <div className="msg-footer">
+                              <span className="msg-time">{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
+                      </React.Fragment>
                     );
                   })}
                 </div>

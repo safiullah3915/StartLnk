@@ -1052,6 +1052,12 @@ class ApproveApplicationView(generics.GenericAPIView):
 		user = get_session_user(request)
 		if not user or application.startup.owner != user:
 			return Response({"detail": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
+		if Application.objects.filter(position=application.position, status='approved').exclude(id=application.id).exists():
+			return Response(
+				{"detail": "This position has already been filled. You cannot approve multiple applicants for the same position."},
+				status=status.HTTP_400_BAD_REQUEST
+			)
+
 		application.status = 'approved'
 		application.save(update_fields=['status'])
 		
@@ -1984,19 +1990,55 @@ class ConversationDetailView(generics.RetrieveAPIView):
 		return context
 
 	def delete(self, request, *args, **kwargs):
+		from django.db import transaction
 		user = get_session_user(request)
 		if not user:
 			return Response({"error": "Authentication required"}, status=status.HTTP_401_UNAUTHORIZED)
 
-		conversation = self.get_object()
-		if not conversation.team:
-			return Response({"error": "Only team chats can be removed"}, status=status.HTTP_400_BAD_REQUEST)
-		if conversation.team.startup.owner_id != user.id:
-			return Response({"error": "Only the founder can remove this team chat"}, status=status.HTTP_403_FORBIDDEN)
+		try:
+			with transaction.atomic():
+				# Fetch conversation with its team link
+				conversation = Conversation.objects.select_related('team', 'team__startup').get(id=kwargs.get('pk'), is_active=True)
+				
+				# Security check: Ensure the user is a participant
+				if not conversation.participants.filter(id=user.id).exists():
+					return Response({"error": "You are not a participant in this conversation"}, status=status.HTTP_403_FORBIDDEN)
 
-		conversation.is_active = False
-		conversation.save(update_fields=['is_active', 'updated_at'])
-		return Response({"message": "Team chat removed"}, status=status.HTTP_200_OK)
+				# If it's a team chat, we remove the connection so a new team can be created
+				if conversation.team:
+					startup = conversation.team.startup
+					if str(startup.owner_id) != str(user.id):
+						return Response({"error": "Only the startup founder can dissolve this team"}, status=status.HTTP_403_FORBIDDEN)
+					
+					# 1. Capture the team record
+					old_team = conversation.team
+					
+					# 2. BREAK THE CONNECTION FIRST
+					# We set team to None and is_active to False. This "orphans" the chat but keeps it in DB.
+					conversation.team = None
+					conversation.is_active = False
+					# Saving here ensures the DB is updated before the team record is actually gone
+					conversation.save(update_fields=['team', 'is_active', 'updated_at'])
+					
+					# 3. Delete only the "Team" link record.
+					# This allows a new Team with a new ID to be created for this startup.
+					# The Conversation and Messages stay in DB because of SET_NULL on the foreign key.
+					old_team.delete()
+					print(f"✅ Team connection removed for startup: {startup.title}")
+				else:
+					# For direct chats, just deactivate
+					conversation.is_active = False
+					conversation.save(update_fields=['is_active', 'updated_at'])
+				
+				return Response({"message": "Team connection removed successfully"}, status=status.HTTP_200_OK)
+
+		except Conversation.DoesNotExist:
+			return Response({"error": "Conversation not found or already removed"}, status=status.HTTP_404_NOT_FOUND)
+		except Exception as e:
+			print(f"❌ Error during team removal: {str(e)}")
+			import traceback
+			traceback.print_exc()
+			return Response({"error": f"Failed to remove team: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class MessageListView(generics.ListCreateAPIView):
