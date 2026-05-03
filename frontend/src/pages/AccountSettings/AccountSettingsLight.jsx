@@ -23,6 +23,11 @@ const AccountSettingsLight = () => {
     config: { duration: 500 },
   });
 
+  const getWordCount = (text) => {
+    if (!text || typeof text !== 'string') return 0;
+    return text.trim().split(/\s+/).filter(word => word.length > 0).length;
+  };
+
   // Handle the toggle for making the profile public.
   const handleToggle = () => {
     setIsProfilePublic(prev => !prev);
@@ -46,9 +51,14 @@ const AccountSettingsLight = () => {
           ? { setter: setSkills, values: newSkill, reset: () => setNewSkill({ title: '', description: '' }) }
           : { setter: setExperiences, values: newExperience, reset: () => setNewExperience({ title: '', description: '' }) };
 
-    const { title, description } = targetState.values;
     if (!title.trim() || !description.trim()) {
       alert('Please provide both name and description.');
+      return;
+    }
+
+    const wordCount = getWordCount(description);
+    if (wordCount > 35) {
+      alert(`Description exceeds the word limit of 35 words (Current: ${wordCount})`);
       return;
     }
 
@@ -109,6 +119,12 @@ const AccountSettingsLight = () => {
 
     if (!title || !description) {
       alert('Both fields are required.');
+      return;
+    }
+
+    const wordCount = getWordCount(description);
+    if (wordCount > 35) {
+      alert(`Description exceeds the word limit of 35 words (Current: ${wordCount})`);
       return;
     }
 
@@ -762,7 +778,7 @@ const AccountSettingsLight = () => {
                   Make your profile discoverable to other members on the platform.
                 </p>
               </div>
-              
+
               {/* Top Skills Section */}
               <div className="section-divider">
                 <h3 className="section-title">Top Skills</h3>
@@ -795,43 +811,44 @@ const AccountSettingsLight = () => {
                 </div>
                 {references.length > 0 && (
                   <div className="table-wrapper" key={`${referencesPage}-${references.length}`}>
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>Name</th>
-                        <th>Description</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {referencesPaginated.map((item, index) => {
-                        const globalIndex = (referencesPage - 1) * PAGE_SIZE + index;
-                        return (
-                        <tr key={globalIndex}>
-                          <td>{item.title}</td>
-                          <td>{item.description}</td>
-                          <td>
-                            <div className="table-actions">
-                              <button
-                                className="table-button edit"
-                                type="button"
-                                onClick={() => handleEditItem('references', globalIndex)}
-                              >
-                                Edit
-                              </button>
-                              <button
-                                className="table-button delete"
-                                type="button"
-                                onClick={() => handleRemoveItem('references', globalIndex)}
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          </td>
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Name</th>
+                          <th>Description</th>
+                          <th>Actions</th>
                         </tr>
-                      )})}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {referencesPaginated.map((item, index) => {
+                          const globalIndex = (referencesPage - 1) * PAGE_SIZE + index;
+                          return (
+                            <tr key={globalIndex}>
+                              <td>{item.title}</td>
+                              <td>{item.description}</td>
+                              <td>
+                                <div className="table-actions">
+                                  <button
+                                    className="table-button edit"
+                                    type="button"
+                                    onClick={() => handleEditItem('references', globalIndex)}
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    className="table-button delete"
+                                    type="button"
+                                    onClick={() => handleRemoveItem('references', globalIndex)}
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 )}
                 {renderPagination(referencesPage, setReferencesPage, references.length)}
@@ -869,43 +886,44 @@ const AccountSettingsLight = () => {
                 </div>
                 {skills.length > 0 && (
                   <div className="table-wrapper" key={`${skillsPage}-${skills.length}`}>
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>Name</th>
-                        <th>Description</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {skillsPaginated.map((item, index) => {
-                        const globalIndex = (skillsPage - 1) * PAGE_SIZE + index;
-                        return (
-                        <tr key={globalIndex}>
-                          <td>{item.title}</td>
-                          <td>{item.description}</td>
-                          <td>
-                            <div className="table-actions">
-                              <button
-                                className="table-button edit"
-                                type="button"
-                                onClick={() => handleEditItem('skills', globalIndex)}
-                              >
-                                Edit
-                              </button>
-                              <button
-                                className="table-button delete"
-                                type="button"
-                                onClick={() => handleRemoveItem('skills', globalIndex)}
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          </td>
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Name</th>
+                          <th>Description</th>
+                          <th>Actions</th>
                         </tr>
-                      )})}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {skillsPaginated.map((item, index) => {
+                          const globalIndex = (skillsPage - 1) * PAGE_SIZE + index;
+                          return (
+                            <tr key={globalIndex}>
+                              <td>{item.title}</td>
+                              <td>{item.description}</td>
+                              <td>
+                                <div className="table-actions">
+                                  <button
+                                    className="table-button edit"
+                                    type="button"
+                                    onClick={() => handleEditItem('skills', globalIndex)}
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    className="table-button delete"
+                                    type="button"
+                                    onClick={() => handleRemoveItem('skills', globalIndex)}
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 )}
                 {renderPagination(skillsPage, setSkillsPage, skills.length)}
@@ -913,7 +931,7 @@ const AccountSettingsLight = () => {
 
               {/* Business Experience Section */}
               <div className="section-divider">
-                <h3 className="section-title">Business Experience</h3>
+                <h3 className="section-title">Experience</h3>
                 <div className="collection-form">
                   <label>
                     Company / Role
@@ -943,48 +961,49 @@ const AccountSettingsLight = () => {
                 </div>
                 {experiences.length > 0 && (
                   <div className="table-wrapper" key={`${experiencesPage}-${experiences.length}`}>
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>Name</th>
-                        <th>Description</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {experiencesPaginated.map((item, index) => {
-                        const globalIndex = (experiencesPage - 1) * PAGE_SIZE + index;
-                        return (
-                        <tr key={globalIndex}>
-                          <td>{item.title}</td>
-                          <td>{item.description}</td>
-                          <td>
-                            <div className="table-actions">
-                              <button
-                                className="table-button edit"
-                                type="button"
-                                onClick={() => handleEditItem('experiences', globalIndex)}
-                              >
-                                Edit
-                              </button>
-                              <button
-                                className="table-button delete"
-                                type="button"
-                                onClick={() => handleRemoveItem('experiences', globalIndex)}
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          </td>
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Name</th>
+                          <th>Description</th>
+                          <th>Actions</th>
                         </tr>
-                      )})}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {experiencesPaginated.map((item, index) => {
+                          const globalIndex = (experiencesPage - 1) * PAGE_SIZE + index;
+                          return (
+                            <tr key={globalIndex}>
+                              <td>{item.title}</td>
+                              <td>{item.description}</td>
+                              <td>
+                                <div className="table-actions">
+                                  <button
+                                    className="table-button edit"
+                                    type="button"
+                                    onClick={() => handleEditItem('experiences', globalIndex)}
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    className="table-button delete"
+                                    type="button"
+                                    onClick={() => handleRemoveItem('experiences', globalIndex)}
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 )}
                 {renderPagination(experiencesPage, setExperiencesPage, experiences.length)}
               </div>
-              
+
               {/* Save Button */}
               <button
                 onClick={handleSave}

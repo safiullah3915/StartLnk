@@ -19,7 +19,8 @@ class PresenceService:
     state.
     """
 
-    TTL_SECONDS = 60
+    ONLINE_THRESHOLD = 60
+    LAST_SEEN_TTL = 60 * 15 # Keep timestamp for 15 minutes to support "Last seen recently"
     LAST_SEEN_PREFIX = "user_last_seen"
     REGISTRY_KEY = "online_user_registry"
     REGISTRY_TTL_SECONDS = 60 * 60 * 24
@@ -45,7 +46,7 @@ class PresenceService:
     def mark_seen(cls, user) -> float:
         last_seen = time.time()
         user_id = str(user.id)
-        cache.set(cls._last_seen_key(user_id), last_seen, timeout=cls.TTL_SECONDS)
+        cache.set(cls._last_seen_key(user_id), last_seen, timeout=cls.LAST_SEEN_TTL)
 
         registry = cls._read_registry()
         registry.add(user_id)
@@ -65,7 +66,7 @@ class PresenceService:
     @classmethod
     def is_online(cls, user_id) -> bool:
         last_seen = cls.get_last_seen(user_id)
-        return last_seen is not None and (time.time() - last_seen) <= cls.TTL_SECONDS
+        return last_seen is not None and (time.time() - last_seen) <= cls.ONLINE_THRESHOLD
 
     @classmethod
     def get_online_user_ids(cls) -> List[str]:

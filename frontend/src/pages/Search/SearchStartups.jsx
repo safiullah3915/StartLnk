@@ -29,21 +29,23 @@ const SearchStartups = () => {
   const [showSearch, setShowSearch] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
+  // Debounce search input
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setFilters(prev => ({ ...prev, query: searchInput }));
+    }, 400); // 400ms debounce
+
+    return () => clearTimeout(handler);
+  }, [searchInput]);
+
   const categories = [
-    { value: '', label: 'All Categories' },
+    { value: '', label: 'All Business Models' },
     { value: 'saas', label: 'SaaS' },
-    { value: 'ecommerce', label: 'E-commerce' },
-    { value: 'agency', label: 'Agency' },
-    { value: 'legal', label: 'Legal' },
     { value: 'marketplace', label: 'Marketplace' },
-    { value: 'media', label: 'Media' },
-    { value: 'platform', label: 'Platform' },
-    { value: 'real_estate', label: 'Real Estate' },
-    { value: 'robotics', label: 'Robotics' },
-    { value: 'software', label: 'Software' },
-    { value: 'web3', label: 'Web3' },
-    { value: 'crypto', label: 'Crypto' },
-    { value: 'other', label: 'Other' }
+    { value: 'ecommerce', label: 'Ecommerce' },
+    { value: 'agency', label: 'Agency' },
+    { value: 'subscription', label: 'Subscription' },
+    { value: 'social_platform', label: 'Social Platform' }
   ];
 
   const types = [
@@ -53,14 +55,29 @@ const SearchStartups = () => {
   ];
 
   const phases = [
-    { value: '', label: 'All Phases' },
+    { value: '', label: 'All Stages' },
     { value: 'Idea Stage', label: 'Idea Stage' },
-    { value: 'Building MVP', label: 'Building MVP' },
-    { value: 'MVP Stage', label: 'MVP Stage' },
-    { value: 'Product Market Fit', label: 'Product Market Fit' },
-    { value: 'Fund raising', label: 'Fund Raising' },
-    { value: 'Growth', label: 'Growth' },
-    { value: 'Exit', label: 'Exit' }
+    { value: 'Pre-MVP', label: 'Pre-MVP' },
+    { value: 'MVP Built', label: 'MVP Built' },
+    { value: 'Early Traction', label: 'Early Traction' },
+    { value: 'Product-Market Fit', label: 'Product-Market Fit' },
+    { value: 'Fundraising Stage', label: 'Fundraising Stage' }
+  ];
+
+  const industries = [
+    { value: '', label: 'All Industries' },
+    { value: 'Fintech', label: 'Fintech' },
+    { value: 'HealthTech', label: 'HealthTech' },
+    { value: 'EdTech', label: 'EdTech' },
+    { value: 'LegalTech', label: 'LegalTech' },
+    { value: 'Real Estate', label: 'Real Estate' },
+    { value: 'AI / ML', label: 'AI / ML' },
+    { value: 'Web3 / Crypto', label: 'Web3 / Crypto' },
+    { value: 'Media', label: 'Media' },
+    { value: 'Gaming', label: 'Gaming' },
+    { value: 'Robotics / Hardware', label: 'Robotics / Hardware' },
+    { value: 'Logistics', label: 'Logistics' },
+    { value: 'Other', label: 'Other' }
   ];
 
   const teamSizes = [
@@ -201,11 +218,11 @@ const SearchStartups = () => {
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={styles.searchFieldIcon}>
                   <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
                 </svg>
-                <input
-                  type="text"
-                  placeholder="Search by name, keyword, or industry..."
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
+                  <input
+                    type="text"
+                    placeholder="Search jobs by title, description, or company..."
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       handleSearch();
@@ -220,23 +237,39 @@ const SearchStartups = () => {
           {showFilters && (
             <div className={styles.filtersPanel}>
               <div className={styles.filterBlock}>
-                <h3>Startup Type</h3>
+                <h3>Industry</h3>
                 <div className={styles.filterChips}>
-                  {types.map(type => (
+                  {industries.map(industryOption => (
                     <button
-                      key={type.value || 'all-types'}
+                      key={industryOption.value || 'all-industries'}
                       type="button"
-                      className={filterButtonClass(filters.type === type.value)}
-                      onClick={() => handleFilterChange('type', type.value)}
+                      className={filterButtonClass(filters.field === industryOption.value)}
+                      onClick={() => handleFilterChange('field', industryOption.value)}
                     >
-                      {type.label}
+                      {industryOption.label}
                     </button>
                   ))}
                 </div>
               </div>
 
               <div className={styles.filterBlock}>
-                <h3>Industry Category</h3>
+                <h3>Startup Stage</h3>
+                <div className={styles.filterChips}>
+                  {phases.map(phaseOption => (
+                    <button
+                      key={phaseOption.value || 'all-phases'}
+                      type="button"
+                      className={filterButtonClass(filters.phase === phaseOption.value)}
+                      onClick={() => handleFilterChange('phase', phaseOption.value)}
+                    >
+                      {phaseOption.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className={styles.filterBlock}>
+                <h3>Business Model</h3>
                 <div className={styles.filterChips}>
                   {categories.map(categoryOption => (
                     <button

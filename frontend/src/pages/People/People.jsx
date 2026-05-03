@@ -13,13 +13,8 @@ function colorFor(name = '') {
   const i = name.charCodeAt(0) % AVATAR_COLORS.length;
   return AVATAR_COLORS[i];
 }
-function initials(name = '') {
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map(w => w[0]?.toUpperCase() || '')
-    .join('');
+function initials(username = '') {
+  return username.charAt(0).toUpperCase() || 'U';
 }
 
 // ── Social icon components ─────────────────────────────────────
@@ -352,10 +347,13 @@ function PersonCard({ person, isSelected, onClick }) {
         {/* Avatar */}
         {person.profile_picture
           ? <img src={person.profile_picture} alt={displayName} className={styles.avatarImg} />
-          : <div className={styles.avatar} style={{ background: colorFor(person.username) }}>{initials(displayName)}</div>
+          : <div className={styles.avatar} style={{ background: colorFor(person.username) }}>{initials(person.username)}</div>
         }
         <div className={styles.cardTitleGroup}>
-          <h2 className={styles.cardTitle}>{displayName}</h2>
+          <h2 className={styles.cardTitle}>
+            {person.full_name || person.username}{' '}
+            {person.full_name && <span className={styles.usernameLabel}>@{person.username}</span>}
+          </h2>
           {person.location && (
             <p className={styles.cardSubtitle}>from {person.location}</p>
           )}
@@ -390,7 +388,7 @@ function PersonCard({ person, isSelected, onClick }) {
 function PersonPanel({ person, onClose }) {
   if (!person) return null;
   const bg = colorFor(person.username);
-  const ini = initials(person.full_name || person.username);
+  const ini = initials(person.username);
   const displayName = person.full_name || person.username;
 
   const hasBio = !!person.bio?.trim();
@@ -420,7 +418,10 @@ function PersonPanel({ person, onClose }) {
           ? <img src={person.profile_picture} alt={person.username} className={styles.panelAvatarImg} />
           : <div className={styles.panelAvatar} style={{ background: bg }}>{ini}</div>
         }
-        <h2 className={styles.panelName}>{displayName}</h2>
+        <h2 className={styles.panelName}>
+          {person.full_name || person.username}{' '}
+          {person.full_name && <span className={styles.usernameLabel}>@{person.username}</span>}
+        </h2>
         {(person.location || hasRegion) && (
           <p className={styles.panelMeta}>
             {[
@@ -489,7 +490,7 @@ function PersonPanel({ person, onClose }) {
         {hasExp && (
           <section className={styles.panelSection}>
             <h3 className={styles.panelSectionTitle}>
-              <BriefcaseIcon /> BUSINESS EXPERIENCE
+              <BriefcaseIcon /> EXPERIENCE
             </h3>
             {person.experience.map((ex, i) => {
               const title = typeof ex === 'string' ? ex : ex?.title;

@@ -29,31 +29,41 @@ const Collaboration = () => {
   
   // Categories from backend CATEGORY_CHOICES
   const categories = [
-    { value: '', label: 'All Categories' },
+    { value: '', label: 'All Business Models' },
     { value: 'saas', label: 'SaaS' },
-    { value: 'ecommerce', label: 'E-commerce' },
-    { value: 'agency', label: 'Agency' },
-    { value: 'legal', label: 'Legal' },
     { value: 'marketplace', label: 'Marketplace' },
-    { value: 'media', label: 'Media' },
-    { value: 'platform', label: 'Platform' },
-    { value: 'real_estate', label: 'Real Estate' },
-    { value: 'robotics', label: 'Robotics' },
-    { value: 'software', label: 'Software' },
-    { value: 'web3', label: 'Web3' },
-    { value: 'crypto', label: 'Crypto' },
-    { value: 'other', label: 'Other' }
+    { value: 'ecommerce', label: 'Ecommerce' },
+    { value: 'agency', label: 'Agency' },
+    { value: 'subscription', label: 'Subscription' },
+    { value: 'social_platform', label: 'Social Platform' }
   ];
 
   // Phases from startup creation form stages
   const phases = [
-    { value: '', label: 'All Phases' },
+    { value: '', label: 'All Stages' },
     { value: 'Idea Stage', label: 'Idea Stage' },
-    { value: 'Building MVP', label: 'Building MVP' },
-    { value: 'MVP', label: 'MVP' },
-    { value: 'Product Market Fit', label: 'Product Market Fit' },
-    { value: 'Fund raising', label: 'Fund raising' },
-    { value: 'Growth', label: 'Growth' }
+    { value: 'Pre-MVP', label: 'Pre-MVP' },
+    { value: 'MVP Built', label: 'MVP Built' },
+    { value: 'Early Traction', label: 'Early Traction' },
+    { value: 'Product-Market Fit', label: 'Product-Market Fit' },
+    { value: 'Growth Stage', label: 'Growth Stage' },
+    { value: 'Fundraising Stage', label: 'Fundraising Stage' }
+  ];
+
+  const industries = [
+    { value: '', label: 'All Industries' },
+    { value: 'Fintech', label: 'Fintech' },
+    { value: 'HealthTech', label: 'HealthTech' },
+    { value: 'EdTech', label: 'EdTech' },
+    { value: 'LegalTech', label: 'LegalTech' },
+    { value: 'Real Estate', label: 'Real Estate' },
+    { value: 'AI / ML', label: 'AI / ML' },
+    { value: 'Web3 / Crypto', label: 'Web3 / Crypto' },
+    { value: 'Media', label: 'Media' },
+    { value: 'Gaming', label: 'Gaming' },
+    { value: 'Robotics / Hardware', label: 'Robotics / Hardware' },
+    { value: 'Logistics', label: 'Logistics' },
+    { value: 'Other', label: 'Other' }
   ];
 
   const teamSizes = [
@@ -159,14 +169,16 @@ const Collaboration = () => {
       setLoading(true);
       const response = await positionAPI.getAllPositions({});
       
-      let allPositions = response.data.results || [];
+      let allPositions = response.data?.results || (Array.isArray(response.data) ? response.data : []);
       
       // Filter out positions from startups owned by the current entrepreneur
+      /*
       if (isEntrepreneur() && user?.id) {
         allPositions = allPositions.filter(position => {
           return position.startup?.owner?.id !== user.id;
         });
       }
+      */
       
       setAllPositions(allPositions);
     } catch (error) {
@@ -266,7 +278,7 @@ const Collaboration = () => {
         <div className={styles.hero}>
           <div className={styles.heroCopy}>
             <h1>Search all jobs</h1>
-            <p>Discover startup roles by keyword, category, phase, and team size.</p>
+            <p>Discover startup roles by keyword, business model, stage, and team size.</p>
           </div>
 
           <div className={styles.heroActions}>
@@ -323,7 +335,7 @@ const Collaboration = () => {
           {showFilters && (
             <div className={styles.filtersPanel}>
               <div className={styles.filterBlock}>
-                <h3>Industry Category</h3>
+                <h3>Business Model</h3>
                 <div className={styles.filterChips}>
                   {categories.map((cat) => (
                     <button
@@ -339,7 +351,23 @@ const Collaboration = () => {
               </div>
 
               <div className={styles.filterBlock}>
-                <h3>Startup Phase</h3>
+                <h3>Industry</h3>
+                <div className={styles.filterChips}>
+                  {industries.map((ind) => (
+                    <button
+                      key={ind.value || 'all-industries'}
+                      type="button"
+                      className={filterButtonClass(filters.field === ind.value)}
+                      onClick={() => handleFilterChange('field', ind.value)}
+                    >
+                      {ind.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className={styles.filterBlock}>
+                <h3>Startup Stage</h3>
                 <div className={styles.filterChips}>
                   {phases.map((phase) => (
                     <button

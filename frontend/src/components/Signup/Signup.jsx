@@ -13,6 +13,7 @@ function Signup() {
 
     const [password, setPassword] = useState("");
     const [email, setEmail] = useState("");
+    const [show, setShow] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
     function passwordError() {
@@ -27,6 +28,10 @@ function Signup() {
             transition: Bounce,
         });
     }
+
+    const passwordToggle = () => {
+        setShow(!show);
+    };
 
     const handleNext = async (e) => {
         e.preventDefault();
@@ -105,6 +110,40 @@ function Signup() {
                     box-shadow: 0 4px 12px rgba(37, 34, 74, 0.2) !important;
                 }
 
+                .inp:focus {
+                    border-color: var(--primary-dark) !important;
+                    box-shadow: 0 0 0 3px rgba(37, 34, 74, 0.1) !important;
+                    outline: none !important;
+                }
+
+                /* Password toggle wrapper */
+                .pas {
+                    position: relative;
+                    width: 100%;
+                    display: flex;
+                    align-items: center;
+                }
+
+                .pas .inp {
+                    width: 100% !important;
+                    padding-right: 3.5rem !important;
+                }
+
+                .pas p {
+                    position: absolute;
+                    right: 1rem;
+                    color: var(--primary-blue);
+                    cursor: pointer;
+                    font-size: 0.82rem;
+                    font-weight: 500;
+                    transition: color 0.2s ease;
+                    user-select: none;
+                }
+
+                .pas p:hover {
+                    color: var(--primary-dark);
+                }
+
                 #signup-page-root .btn:hover:not(:disabled) {
                     background: #1a1835 !important;
                     transform: translateY(-2px) !important;
@@ -175,14 +214,17 @@ function Signup() {
                         {/* Password */}
                         <div className="field-group">
                             <label htmlFor="signup-password">Password</label>
-                            <input
-                                id="signup-password"
-                                type="password"
-                                placeholder="Create a strong password (min. 8 characters)"
-                                className="inp"
-                                autoComplete="on"
-                                onChange={(e) => setPassword(e.target.value)}
-                            />
+                            <div className="pas">
+                                <input
+                                    id="signup-password"
+                                    type={show ? "text" : "password"}
+                                    placeholder="Create a strong password (min. 8 characters)"
+                                    className="inp"
+                                    autoComplete="on"
+                                    onChange={(e) => setPassword(e.target.value)}
+                                />
+                                <p onClick={passwordToggle}>{show ? "hide" : "show"}</p>
+                            </div>
                         </div>
 
                         {/* Next button */}

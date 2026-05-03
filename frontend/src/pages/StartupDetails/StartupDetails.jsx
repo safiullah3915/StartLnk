@@ -36,6 +36,7 @@ const StartupDetails = () => {
     last_month_profit: ''
   });
   const [imgError, setImgError] = useState(false);
+  const [teamCurrentPage, setTeamCurrentPage] = useState(1);
 
   useEffect(() => {
     loadStartupDetails();
@@ -597,20 +598,23 @@ const StartupDetails = () => {
           <div className={styles.founderAvatarWrapper}>
             <div className={styles.founderAvatar}>
               {startup.owner?.profile_picture && !imgError ? (
-                <img 
-                  src={startup.owner.profile_picture} 
-                  alt={startup.owner.full_name} 
+                <img
+                  src={startup.owner.profile_picture}
+                  alt={startup.owner.full_name}
                   onError={() => setImgError(true)}
                 />
               ) : (
-                <div className={styles.avatarPlaceholder}>
-                  {startup.owner?.full_name?.charAt(0).toUpperCase() || 'F'}
+                <div className={styles.founderAvatarPlaceholder}>
+                  {startup.owner?.username?.charAt(0).toUpperCase() || 'F'}
                 </div>
               )}
             </div>
           </div>
           <div className={styles.founderInfo}>
-            <span className={styles.founderNameLabel}>{startup.owner?.full_name?.toUpperCase() || 'FOUNDER'}</span>
+            <span className={styles.founderNameLabel}>
+              {startup.owner?.full_name?.toUpperCase() || 'FOUNDER'}{' '}
+              <span className={styles.usernameLabel}>@{startup.owner?.username}</span>
+            </span>
             <span className={styles.founderRoleSeparator}>|</span>
             <span className={styles.founderRoleLabel}>FOUNDER</span>
           </div>
@@ -620,7 +624,6 @@ const StartupDetails = () => {
         <div className={styles.tags}>
           <span className={`${styles.tag} ${styles.fund}`}>{startup.category}</span>
           <span className={`${styles.tag} ${styles.equity}`}>{startup.type}</span>
-          <span className={`${styles.tag} ${styles.collab}`}>{startup.field}</span>
         </div>
 
         {/* Description */}
@@ -695,11 +698,11 @@ const StartupDetails = () => {
             <h3 className={`${styles.sectionTitle} ${styles.collabSectionTitle}`}>COLLABORATION DETAILS</h3>
             <div className={`${styles.performance} ${styles.collabPerformance}`}>
               <div className={`${styles.metric} ${styles.collabMetric}`}>
-                <span className={styles.collabMetricLabel}>EARN THROUGH</span>
-                <p className={styles.collabMetricValue}>{startup.earn_through || 'N/A'}</p>
+                <span className={styles.collabMetricLabel}>INDUSTRY</span>
+                <p className={styles.collabMetricValue}>{startup.field || 'N/A'}</p>
               </div>
               <div className={`${styles.metric} ${styles.collabMetric}`}>
-                <span className={styles.collabMetricLabel}>CURRENT PHASE</span>
+                <span className={styles.collabMetricLabel}>CURRENT STAGE</span>
                 <p className={styles.collabMetricValue}>{startup.phase || 'N/A'}</p>
               </div>
               <div className={`${styles.metric} ${styles.collabMetric}`}>
@@ -718,6 +721,78 @@ const StartupDetails = () => {
 
         <hr className={styles.divider} />
 
+        {/* Meet the Team Section */}
+        <div className={styles.teamSection}>
+          <div className={styles.teamHeader}>
+            <div>
+              {/* <span className={styles.teamSubtitle}>COLLABORATORS</span> */}
+              <h3 className={styles.sectionTitle}>Meet our team</h3>
+            </div>
+          </div>
+
+          <div className={styles.teamGrid}>
+            {(() => {
+              const founder = {
+                id: `founder-${startup.owner?.id}`,
+                user: startup.owner,
+                role: 'Founder'
+              };
+              
+              // Filter out founder from team_members if they happen to be added there to avoid duplication
+              const collaborators = (startup.team_members || []).filter(m => m.user?.id !== startup.owner?.id);
+              const combinedTeam = [founder, ...collaborators];
+              
+              return combinedTeam
+                .slice((teamCurrentPage - 1) * 4, teamCurrentPage * 4)
+                .map((member) => (
+                  <div key={member.id} className={styles.teamMemberCard}>
+                    <div className={styles.memberAvatarWrapper}>
+                      <div className={styles.memberAvatar}>
+                        {member.user?.profile_picture ? (
+                          <img src={member.user.profile_picture} alt={member.user.username} />
+                        ) : (
+                          <div className={styles.memberAvatarPlaceholder}>
+                            {member.user?.username ? member.user.username.charAt(0).toUpperCase() : 'U'}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className={styles.memberInfo}>
+                      <h4 className={styles.memberName}>
+                        {member.user?.full_name || (member.role === 'Founder' ? 'FOUNDER' : 'MEMBER')}{' '}
+                        <span className={styles.usernameLabel}>@{member.user?.username}</span>
+                      </h4>
+                      <p className={styles.memberRole}>{member.role?.toUpperCase()}</p>
+                    </div>
+                  </div>
+                ));
+            })()}
+          </div>
+
+          {(() => {
+            const collaborators = (startup.team_members || []).filter(m => m.user?.id !== startup.owner?.id);
+            const totalMembers = 1 + collaborators.length; // 1 for founder
+            
+            if (totalMembers > 4) {
+              return (
+                <div className={styles.paginationDots}>
+                  {Array.from({ length: Math.ceil(totalMembers / 4) }).map((_, idx) => (
+                    <button
+                      key={idx}
+                      className={`${styles.dot} ${teamCurrentPage === idx + 1 ? styles.activeDot : ''}`}
+                      onClick={() => setTeamCurrentPage(idx + 1)}
+                      aria-label={`Go to page ${idx + 1}`}
+                    />
+                  ))}
+                </div>
+              );
+            }
+            return null;
+          })()}
+        </div>
+
+        <hr className={styles.divider} />
+
         {/* Positions - Only for Collaboration startups, Hidden for Investors */}
         {!isInvestor() && startup?.type === 'collaboration' && (
           <>
@@ -731,6 +806,16 @@ const StartupDetails = () => {
                     {position.requirements && (
                       <p className={styles.positionRequirements}>
                         <strong>Requirements:</strong> {position.requirements}
+                      </p>
+                    )}
+                    {position.earn_through && (
+                      <p className={styles.positionEarn}>
+                        <strong>Earn Through:</strong> {position.earn_through}
+                      </p>
+                    )}
+                    {position.time_commitment && (
+                      <p className={styles.positionEarn}>
+                        <strong>Commitment:</strong> {position.time_commitment}
                       </p>
                     )}
                     {/* Show Apply button for students OR entrepreneurs who don't own this startup */}

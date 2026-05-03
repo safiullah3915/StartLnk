@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { getStartupDetailPath, normalizeId } from "../../utils/idUtils";
 
-const JobCard = ({ id, title, description, requirements, startup, applications_count, isApplied = false, hasAppliedToSpecificPosition = false, hasAppliedToStartup = false }) => {
+const JobCard = ({ id, title, description, requirements, earn_through, time_commitment, startup, applications_count, isApplied = false, hasAppliedToSpecificPosition = false, hasAppliedToStartup = false }) => {
   const { isStudent, isEntrepreneur } = useAuth();
   const normalizedStartupId = normalizeId(startup?.id);
   
@@ -37,11 +37,11 @@ const JobCard = ({ id, title, description, requirements, startup, applications_c
         <div className={styles.stats}>
           <div className={styles.statsheading}>
             Earn Through
-            <p>{startup?.earn_through || 'Equity'}</p>
+            <p>{earn_through || startup?.earn_through || 'Equity'}</p>
           </div>
           <div className={styles.statsheading}>
-            Team Size  
-            <p>{startup?.team_size || '1-5'}</p>
+            Commitment
+            <p>{time_commitment || startup?.time_commitment || 'Flexible'}</p>
           </div>
           <div className={styles.statsheading}>
             Phase

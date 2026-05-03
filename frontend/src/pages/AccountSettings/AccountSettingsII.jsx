@@ -20,12 +20,17 @@ const App = () => {
   const [references, setReferences] = useState([]);
   const [skills, setSkills] = useState([]);
   const [experiences, setExperiences] = useState([]);
-  
+
   // Personal Info State
   const [savedFullName, setSavedFullName] = useState('');
   const [fullName, setFullName] = useState('');
   const [country, setCountry] = useState('');
   const [city, setCity] = useState('');
+
+  const getWordCount = (text) => {
+    if (!text || typeof text !== 'string') return 0;
+    return text.trim().split(/\s+/).filter(word => word.length > 0).length;
+  };
 
   const [referencesPage, setReferencesPage] = useState(1);
   const [skillsPage, setSkillsPage] = useState(1);
@@ -61,7 +66,7 @@ const App = () => {
   const [originalFileObject, setOriginalFileObject] = useState(null);
   const [dbOriginalPicture, setDbOriginalPicture] = useState(null);
   const [cropError, setCropError] = useState('');
-  
+
   // Collapse/expand state for form sections
   const [isReferencesFormOpen, setIsReferencesFormOpen] = useState(false);
   const [isSkillsFormOpen, setIsSkillsFormOpen] = useState(false);
@@ -74,13 +79,13 @@ const App = () => {
   const loadUserData = async () => {
     try {
       setLoading(true);
-      
+
       // Load user profile data
       const profileResponse = await userAPI.getProfileData();
-      
+
       const data = profileResponse.data;
-      
-        if (data.profile) {
+
+      if (data.profile) {
         setIsProfilePublic(data.profile.is_public || false);
         setProfileDescription(data.profile.bio || data.profile.description || '');
         setProfilePicture(data.profile.profile_picture || null);
@@ -95,7 +100,7 @@ const App = () => {
         setSkills(data.profile.skills || []);
         setExperiences(data.profile.experience || []);
         setReferences(data.profile.references || []);
-        
+
         if (data.profile.user?.full_name) {
           setFullName(data.profile.user.full_name);
           setSavedFullName(data.profile.user.full_name);
@@ -103,7 +108,7 @@ const App = () => {
           setFullName(data.profile.full_name);
           setSavedFullName(data.profile.full_name);
         }
-        
+
         if (data.profile.location) {
           const parts = data.profile.location.split(',').map(s => s.trim());
           if (parts.length > 1) {
@@ -118,12 +123,12 @@ const App = () => {
         setSkillsPage(1);
         setExperiencesPage(1);
       }
-      
+
       // Update stats
       if (data.stats) {
         setProfileStats(data.stats);
       }
-      
+
       // Load role-specific data
       if (isStudent()) {
         setApplications(data.applications || []);
@@ -134,7 +139,7 @@ const App = () => {
         setFavorites(data.favorites || []);
         setInterests(data.interests || []);
       }
-      
+
     } catch (error) {
       console.error('Failed to load user data:', error);
       toast.error('Failed to load user data');
@@ -263,7 +268,7 @@ const App = () => {
   const handleFileChange = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
-    
+
     // Validate file type
     if (!file.type.startsWith('image/')) {
       toast.error('Please select a valid image file');
@@ -296,25 +301,25 @@ const App = () => {
       // 1. Physically crop the image using canvas
       const croppedBlob = await getCroppedImg(cropImageSrc, croppedAreaPixels);
       if (!croppedBlob) throw new Error("Failed to process image block. Try another image.");
-      
+
       // Some mobile webviews crash on `new File()`, wrap it safely:
       let croppedFile;
       try {
         croppedFile = new File([croppedBlob], 'profile_cropped.jpg', { type: 'image/jpeg' });
       } catch (e) {
         // Fallback for older browsers: use the blob directly, uploadAPI handles formData
-        croppedFile = croppedBlob; 
+        croppedFile = croppedBlob;
         croppedFile.name = 'profile_cropped.jpg';
       }
-      
+
       const cropData = { crop, zoom };
-      
+
       const response = await uploadAPI.uploadProfilePicture(croppedFile, originalFileObject, cropData);
-      
+
       if (response.data && response.data.file_url) {
         setProfilePicture(response.data.file_url);
         toast.success('Profile picture updated successfully');
-        loadUserData(); 
+        loadUserData();
         setIsCropModalOpen(false);
       } else {
         throw new Error("Invalid response from server");
@@ -323,7 +328,7 @@ const App = () => {
       console.error('Failed to crop and upload:', error);
       let userMsg = 'An unexpected error occurred. Please try again later.';
       const rawMsg = error.message ? error.message.toLowerCase() : '';
-      
+
       if (rawMsg.includes('timeout') || error.code === 'ECONNABORTED') {
         userMsg = 'Upload took too long due to a slow connection. Please try again.';
       } else if (rawMsg.includes('network error') || !window.navigator.onLine) {
@@ -336,7 +341,7 @@ const App = () => {
         // Safe standard Javascript errors if thrown locally
         userMsg = error.message;
       }
-      
+
       setCropError(userMsg);
     } finally {
       setIsUploadingPicture(false);
@@ -367,7 +372,7 @@ const App = () => {
     if (isSaving) return;
     setIsSaving(true);
     setBannerState({ type: null, message: '' });
-    
+
     try {
       const profileData = {
         bio: profileDescription || '',
@@ -429,6 +434,12 @@ const App = () => {
       return;
     }
 
+    const wordCount = getWordCount(description);
+    if (wordCount > 35) {
+      toast.error(`Description exceeds the word limit of 35 words (Current: ${wordCount})`);
+      return;
+    }
+
     const newItem = { title: title.trim(), description: description.trim() };
 
     if (type === 'references') {
@@ -451,7 +462,7 @@ const App = () => {
   };
 
   // persistProfileCollections is now a no-op — all saves go through Finalize Profile
-  const persistProfileCollections = useCallback(() => {}, []);
+  const persistProfileCollections = useCallback(() => { }, []);
 
   const openDeleteConfirm = (type, index) => setDeleteConfirm({ type, index });
 
@@ -522,6 +533,19 @@ const App = () => {
     if ((editingItem.type !== 'profile_description' && !title) || !description) {
       toast.error('Both fields are required.');
       return;
+    }
+
+    const wordCount = getWordCount(description);
+    if (editingItem.type === 'profile_description') {
+      if (wordCount > 50) {
+        toast.error(`Bio exceeds the word limit of 50 words (Current: ${wordCount})`);
+        return;
+      }
+    } else {
+      if (wordCount > 35) {
+        toast.error(`Description exceeds the word limit of 35 words (Current: ${wordCount})`);
+        return;
+      }
     }
 
     if (editingItem.type === 'profile_description') {
@@ -1367,12 +1391,12 @@ const App = () => {
       )}
       <animated.div style={fade} className="container">
         <div className="main-layout">
-          
+
           {/* ── Left Panel ── */}
           <div className="left-panel">
             <div className="profile-card">
-              <div 
-                className="profile-picture" 
+              <div
+                className="profile-picture"
                 onClick={handleProfilePictureClick}
                 style={{ cursor: isUploadingPicture ? 'not-allowed' : 'pointer', position: 'relative' }}
               >
@@ -1380,9 +1404,9 @@ const App = () => {
                   {isUploadingPicture ? (
                     <span className="finalize-spinner" style={{ borderColor: 'rgba(255,255,255,0.2)', borderLeftColor: '#fff', width: '2rem', height: '2rem' }} />
                   ) : profilePicture ? (
-                    <img 
-                      src={profilePicture.startsWith('http') ? profilePicture : `http://localhost:8000${profilePicture}`} 
-                      alt="Profile" 
+                    <img
+                      src={profilePicture.startsWith('http') ? profilePicture : `http://localhost:8000${profilePicture}`}
+                      alt="Profile"
                       style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
                       onError={(e) => {
                         e.target.style.display = 'none';
@@ -1396,12 +1420,12 @@ const App = () => {
                 {!isUploadingPicture && (
                   <div className="edit-plus-badge" title="Change Profile Picture">+</div>
                 )}
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  onChange={handleFileChange} 
-                  accept="image/*" 
-                  style={{ display: 'none' }} 
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  accept="image/*"
+                  style={{ display: 'none' }}
                 />
               </div>
               <h2 className="profile-name" style={{ marginBottom: '4px' }}>{savedFullName || user?.username || 'Unknown User'}</h2>
@@ -1418,34 +1442,34 @@ const App = () => {
                 </span>
                 <button type="button" className="desc-edit-btn" title="Edit description" onClick={() => handleEditItem('profile_description', 0)}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                   </svg>
                 </button>
               </div>
-              
+
               <div className="profile-stats-list">
                 <div className="stat-item">
-                  <span className="stat-icon" style={{color: '#60A5FA', display: 'flex', alignItems: 'center'}}>
+                  <span className="stat-icon" style={{ color: '#60A5FA', display: 'flex', alignItems: 'center' }}>
                     <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
-                  </span> 
+                  </span>
                   {user?.email || 'No email provided'}
                 </div>
                 <div className="stat-item">
-                  <span className="stat-icon" style={{color: '#F59E0B', display: 'flex', alignItems: 'center'}}>
+                  <span className="stat-icon" style={{ color: '#F59E0B', display: 'flex', alignItems: 'center' }}>
                     <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
-                  </span> 
+                  </span>
                   {experiences.length} Experiences
                 </div>
                 <div className="stat-item">
-                  <span className="stat-icon" style={{color: '#10B981', display: 'flex', alignItems: 'center'}}>
+                  <span className="stat-icon" style={{ color: '#10B981', display: 'flex', alignItems: 'center' }}>
                     <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                     </svg>
-                  </span> 
+                  </span>
                   Verified Member
                 </div>
                 {isStudent() && (
@@ -1464,42 +1488,44 @@ const App = () => {
                   </div>
                 )}
               </div>
-              
+
               {/* Social / Online Presence Icons */}
               <div className="social-icons-row">
                 {githubUrl ? (
                   <a href={githubUrl.startsWith('http') ? githubUrl : `https://${githubUrl}`} target="_blank" rel="noopener noreferrer" className="social-icon-link social-icon-link--active" title="GitHub">
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" /></svg>
                   </a>
                 ) : (
                   <span className="social-icon-link social-icon-link--disabled" title="Add your GitHub link">
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" /></svg>
                   </span>
                 )}
                 {linkedinUrl ? (
-                  <a href={linkedinUrl.startsWith('http') ? linkedinUrl : `https://${linkedinUrl}`} target="_blank" rel="noopener noreferrer" className="social-icon-link social-icon-link--active" title="LinkedIn" style={{color: '#0A66C2'}}>
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                  <a href={linkedinUrl.startsWith('http') ? linkedinUrl : `https://${linkedinUrl}`} target="_blank" rel="noopener noreferrer" className="social-icon-link social-icon-link--active" title="LinkedIn" style={{ color: '#0A66C2' }}>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" /></svg>
                   </a>
                 ) : (
                   <span className="social-icon-link social-icon-link--disabled" title="Add your LinkedIn link">
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" /></svg>
                   </span>
                 )}
                 {portfolioUrl ? (
-                  <a href={portfolioUrl.startsWith('http') ? portfolioUrl : `https://${portfolioUrl}`} target="_blank" rel="noopener noreferrer" className="social-icon-link social-icon-link--active" title="Portfolio" style={{color: '#10B981'}}>
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                  <a href={portfolioUrl.startsWith('http') ? portfolioUrl : `https://${portfolioUrl}`} target="_blank" rel="noopener noreferrer" className="social-icon-link social-icon-link--active" title="Portfolio" style={{ color: '#10B981' }}>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>
                   </a>
                 ) : (
                   <span className="social-icon-link social-icon-link--disabled" title="Add your portfolio link">
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>
                   </span>
                 )}
               </div>
 
               <button className="logout-btn-bottom" onClick={logout}>
                 Logout
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1m0-16V6m6 10v-3a4 4 0 00-4 4H7a4 4 0 00-4 4v3" />
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                  <polyline points="16 17 21 12 16 7"></polyline>
+                  <line x1="21" y1="12" x2="9" y2="12"></line>
                 </svg>
               </button>
             </div>
@@ -1532,7 +1558,7 @@ const App = () => {
             <div className="form-section">
               <div className="section-header">
                 <h3 className="section-title">
-                  <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{color: '#8B5CF6'}}>
+                  <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: '#8B5CF6' }}>
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
                   Personal Information
@@ -1595,7 +1621,7 @@ const App = () => {
             <div className="form-section">
               <div className="section-header">
                 <h3 className="section-title">
-                  <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{color: '#3B82F6'}}>
+                  <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: '#3B82F6' }}>
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                   </svg>
                   Online Presence
@@ -1605,7 +1631,7 @@ const App = () => {
                 <div className="online-presence-grid">
                   <div className="form-field">
                     <label>
-                      <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" style={{marginRight:'4px',verticalAlign:'middle'}}><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                      <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" style={{ marginRight: '4px', verticalAlign: 'middle' }}><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" /></svg>
                       GITHUB
                     </label>
                     <input
@@ -1618,7 +1644,7 @@ const App = () => {
                   </div>
                   <div className="form-field">
                     <label>
-                      <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" style={{marginRight:'4px',verticalAlign:'middle'}}><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                      <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" style={{ marginRight: '4px', verticalAlign: 'middle' }}><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" /></svg>
                       LINKEDIN
                     </label>
                     <input
@@ -1631,7 +1657,7 @@ const App = () => {
                   </div>
                   <div className="form-field">
                     <label>
-                      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight:'4px',verticalAlign:'middle'}}><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '4px', verticalAlign: 'middle' }}><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>
                       PORTFOLIO
                     </label>
                     <input
@@ -1651,7 +1677,7 @@ const App = () => {
             <div className="form-section">
               <div className="section-header">
                 <h3 className="section-title">
-                  <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{color: '#A855F7'}}>
+                  <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: '#A855F7' }}>
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
                   </svg>
                   Top Skills
@@ -1684,7 +1710,7 @@ const App = () => {
                   + Add New Skill
                 </button>
               </div>
-              
+
               {references.length > 0 ? (
                 <div className="data-list">
                   {referencesPaginated.map((item, index) => {
@@ -1716,7 +1742,7 @@ const App = () => {
             <div className="form-section">
               <div className="section-header">
                 <h3 className="section-title">
-                  <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{color: '#EC4899'}}>
+                  <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: '#EC4899' }}>
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                   </svg>
                   Skills & Hobbies
@@ -1749,7 +1775,7 @@ const App = () => {
                   + Add Hobby Entry
                 </button>
               </div>
-              
+
               {skills.length > 0 ? (
                 <div className="data-list">
                   {skillsPaginated.map((item, index) => {
@@ -1781,10 +1807,10 @@ const App = () => {
             <div className="form-section">
               <div className="section-header">
                 <h3 className="section-title">
-                  <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{color: '#F59E0B'}}>
+                  <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: '#F59E0B' }}>
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
-                  Business Experience
+                  Experience
                 </h3>
               </div>
               <div className="collection-form">
@@ -1814,7 +1840,7 @@ const App = () => {
                   + Add Experience
                 </button>
               </div>
-              
+
               {experiences.length > 0 ? (
                 <div className="data-list">
                   {experiencesPaginated.map((item, index) => {
@@ -1843,31 +1869,31 @@ const App = () => {
             </div>
 
             <div className="finalize-container">
-               <button
-                 className="finalize-btn"
-                 onClick={handleSave}
-                 disabled={isSaving}
-                 style={{ opacity: isSaving ? 0.8 : 1, cursor: isSaving ? 'not-allowed' : 'pointer' }}
-               >
-                 {isSaving ? (
-                   <><span className="finalize-spinner" />Saving...</>
-                 ) : (
-                   'Finalize Profile'
-                 )}
-               </button>
-               {bannerState.type === 'success' && (
-                 <div className="save-success-banner">
-                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                   {bannerState.message}
-                 </div>
-               )}
-               {bannerState.type === 'error' && (
-                 <div className="save-error-banner">
-                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                   {bannerState.message}
-                 </div>
-               )}
-               <div className="security-note">ALL CHANGES ARE ENCRYPTED AND SECURE</div>
+              <button
+                className="finalize-btn"
+                onClick={handleSave}
+                disabled={isSaving}
+                style={{ opacity: isSaving ? 0.8 : 1, cursor: isSaving ? 'not-allowed' : 'pointer' }}
+              >
+                {isSaving ? (
+                  <><span className="finalize-spinner" />Saving...</>
+                ) : (
+                  'Finalize Profile'
+                )}
+              </button>
+              {bannerState.type === 'success' && (
+                <div className="save-success-banner">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                  {bannerState.message}
+                </div>
+              )}
+              {bannerState.type === 'error' && (
+                <div className="save-error-banner">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+                  {bannerState.message}
+                </div>
+              )}
+              <div className="security-note">ALL CHANGES ARE ENCRYPTED AND SECURE</div>
             </div>
           </div>
         </div>
@@ -1881,7 +1907,7 @@ const App = () => {
                 <button type="button" className="modal-close" onClick={closeEditModal} disabled={isEditSaving}>&times;</button>
               </div>
               {editingItem.type !== 'profile_description' && (
-                <div className="form-field" style={{marginBottom: "1rem"}}>
+                <div className="form-field" style={{ marginBottom: "1rem" }}>
                   <label>NAME</label>
                   <input
                     type="text"
@@ -1893,11 +1919,11 @@ const App = () => {
                   />
                 </div>
               )}
-              <div className="form-field" style={{marginBottom: "1.5rem"}}>
+              <div className="form-field" style={{ marginBottom: "1.5rem" }}>
                 <label>{editingItem.type === 'profile_description' ? 'BIO / DESCRIPTION' : 'DESCRIPTION'}</label>
                 <textarea
                   className="collection-input"
-                  style={{minHeight: "100px", resize: "vertical"}}
+                  style={{ minHeight: "100px", resize: "vertical" }}
                   value={editForm.description}
                   onChange={(e) => handleEditFieldChange('description', e.target.value)}
                   disabled={isEditSaving}
@@ -1913,7 +1939,7 @@ const App = () => {
             </div>
           </div>
         )}
-        
+
         {deleteConfirm && (
           <div className="modal-overlay" role="dialog" aria-modal="true">
             <div className="modal-card">
@@ -1922,7 +1948,7 @@ const App = () => {
                 <button type="button" className="modal-close" onClick={() => setDeleteConfirm(null)}>&times;</button>
               </div>
               <div className="modal-body-warn">
-                <span style={{fontSize: "1.3rem", marginTop: "1px"}}>⚠️</span>
+                <span style={{ fontSize: "1.3rem", marginTop: "1px" }}>⚠️</span>
                 <p>Are you sure you want to delete this entry? This action cannot be undone.</p>
               </div>
               <div className="modal-actions">
@@ -1944,7 +1970,7 @@ const App = () => {
 
               {cropError && (
                 <div className="save-error-banner" style={{ marginBottom: '1rem', marginTop: 0 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
                   <span>{cropError}</span>
                 </div>
               )}
@@ -1964,7 +1990,7 @@ const App = () => {
               </div>
 
               <div className="crop-controls">
-                <span style={{color: '#9CA3AF', fontSize: '0.85rem'}}>Zoom</span>
+                <span style={{ color: '#9CA3AF', fontSize: '0.85rem' }}>Zoom</span>
                 <input
                   type="range"
                   value={zoom}
@@ -1984,7 +2010,7 @@ const App = () => {
                   Upload New
                 </button>
                 <button type="button" className="crop-btn-save" onClick={handleCropSave} disabled={isUploadingPicture}>
-                  {isUploadingPicture ? <><span className="finalize-spinner" style={{width: '1rem', height:'1rem', borderColor: 'rgba(255,255,255,0.2)', borderLeftColor: '#fff', marginRight: '0.4rem'}}/> Saving</> : 'Save & Upload'}
+                  {isUploadingPicture ? <><span className="finalize-spinner" style={{ width: '1rem', height: '1rem', borderColor: 'rgba(255,255,255,0.2)', borderLeftColor: '#fff', marginRight: '0.4rem' }} /> Saving</> : 'Save & Upload'}
                 </button>
               </div>
             </div>

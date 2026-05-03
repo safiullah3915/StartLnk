@@ -11,24 +11,26 @@ import './CreateStartup.css';
 /* ─── Static data ─────────────────────────────────────────────────────────── */
 const CATEGORIES = [
   { value: 'saas', label: 'SaaS' },
+  { value: 'marketplace', label: 'Marketplace' },
   { value: 'ecommerce', label: 'Ecommerce' },
   { value: 'agency', label: 'Agency' },
-  { value: 'legal', label: 'Legal' },
-  { value: 'marketplace', label: 'Marketplace' },
-  { value: 'media', label: 'Media' },
-  { value: 'platform', label: 'Platform' },
-  { value: 'real_estate', label: 'Real Estate' },
-  { value: 'robotics', label: 'Robotics' },
-  { value: 'software', label: 'Software' },
-  { value: 'web3', label: 'Web3' },
-  { value: 'crypto', label: 'Crypto' },
+  { value: 'subscription', label: 'Subscription' },
+  { value: 'social_platform', label: 'Social Platform' },
   { value: 'other', label: 'Other' },
 ];
 
 const STAGES = [
-  'Idea Stage', 'Building MVP', 'MVP Stage',
-  'Product Market Fit', 'Fund raising', 'Growth', 'Exit',
+  'Idea Stage', 'Pre-MVP', 'MVP Built',
+  'Early Traction', 'Product-Market Fit', 'Growth Stage', 'Fundraising Stage'
 ];
+
+const INDUSTRIES = [
+  'Fintech', 'HealthTech', 'EdTech', 'LegalTech', 'Real Estate',
+  'AI / ML', 'Web3 / Crypto', 'Media', 'Gaming',
+  'Robotics / Hardware', 'Logistics', 'Other'
+];
+
+
 
 /* ─── Helpers ─────────────────────────────────────────────────────────────── */
 const Field = ({ label, required, error, children }) => (
@@ -67,9 +69,8 @@ const CreateStartupProject = () => {
     last_month_revenue: '',
     last_month_profit: '',
     type: 'collaboration',
-    earn_through: '',
     phase: '',
-    team_size: '',
+    team_size: 'Just Me',
     category: 'saas',
   });
 
@@ -100,8 +101,6 @@ const CreateStartupProject = () => {
         e.phase = 'Current phase is required.';
       if (!formData.team_size.trim())
         e.team_size = 'Team size is required.';
-      if (!formData.earn_through.trim())
-        e.earn_through = 'Please specify how you / team members earn.';
       if (formData.website_url.trim()) {
         try {
           new URL(formData.website_url.trim().startsWith('http') ? formData.website_url : `https://${formData.website_url}`);
@@ -173,9 +172,9 @@ const CreateStartupProject = () => {
         last_month_revenue: formData.last_month_revenue || '',
         last_month_profit: formData.last_month_profit || '',
         type: formData.type,
-        earn_through: formData.earn_through || '',
         phase: formData.phase || '',
         team_size: formData.team_size || '',
+        time_commitment: formData.time_commitment || '',
         category: formData.category || 'other',
       };
 
@@ -240,7 +239,10 @@ const CreateStartupProject = () => {
               </p>
 
               {/* Startup name */}
-              <Field label="Startup Name" required error={errors.title}>
+              <div className="cs-section">
+                <div className="cs-section-heading">
+                  <span>✨</span> Startup Name*
+                </div>
                 <input
                   className="cs-input"
                   type="text"
@@ -249,12 +251,13 @@ const CreateStartupProject = () => {
                   onChange={handleInputChange}
                   placeholder="e.g. TechFlow, BuildBridge"
                 />
-              </Field>
+                {errors.title && <span className="cs-error">{errors.title}</span>}
+              </div>
 
               {/* Category */}
               <div className="cs-section">
                 <div className="cs-section-heading">
-                  <span>🏷️</span> Category
+                  <span>🏷️</span> Business Model
                 </div>
                 <div className="cs-chips">
                   {CATEGORIES.map(cat => (
@@ -273,7 +276,10 @@ const CreateStartupProject = () => {
               <div className="cs-divider" />
 
               {/* Description */}
-              <Field label="Startup Description" required error={errors.description}>
+              <div className="cs-section">
+                <div className="cs-section-heading">
+                  <span>📝</span> Startup Description*
+                </div>
                 <textarea
                   className="cs-textarea"
                   name="description"
@@ -282,19 +288,28 @@ const CreateStartupProject = () => {
                   placeholder="Describe what your startup does, who it's for, and what problem it solves."
                   rows={4}
                 />
-              </Field>
+                {errors.description && <span className="cs-error">{errors.description}</span>}
+              </div>
 
               {/* Field / Industry */}
-              <Field label="Field / Industry" required error={errors.field}>
-                <input
-                  className="cs-input"
-                  type="text"
-                  name="field"
-                  value={formData.field}
-                  onChange={handleInputChange}
-                  placeholder="e.g., Technology, Healthcare, Finance"
-                />
-              </Field>
+              <div className="cs-section">
+                <div className="cs-section-heading">
+                  <span>🏢</span> Field / Industry
+                </div>
+                <div className="cs-chips">
+                  {INDUSTRIES.map(ind => (
+                    <button
+                      key={ind}
+                      type="button"
+                      className={`cs-chip${formData.field === ind ? ' selected' : ''}`}
+                      onClick={() => { set('field', ind); setErrors(p => ({ ...p, field: undefined })); }}
+                    >
+                      {ind}
+                    </button>
+                  ))}
+                </div>
+                {errors.field && <span className="cs-error">{errors.field}</span>}
+              </div>
 
               <div className="cs-nav">
                 <button
@@ -405,37 +420,26 @@ const CreateStartupProject = () => {
                 </Field>
               </div>
 
-              {/* Team size + Earn through */}
-              <div className="cs-row">
-                <Field
-                  label={formData.type === 'collaboration' ? 'Current Team Size' : 'Team Size'}
-                  required
-                  error={errors.team_size}
-                >
-                  <input
-                    className="cs-input"
-                    type="text"
-                    name="team_size"
-                    value={formData.team_size}
-                    onChange={handleInputChange}
-                    placeholder={formData.type === 'collaboration' ? 'e.g., Just me, 1–2' : 'e.g., 2–5 people'}
-                  />
-                </Field>
-                <Field
-                  label={formData.type === 'collaboration' ? 'How will team earn?' : 'How do you earn?'}
-                  required
-                  error={errors.earn_through}
-                >
-                  <input
-                    className="cs-input"
-                    type="text"
-                    name="earn_through"
-                    value={formData.earn_through}
-                    onChange={handleInputChange}
-                    placeholder={formData.type === 'collaboration' ? 'e.g., Equity, Revenue Share' : 'e.g., Subscriptions, Ads'}
-                  />
-                </Field>
-              </div>
+              {/* Team size */}
+              <Field
+                label={formData.type === 'collaboration' ? 'Current Team Size' : 'Team Size'}
+                required
+                error={errors.team_size}
+              >
+                <input
+                  className="cs-input"
+                  type="text"
+                  name="team_size"
+                  value={formData.team_size}
+                  onChange={handleInputChange}
+                  placeholder="Just Me"
+                  disabled
+                  title="Disabled: Team size will update automatically as you add members."
+                  style={{ cursor: 'not-allowed', opacity: 0.7 }}
+                />
+              </Field>
+              
+
 
               <div className="cs-nav">
                 <button type="button" className="cs-back-btn" onClick={goBack}>
@@ -518,11 +522,11 @@ const CreateStartupProject = () => {
                 }}>
                   {[
                     ['Startup', formData.title],
-                    ['Category', formData.category?.toUpperCase()],
+                    ['Business Model', formData.category?.toUpperCase()],
+                    ['Industry', formData.field],
                     ['Stage', formData.stage],
                     ['Phase', formData.phase],
                     ['Team size', formData.team_size],
-                    ['Team earns via', formData.earn_through],
                     ['Website', formData.website_url || '—'],
                   ].map(([k, v]) => (
                     <div key={k} style={{

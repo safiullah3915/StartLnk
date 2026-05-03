@@ -70,17 +70,11 @@ class Startup(models.Model):
 	
 	CATEGORY_CHOICES = [
 		('saas', 'SaaS'),
-		('ecommerce', 'E-commerce'),
-		('agency', 'Agency'),
-		('legal', 'Legal'),
 		('marketplace', 'Marketplace'),
-		('media', 'Media'),
-		('platform', 'Platform'),
-		('real_estate', 'Real Estate'),
-		('robotics', 'Robotics'),
-		('software', 'Software'),
-		('web3', 'Web3'),
-		('crypto', 'Crypto'),
+		('ecommerce', 'Ecommerce'),
+		('agency', 'Agency'),
+		('subscription', 'Subscription'),
+		('social_platform', 'Social Platform'),
 		('other', 'Other'),
 	]
 	
@@ -109,6 +103,7 @@ class Startup(models.Model):
 	earn_through = models.CharField(max_length=50, blank=True)  # For collaborations
 	phase = models.CharField(max_length=50, blank=True)  # For collaborations
 	team_size = models.CharField(max_length=50, blank=True)  # For collaborations
+	time_commitment = models.CharField(max_length=50, blank=True)  # For collaborations
 	type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='marketplace')
 	category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='other')
 	status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
@@ -165,6 +160,8 @@ class Position(models.Model):
 	title = models.CharField(max_length=100)
 	description = models.TextField(blank=True)
 	requirements = models.TextField(blank=True)
+	earn_through = models.CharField(max_length=50, blank=True)
+	time_commitment = models.CharField(max_length=50, blank=True)
 	is_active = models.BooleanField(default=True)
 	created_at = models.DateTimeField(auto_now_add=True)
 	

@@ -4,6 +4,8 @@ import './App.css';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Login } from './components/login/Login';
 import { Signup } from './components/Signup/Signup';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import EmailVerification from './components/EmailVerification/EmailVerification';
 import { LandingPage } from './pages/LandingPage/LandingPage';
 import { Marketplace } from './pages/Marketplace/Marketplace';
@@ -180,6 +182,7 @@ function AppRoutes() {
   return (
     <>
       <ScrollToTop />
+      <ToastContainer position="top-right" autoClose={3000} />
       {isRefreshing && (
         <div className="refresh-overlay">
           <div className="refresh-icon-container">

@@ -1,4 +1,5 @@
 from rest_framework import serializers
+# Team section implemented
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
@@ -15,10 +16,11 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 	password = serializers.CharField(write_only=True, min_length=8)
 	role = serializers.ChoiceField(choices=User.ROLE_CHOICES, default='entrepreneur')
 	phone_number = serializers.CharField(required=False, allow_blank=True)
+	full_name = serializers.CharField(required=False, allow_blank=True)
 	
 	class Meta:
 		model = User
-		fields = ('username', 'email', 'password', 'role', 'phone_number')
+		fields = ('username', 'email', 'password', 'role', 'phone_number', 'full_name')
 	
 	def validate_password(self, value):
 		try:
@@ -34,7 +36,17 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 	
 	def create(self, validated_data):
 		password = validated_data.pop('password')
+		full_name = validated_data.pop('full_name', None)
+		
 		user = User(**validated_data)
+		
+		# Handle full_name
+		if full_name:
+			parts = full_name.strip().split(' ', 1)
+			user.first_name = parts[0]
+			if len(parts) > 1:
+				user.last_name = parts[1]
+		
 		# Hash password with bcrypt
 		hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
 		user.password = hashed_password.decode('utf-8')
@@ -97,7 +109,7 @@ class PositionSerializer(serializers.ModelSerializer):
 
 	class Meta:
 		model = Position
-		fields = ('id', 'title', 'description', 'requirements', 'is_active', 'applications_count', 'created_at', 'startup')
+		fields = ('id', 'title', 'description', 'requirements', 'earn_through', 'time_commitment', 'is_active', 'applications_count', 'created_at', 'startup')
 
 	def get_applications_count(self, obj):
 		return obj.applications.count()
@@ -112,6 +124,7 @@ class PositionSerializer(serializers.ModelSerializer):
 			'earn_through': getattr(obj.startup, 'earn_through', None) or '',
 			'team_size': getattr(obj.startup, 'team_size', None) or '',
 			'phase': getattr(obj.startup, 'phase', None) or '',
+			'time_commitment': getattr(obj.startup, 'time_commitment', None) or '',
 		}
 
 
@@ -120,14 +133,31 @@ class StartupListSerializer(serializers.ModelSerializer):
 	owner = UserSerializer(read_only=True)
 	tag = serializers.SerializerMethodField()
 	name = serializers.CharField(source='title', read_only=True)
+	team_size = serializers.SerializerMethodField()
 	
 	class Meta:
 		model = Startup
 		fields = (
 			'id', 'name', 'title', 'description', 'revenue', 'profit', 
 			'asking_price', 'tag', 'type', 'field', 'category', 'created_at', 
-			'owner', 'earn_through', 'phase', 'team_size'
+			'owner', 'earn_through', 'phase', 'team_size', 'time_commitment'
 		)
+	
+	def get_team_size(self, obj):
+		try:
+			# Base count is 1 for the owner
+			count = 1
+			if hasattr(obj, 'team') and obj.team:
+				# count members and filter out owner if they are already in the team list
+				# assuming owner is already counted once, we only count collaborators
+				collaborators = obj.team.members.exclude(user=obj.owner).count()
+				count += collaborators
+			
+			if count <= 1:
+				return "Just Me"
+			return f"{count} Members"
+		except:
+			return "Just Me"
 	
 	def get_tag(self, obj):
 		# Return first tag or a default based on type
@@ -137,6 +167,15 @@ class StartupListSerializer(serializers.ModelSerializer):
 		return "Fund Raising" if obj.type == 'marketplace' else "Open to Collaborate"
 
 
+class TeamMemberSerializer(serializers.ModelSerializer):
+	"""Serializer for team members"""
+	user = UserSerializer(read_only=True)
+	
+	class Meta:
+		model = TeamMember
+		fields = ('id', 'user', 'role', 'joined_at')
+
+
 class StartupDetailSerializer(serializers.ModelSerializer):
 	"""Serializer for startup detail view"""
 	owner = UserSerializer(read_only=True)
@@ -144,6 +183,8 @@ class StartupDetailSerializer(serializers.ModelSerializer):
 	positions = PositionSerializer(many=True, read_only=True)
 	performance = serializers.SerializerMethodField()
 	name = serializers.CharField(source='title', read_only=True)
+	team_members = serializers.SerializerMethodField()
+	team_size = serializers.SerializerMethodField()
 	
 	class Meta:
 		model = Startup
@@ -153,8 +194,23 @@ class StartupDetailSerializer(serializers.ModelSerializer):
 			'revenue', 'profit', 'asking_price',
 			'ttm_revenue', 'ttm_profit', 'last_month_revenue', 'last_month_profit',
 			'earn_through', 'phase', 'team_size', 'website_url',
-			'created_at', 'updated_at'
+			'created_at', 'updated_at', 'team_members', 'time_commitment'
 		)
+	
+	def get_team_size(self, obj):
+		try:
+			# Base count is 1 for the owner
+			count = 1
+			if hasattr(obj, 'team') and obj.team:
+				# count members and filter out owner if they are already in the team list
+				collaborators = obj.team.members.exclude(user=obj.owner).count()
+				count += collaborators
+			
+			if count <= 1:
+				return "Just Me"
+			return f"{count} Members"
+		except:
+			return "Just Me"
 	
 	def get_tags(self, obj):
 		# Handle missing tags gracefully
@@ -172,6 +228,15 @@ class StartupDetailSerializer(serializers.ModelSerializer):
 			'lastMonthRevenue': getattr(obj, 'last_month_revenue', None) or '$0',
 			'lastMonthProfit': getattr(obj, 'last_month_profit', None) or '$0',
 		}
+
+	def get_team_members(self, obj):
+		try:
+			if hasattr(obj, 'team') and obj.team:
+				members = obj.team.members.all().select_related('user', 'user__profile')
+				return TeamMemberSerializer(members, many=True, context=self.context).data
+		except Exception as e:
+			print(f"⚠️ Warning: Error getting team members for startup {obj.id}: {str(e)}")
+		return []
 
 
 class StartupCreateSerializer(serializers.ModelSerializer):
@@ -212,13 +277,33 @@ class ApplicationSerializer(serializers.ModelSerializer):
 	startup = StartupListSerializer(read_only=True)
 	position = PositionSerializer(read_only=True)
 	applicant = UserSerializer(read_only=True)
+	active_commitments = serializers.SerializerMethodField()
 	
 	class Meta:
 		model = Application
 		fields = (
 			'id', 'startup', 'position', 'applicant', 'cover_letter',
-			'experience', 'portfolio_url', 'resume_url', 'status', 'created_at'
+			'experience', 'portfolio_url', 'resume_url', 'status', 
+			'created_at', 'active_commitments'
 		)
+
+	def get_active_commitments(self, obj):
+		"""Calculate how many active startups the applicant is currently part of"""
+		user = obj.applicant
+		if not user:
+			return 0
+			
+		# Count startups owned by the user that are active
+		owned_count = Startup.objects.filter(owner=user, status='active').count()
+		
+		# Count team memberships in other active startups
+		# Use distinct to avoid double counting if somehow they are in multiple teams of same startup (though unique_together prevents this)
+		team_count = TeamMember.objects.filter(
+			user=user, 
+			team__startup__status='active'
+		).exclude(team__startup__owner=user).count()
+		
+		return owned_count + team_count
 
 
 class ApplicationCreateSerializer(serializers.ModelSerializer):
@@ -347,6 +432,7 @@ class ApplicationCreateSerializer(serializers.ModelSerializer):
 class UserStartupSerializer(serializers.ModelSerializer):
 	"""Serializer for user's startups"""
 	applications = serializers.SerializerMethodField()
+	team_size = serializers.SerializerMethodField()
 	
 	class Meta:
 		model = Startup
@@ -364,6 +450,21 @@ class UserStartupSerializer(serializers.ModelSerializer):
 
 	def get_applications(self, obj):
 		return obj.applications.count()
+
+	def get_team_size(self, obj):
+		try:
+			# Base count is 1 for the owner
+			count = 1
+			if hasattr(obj, 'team') and obj.team:
+				# count members and filter out owner if they are already in the team list
+				collaborators = obj.team.members.exclude(user=obj.owner).count()
+				count += collaborators
+			
+			if count <= 1:
+				return "Just Me"
+			return f"{count} Members"
+		except:
+			return "Just Me"
 
 	def get_has_approved_applications(self, obj):
 		try:

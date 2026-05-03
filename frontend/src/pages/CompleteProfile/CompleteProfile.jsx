@@ -21,7 +21,9 @@ function CompleteProfile() {
     const { signup, isAuthenticated } = useAuth();
 
     const [step,       setStep]       = useState(1);
+    const [fullName,   setFullName]   = useState("");
     const [name,       setName]       = useState("");
+    const [fullNameError, setFullNameError] = useState("");
     const [nameError,  setNameError]  = useState("");
     const [role,       setRole]       = useState("entrepreneur");
     const [loading,    setLoading]    = useState(false);    // step-2 submit spinner
@@ -54,6 +56,13 @@ function CompleteProfile() {
     const handleContinue = async (e) => {
         e.preventDefault();
         setNameError("");
+        setFullNameError("");
+
+        // 0. Full Name check
+        if (!fullName.trim()) {
+            setFullNameError("Full name is required.");
+            return;
+        }
 
         // 1. Local format check
         const formatErr = localValidate(name);
@@ -87,7 +96,7 @@ function CompleteProfile() {
         setLoading(true);
 
         try {
-            const result = await signup(name.trim(), email, password, role);
+            const result = await signup(name.trim(), email, password, role, "", fullName.trim());
 
             if (result.success) {
                 sessionStorage.removeItem("signup_email");
@@ -158,8 +167,29 @@ function CompleteProfile() {
                     {/* ── STEP 1 ── */}
                     {step === 1 && (
                         <form onSubmit={handleContinue} className="cp-form">
-                            <h2 className="cp-title">Choose your username</h2>
-                            <p className="cp-subtitle">This is how others will see you on StartLnk.</p>
+                            <h2 className="cp-title">Complete your account</h2>
+                            <p className="cp-subtitle">Tell us a bit about yourself to get started.</p>
+
+                            {/* Full Name */}
+                            <div className="cp-field">
+                                <label className="cp-label" htmlFor="cp-fullname">Full Name</label>
+                                <input
+                                    id="cp-fullname"
+                                    type="text"
+                                    placeholder="e.g. Ahsan Tariq"
+                                    className={`cp-input${fullNameError ? " cp-input-err" : ""}`}
+                                    value={fullName}
+                                    onChange={(e) => {
+                                        setFullName(e.target.value);
+                                        if (fullNameError) setFullNameError("");
+                                    }}
+                                    autoFocus
+                                    autoComplete="name"
+                                />
+                                {fullNameError && (
+                                    <span className="cp-field-error">{fullNameError}</span>
+                                )}
+                            </div>
 
                             {/* Username */}
                             <div className="cp-field">
@@ -174,7 +204,6 @@ function CompleteProfile() {
                                         setName(e.target.value);
                                         if (nameError) setNameError(localValidate(e.target.value));
                                     }}
-                                    autoFocus
                                     autoComplete="username"
                                 />
                                 {nameError && (
@@ -197,7 +226,7 @@ function CompleteProfile() {
                             <button
                                 type="submit"
                                 className={`cp-btn${checking ? " loading" : ""}`}
-                                disabled={!name.trim() || checking}
+                                disabled={!name.trim() || !fullName.trim() || checking}
                             >
                                 {checking
                                     ? <><div className="cp-spinner" /> Checking...</>

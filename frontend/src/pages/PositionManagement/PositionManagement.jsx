@@ -20,7 +20,9 @@ const PositionManagement = () => {
   const [newPosition, setNewPosition] = useState({
     title: '',
     description: '',
-    requirements: ''
+    requirements: '',
+    earn_through: '',
+    time_commitment: ''
   });
 
   useEffect(() => {
@@ -71,7 +73,7 @@ const PositionManagement = () => {
   const handleCreatePosition = async (e) => {
     e.preventDefault();
     
-    if (!newPosition.title.trim() || !newPosition.description.trim()) {
+    if (!newPosition.title.trim() || !newPosition.description.trim() || !newPosition.earn_through || !newPosition.time_commitment) {
       toast.error('Please fill in all required fields');
       return;
     }
@@ -79,7 +81,7 @@ const PositionManagement = () => {
     try {
       await positionAPI.createPosition(startupId, newPosition);
       toast.success('Position created successfully!');
-      setNewPosition({ title: '', description: '', requirements: '' });
+      setNewPosition({ title: '', description: '', requirements: '', earn_through: '', time_commitment: '' });
       setShowCreateForm(false);
       loadPositions();
     } catch (error) {
@@ -259,6 +261,38 @@ const PositionManagement = () => {
                   />
                 </div>
 
+                <div className={styles.formGroup}>
+                  <label>Earn Through *</label>
+                  <div className={styles.chips}>
+                    {['Equity-Based', 'Revenue Share', 'Paid', 'Unpaid', 'Hybrid'].map(option => (
+                      <button
+                        key={option}
+                        type="button"
+                        className={`${styles.chip} ${newPosition.earn_through === option ? styles.selected : ''}`}
+                        onClick={() => handleInputChange({ target: { name: 'earn_through', value: option } })}
+                      >
+                        {option}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label>Time Commitment *</label>
+                  <div className={styles.chips}>
+                    {['Full-Time', 'Part-Time', 'Few Hours Daily', 'Weekend Only', 'Flexible', 'Occasional', 'Short-Term'].map(option => (
+                      <button
+                        key={option}
+                        type="button"
+                        className={`${styles.chip} ${newPosition.time_commitment === option ? styles.selected : ''}`}
+                        onClick={() => handleInputChange({ target: { name: 'time_commitment', value: option } })}
+                      >
+                        {option}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div className={styles.formActions}>
                   <button
                     type="button"
@@ -303,59 +337,71 @@ const PositionManagement = () => {
               {positions.filter(p => p.is_active).length > 0 && (
                 <div>
                   <h4 className={styles.subsectionTitle}>Active Positions</h4>
-            <div className={styles.positionsGrid}>
+                  <div className={styles.positionsGrid}>
                     {positions.filter(p => p.is_active).map((position) => (
-                <div key={position.id} className={styles.positionCard}>
-                  <div className={styles.cardHeader}>
-                    <div className={styles.cardTitle}>
-                      <h4>{position.title}</h4>
+                      <div key={position.id} className={styles.positionCard}>
+                        <div className={styles.cardHeader}>
+                          <div className={styles.cardTitle}>
+                            <h4>{position.title}</h4>
                             <span className={`${styles.badge} ${styles.active}`}>
                               Active
-                      </span>
-                    </div>
-                  </div>
+                            </span>
+                          </div>
+                        </div>
 
-                  <div className={styles.cardContent}>
-                    <p className={styles.description}>{position.description}</p>
-                    
-                    {position.requirements && (
-                      <div className={styles.requirements}>
-                        <strong>Requirements:</strong>
-                        <p>{position.requirements}</p>
-                      </div>
-                    )}
+                        <div className={styles.cardContent}>
+                          <p className={styles.description}>{position.description}</p>
+                          
+                          {position.requirements && (
+                            <div className={styles.requirements}>
+                              <strong>Requirements:</strong>
+                              <p>{position.requirements}</p>
+                            </div>
+                          )}
 
-                    <div className={styles.stats}>
-                      <div className={styles.stat}>
-                        <span className={styles.statNumber}>{position.applications_count || 0}</span>
-                        <span className={styles.statLabel}>Applications</span>
-                      </div>
-                      <div className={styles.stat}>
-                        <span className={styles.statNumber}>
-                          {new Date(position.created_at).toLocaleDateString()}
-                        </span>
-                        <span className={styles.statLabel}>Posted</span>
-                      </div>
-                    </div>
-                  </div>
+                          {position.earn_through && (
+                            <div className={styles.earnThrough}>
+                              <strong>Compensation:</strong> {position.earn_through}
+                            </div>
+                          )}
 
-                  <div className={styles.cardActions}>
-                    <Link
-                      to={`/positions/${position.id}/applications`}
-                      className={styles.viewButton}
-                    >
-                      View Applications
-                    </Link>
-                    <button
+                          {position.time_commitment && (
+                            <div className={styles.earnThrough}>
+                              <strong>Commitment:</strong> {position.time_commitment}
+                            </div>
+                          )}
+
+                          <div className={styles.stats}>
+                            <div className={styles.stat}>
+                              <span className={styles.statNumber}>{position.applications_count || 0}</span>
+                              <span className={styles.statLabel}>Applications</span>
+                            </div>
+                            <div className={styles.stat}>
+                              <span className={styles.statNumber}>
+                                {new Date(position.created_at).toLocaleDateString()}
+                              </span>
+                              <span className={styles.statLabel}>Posted</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className={styles.cardActions}>
+                          <Link
+                            to={`/positions/${position.id}/applications`}
+                            className={styles.viewButton}
+                          >
+                            View Applications
+                          </Link>
+                          <button
                             onClick={() => handleTogglePosition(position.id, position.is_active, position.title)}
                             className={`${styles.toggleButton} ${styles.closeBtn}`}
-                    >
+                          >
                             Close
-                    </button>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </div>
-              ))}
-            </div>
                 </div>
               )}
 
@@ -382,6 +428,18 @@ const PositionManagement = () => {
                             <div className={styles.requirements}>
                               <strong>Requirements:</strong>
                               <p>{position.requirements}</p>
+                            </div>
+                          )}
+
+                          {position.earn_through && (
+                            <div className={styles.earnThrough}>
+                              <strong>Compensation:</strong> {position.earn_through}
+                            </div>
+                          )}
+
+                          {position.time_commitment && (
+                            <div className={styles.earnThrough}>
+                              <strong>Commitment:</strong> {position.time_commitment}
                             </div>
                           )}
 
@@ -447,4 +505,3 @@ const PositionManagement = () => {
 };
 
 export default PositionManagement;
-

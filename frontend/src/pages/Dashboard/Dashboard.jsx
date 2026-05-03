@@ -9,6 +9,14 @@ import apiClient from '../../utils/axiosConfig';
 import { getStartupDetailPath } from '../../utils/idUtils';
 import { toast } from 'react-toastify';
 
+const ChevronLeftIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+);
+
+const ChevronRightIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+);
+
 const Dashboard = () => {
   const { user, isEntrepreneur, isStudent, isInvestor, loading: authLoading, isAuthenticated } = useAuth();
   const [stats, setStats] = useState(null);
@@ -18,7 +26,11 @@ const Dashboard = () => {
   const [startupIdToPositions, setStartupIdToPositions] = useState({});
   const [startupDeleteConfirm, setStartupDeleteConfirm] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [positionPages, setPositionPages] = useState({});
+  const [startupPage, setStartupPage] = useState(1);
   const applicationsPerPage = 3;
+  const positionsPerPage = 3;
+  const startupsPerPage = 4;
   const recentApplicationsRef = useRef(null);
 
   const formatDate = (value) => {
@@ -76,6 +88,17 @@ const Dashboard = () => {
 
   const handleNextPage = () => {
     setCurrentPage(prev => Math.min(totalPages, prev + 1));
+  };
+
+  const handlePositionPageChange = (startupId, newPage) => {
+    setPositionPages(prev => ({
+      ...prev,
+      [startupId]: newPage
+    }));
+  };
+
+  const handleStartupPageChange = (newPage) => {
+    setStartupPage(newPage);
   };
 
   useEffect(() => {
@@ -259,34 +282,70 @@ const Dashboard = () => {
           </div>
         ) : (
           <div className={styles.cardsGrid}>
-            {myStartups.map((startup) => (
-              <div key={startup.id} className={styles.startupCard}>
-                <div className={styles.cardHeader}>
-                  <div className={styles.cardIcon}><h3>{startup.title}</h3></div>
-                  <span className={styles.cardTag}>{startup.category ? startup.category.charAt(0).toUpperCase() + startup.category.slice(1) : 'Other'}</span>
-                </div>
-                <p className={styles.cardDescription}>{startup.description?.substring(0, 100)}{startup.description && startup.description.length > 100 ? '...' : ''}</p>
-                <div className={styles.cardStats}>
-                  {startup.type === 'marketplace' ? (
-                    <>
-                      <div><span className={styles.statsLabel}>Revenue</span><p className={styles.statsValue}>{startup.revenue || '$0'}</p></div>
-                      <div><span className={styles.statsLabel}>Profit</span><p className={styles.statsValue}>{startup.profit || '$0'}</p></div>
-                      <div><span className={styles.statsLabel}>Price</span><p className={styles.statsValue}>{startup.asking_price || '$0'}</p></div>
-                    </>
-                  ) : (
-                    <>
-                      <div><span className={styles.statsLabel}>Earn Through</span><p className={styles.statsValue}>{startup.earn_through || 'N/A'}</p></div>
-                      <div><span className={styles.statsLabel}>Category</span><p className={styles.statsValue}>{startup.category || 'N/A'}</p></div>
-                      <div><span className={styles.statsLabel}>Team Size</span><p className={styles.statsValue}>{startup.team_size || 'N/A'}</p></div>
-                    </>
+            {(() => {
+              const totalStartups = myStartups.length;
+              const totalStartupPages = Math.ceil(totalStartups / startupsPerPage);
+              const paginatedStartups = myStartups.slice(
+                (startupPage - 1) * startupsPerPage,
+                startupPage * startupsPerPage
+              );
+
+              return (
+                <>
+                  {paginatedStartups.map((startup) => (
+                    <div key={startup.id} className={styles.startupCard}>
+                      <div className={styles.cardHeader}>
+                        <div className={styles.cardIcon}><h3>{startup.title}</h3></div>
+                        <span className={styles.cardTag}>{startup.category ? startup.category.charAt(0).toUpperCase() + startup.category.slice(1) : 'Other'}</span>
+                      </div>
+                      <p className={styles.cardDescription}>{startup.description?.substring(0, 100)}{startup.description && startup.description.length > 100 ? '...' : ''}</p>
+                      <div className={styles.cardStats}>
+                        {startup.type === 'marketplace' ? (
+                          <>
+                            <div><span className={styles.statsLabel}>Revenue</span><p className={styles.statsValue}>{startup.revenue || '$0'}</p></div>
+                            <div><span className={styles.statsLabel}>Profit</span><p className={styles.statsValue}>{startup.profit || '$0'}</p></div>
+                            <div><span className={styles.statsLabel}>Price</span><p className={styles.statsValue}>{startup.asking_price || '$0'}</p></div>
+                          </>
+                        ) : (
+                          <>
+                            <div><span className={styles.statsLabel}>Industry</span><p className={styles.statsValue}>{startup.field || 'N/A'}</p></div>
+                            <div><span className={styles.statsLabel}>Category</span><p className={styles.statsValue}>{startup.category || 'N/A'}</p></div>
+                            <div><span className={styles.statsLabel}>Team Size</span><p className={styles.statsValue}>{startup.team_size || 'N/A'}</p></div>
+                          </>
+                        )}
+                      </div>
+                      <div className={styles.cardActions}>
+                        <Link to={getStartupDetailPath(startup.id)} className={styles.viewButton}>View Details</Link>
+                        <button onClick={() => handleDeleteStartup(startup.id, startup.title)} className={styles.deleteButton}>Delete</button>
+                      </div>
+                    </div>
+                  ))}
+                  {totalStartupPages > 1 && (
+                    <div className={styles.startupPagination}>
+                      <div className={styles.pagination}>
+                        <button 
+                          className={styles.paginationButton}
+                          onClick={() => handleStartupPageChange(startupPage - 1)}
+                          disabled={startupPage === 1}
+                        >
+                          <ChevronLeftIcon />
+                        </button>
+                        <span className={styles.paginationInfo}>
+                          Page {startupPage} of {totalStartupPages}
+                        </span>
+                        <button 
+                          className={styles.paginationButton}
+                          onClick={() => handleStartupPageChange(startupPage + 1)}
+                          disabled={startupPage === totalStartupPages}
+                        >
+                          <ChevronRightIcon />
+                        </button>
+                      </div>
+                    </div>
                   )}
-                </div>
-                <div className={styles.cardActions}>
-                  <Link to={getStartupDetailPath(startup.id)} className={styles.viewButton}>View Details</Link>
-                  <button onClick={() => handleDeleteStartup(startup.id, startup.title)} className={styles.deleteButton}>Delete</button>
-                </div>
-              </div>
-            ))}
+                </>
+              );
+            })()}
           </div>
         )}
       </div>
@@ -312,15 +371,49 @@ const Dashboard = () => {
                       <div className={styles.tableHeader}>
                         <div>Title</div><div>Status</div><div>Applications</div><div>Posted</div><div></div>
                       </div>
-                      {positions.map(p => (
-                        <div key={p.id} className={styles.tableRow}>
-                          <div>{p.title}</div>
-                          <div><span className={p.is_active ? styles.statusActive : styles.statusClosed}>{p.is_active ? 'Active' : 'Closed'}</span></div>
-                          <div>{p.applications_count || 0}</div>
-                          <div>{new Date(p.created_at).toLocaleDateString()}</div>
-                          <div><Link to={`/positions/${p.id}/applications`} className={styles.statAction}>View Applications</Link></div>
-                        </div>
-                      ))}
+                      {(() => {
+                        const currentPosPage = positionPages[s.id] || 1;
+                        const totalPosPages = Math.ceil(positions.length / positionsPerPage);
+                        const paginatedPositions = positions.slice(
+                          (currentPosPage - 1) * positionsPerPage,
+                          currentPosPage * positionsPerPage
+                        );
+
+                        return (
+                          <>
+                            {paginatedPositions.map(p => (
+                              <div key={p.id} className={styles.tableRow}>
+                                <div>{p.title}</div>
+                                <div><span className={p.is_active ? styles.statusActive : styles.statusClosed}>{p.is_active ? 'Active' : 'Closed'}</span></div>
+                                <div>{p.applications_count || 0}</div>
+                                <div>{new Date(p.created_at).toLocaleDateString()}</div>
+                                <div><Link to={`/positions/${p.id}/applications`} className={styles.statAction}>View Applications</Link></div>
+                              </div>
+                            ))}
+                            {totalPosPages > 1 && (
+                              <div className={styles.pagination}>
+                                <button 
+                                  className={styles.paginationButton}
+                                  onClick={() => handlePositionPageChange(s.id, currentPosPage - 1)}
+                                  disabled={currentPosPage === 1}
+                                >
+                                  <ChevronLeftIcon />
+                                </button>
+                                <span className={styles.paginationInfo}>
+                                  Page {currentPosPage} of {totalPosPages}
+                                </span>
+                                <button 
+                                  className={styles.paginationButton}
+                                  onClick={() => handlePositionPageChange(s.id, currentPosPage + 1)}
+                                  disabled={currentPosPage === totalPosPages}
+                                >
+                                  <ChevronRightIcon />
+                                </button>
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
                   )}
                 </div>

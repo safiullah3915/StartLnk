@@ -21,7 +21,7 @@ export default function AccountSettings() {
       setLoading(true);
       const response = await userAPI.getProfileData();
       const data = response.data;
-      
+
       if (data.profile) {
         setProfilePublic(data.profile.is_public || false);
         setProfileData(data.profile);
@@ -39,7 +39,7 @@ export default function AccountSettings() {
       const profileData = {
         is_public: profilePublic,
       };
-      
+
       await userAPI.updateProfileData(profileData);
       toast.success('Profile updated successfully');
     } catch (error) {
@@ -76,9 +76,9 @@ export default function AccountSettings() {
           <h2>{user?.username || 'Unknown User'}</h2>
           <p className={styles.location}>{user?.email || 'No email'} • {user?.role || 'No role'}</p>
           <p className={styles.tldr}>
-            {loading ? 'Loading profile...' : 
-             (user ? `${user.username} is a ${user.role} on our platform.` : 
-              'Profile information not available.')}
+            {loading ? 'Loading profile...' :
+              (user ? `${user.username} is a ${user.role} on our platform.` :
+                'Profile information not available.')}
           </p>
 
           <div className={styles.skillSection}>
@@ -97,11 +97,11 @@ export default function AccountSettings() {
 
           <div className={styles.extraSection}>
             <h4>About me</h4>
-            <button className={styles.addBtn}>+ Add Business Experience</button>
+            <button className={styles.addBtn}>+ Add Experience</button>
           </div>
 
           <div className={styles.footerRow}>
-            <button 
+            <button
               className={styles.saveBtn}
               onClick={saveProfile}
               disabled={loading}

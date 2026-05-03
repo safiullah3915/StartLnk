@@ -208,7 +208,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const signup = async (username, email, password, role = 'entrepreneur', phone_number = '') => {
+  const signup = async (username, email, password, role = 'entrepreneur', phone_number = '', full_name = '') => {
     try {
       const requestData = {
         username,
@@ -220,6 +220,11 @@ export const AuthProvider = ({ children }) => {
       // Only include phone_number if provided
       if (phone_number && phone_number.trim()) {
         requestData.phone_number = phone_number.trim();
+      }
+
+      // Only include full_name if provided
+      if (full_name && full_name.trim()) {
+        requestData.full_name = full_name.trim();
       }
       
       console.log('📝 Signup request data:', requestData);

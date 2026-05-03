@@ -244,13 +244,18 @@ class MessageService {
 
   // Format conversation title for display
   getConversationTitle(conversation, currentUserId) {
-    if (conversation.title) {
+    // If it's a team conversation, prioritize the title (Startup name)
+    if (conversation.team_id && conversation.title) {
       return conversation.title;
     }
-    
+
     if (conversation.participants.length === 2) {
       const otherUser = this.getOtherParticipant(conversation, currentUserId);
       return otherUser ? otherUser.username : 'Unknown User';
+    }
+
+    if (conversation.title) {
+      return conversation.title;
     }
     
     return `Group (${conversation.participants.length} members)`;

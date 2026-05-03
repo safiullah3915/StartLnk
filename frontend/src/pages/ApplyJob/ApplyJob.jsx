@@ -6,6 +6,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { toast } from 'react-toastify';
 import { useAuth } from '../../contexts/AuthContext';
 import apiClient from '../../utils/axiosConfig';
+import { userAPI } from '../../utils/apiServices';
 import { getStartupDetailPath, normalizeId } from '../../utils/idUtils';
 
 const ApplyJob = () => {
@@ -28,21 +29,20 @@ const ApplyJob = () => {
     portfolio_url: '',
     resume: null
   });
+
   const selectedPositionTitle =
     positions.find(position => String(position.id) === String(formData.position_id))?.title ||
     'Select Position';
 
   useEffect(() => {
-    // Allow students and entrepreneurs (but not if they own the startup)
     if (!isStudent() && !isEntrepreneur()) {
-      toast.error('Only students and entrepreneurs can apply for positions');
+      toast.error('Only students and entrepreneurs can apply for positions', { toastId: 'role-error' });
       navigate('/dashboard');
       return;
     }
     loadStartupDetails();
     loadPositions();
     
-    // Check if specific position was selected via URL param
     const urlParams = new URLSearchParams(window.location.search);
     const positionId = urlParams.get('position');
     if (positionId) {
@@ -52,17 +52,12 @@ const ApplyJob = () => {
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (
-        positionDropdownRef.current &&
-        !positionDropdownRef.current.contains(event.target)
-      ) {
+      if (positionDropdownRef.current && !positionDropdownRef.current.contains(event.target)) {
         setIsPositionMenuOpen(false);
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('touchstart', handleClickOutside);
-
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('touchstart', handleClickOutside);
@@ -75,24 +70,20 @@ const ApplyJob = () => {
       const startupData = response.data;
       setStartup(startupData);
       
-      // Check if entrepreneur is trying to apply to their own startup
       if (isEntrepreneur() && user?.id === startupData?.owner?.id) {
-        toast.error('You cannot apply to positions in your own startup');
+        toast.error('You cannot apply to positions in your own startup', { toastId: 'own-startup-error' });
         navigate(getStartupDetailPath(normalizedStartupId));
         return;
       }
       
-      // Check if user has already applied to any position in this startup
       if (user && (isStudent() || isEntrepreneur())) {
         try {
           const appsResponse = await userAPI.getUserApplications();
           const applications = appsResponse.data.results || appsResponse.data;
           if (Array.isArray(applications)) {
-            const hasAppliedToStartup = applications.some(
-              app => app.startup?.id === startupData.id
-            );
+            const hasAppliedToStartup = applications.some(app => app.startup?.id === startupData.id);
             if (hasAppliedToStartup) {
-              toast.error(`You have already applied to a position at ${startupData.title}. You can only apply to one position per startup.`);
+              toast.error(`You have already applied to a position at ${startupData.title}.`, { toastId: 'already-applied-error' });
               navigate(getStartupDetailPath(normalizedStartupId));
               return;
             }
@@ -115,15 +106,11 @@ const ApplyJob = () => {
       const response = await apiClient.get(`/api/startups/${normalizedStartupId}/positions`);
       const positionData = response.data.positions || response.data;
       setPositions(positionData);
-      
-      // If position_id is set, find and select the position
       const positionId = formData.position_id || new URLSearchParams(window.location.search).get('position');
       if (positionId && positionData.length > 0) {
         const position = positionData.find(p => p.id === positionId);
         setSelectedPosition(position);
-        if (positionId && !formData.position_id) {
-          setFormData(prev => ({ ...prev, position_id: positionId }));
-        }
+        if (!formData.position_id) setFormData(prev => ({ ...prev, position_id: positionId }));
       }
     } catch (error) {
       console.error('Failed to load positions:', error);
@@ -133,137 +120,98 @@ const ApplyJob = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleFileChange = (e) => {
-    setFormData(prev => ({
-      ...prev,
-      resume: e.target.files[0]
-    }));
+    setFormData(prev => ({ ...prev, resume: e.target.files[0] }));
   };
 
   const handlePositionSelect = (positionId) => {
     setFormData(prev => ({ ...prev, position_id: positionId }));
-    const position = positions.find(p => p.id === positionId) || null;
-    setSelectedPosition(position);
+    setSelectedPosition(positions.find(p => p.id === positionId) || null);
     setIsPositionMenuOpen(false);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    const coverLetterWords = formData.cover_letter.trim().split(/\s+/).filter(w => w.length > 0).length;
+    const experienceWords = formData.experience.trim().split(/\s+/).filter(w => w.length > 0).length;
+
+    if (coverLetterWords > 300) {
+      toast.error('Cover letter exceed the word count of 300');
+      return;
+    }
+    if (experienceWords > 200) {
+      toast.error('Experience exceed the word count of 200');
+      return;
+    }
     if (!formData.cover_letter.trim() || !formData.experience.trim()) {
       toast.error('Please fill in all required fields');
       return;
     }
-
     if (!formData.position_id && positions.length > 0) {
       toast.error('Please select a position to apply for');
       return;
     }
-
     if (!formData.resume) {
       toast.error('Please attach your resume (PDF, DOC, or DOCX)');
       return;
     }
 
     setSubmitting(true);
-    
     try {
-      let portfolioUrl = formData.portfolio_url.trim();
-      let resumeUrl = '';
-
-      if (!formData.resume) {
-        toast.error('Resume upload failed. Please attach your resume and try again.');
-        return;
-      }
-
-      try {
-        setUploadingResume(true);
-        const resumeData = new FormData();
-        resumeData.append('file', formData.resume);
-
-        const resumeResponse = await apiClient.post('/api/upload/resume', resumeData, {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
-        });
-
-        resumeUrl = resumeResponse.data?.file_url || resumeResponse.data?.file || '';
-
-        if (!resumeUrl) {
-          toast.error('Failed to obtain resume URL. Please try uploading again.');
-          return;
-        }
-      } catch (uploadError) {
-        console.error('Failed to upload resume:', uploadError);
-        toast.error('Failed to upload resume. Please try again.');
-        return;
-      } finally {
-        setUploadingResume(false);
-      }
+      setUploadingResume(true);
+      const resumeData = new FormData();
+      resumeData.append('file', formData.resume);
+      const resumeResponse = await apiClient.post('/api/upload/resume', resumeData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      const resumeUrl = resumeResponse.data?.file_url || resumeResponse.data?.file || '';
+      if (!resumeUrl) throw new Error('Resume URL failed');
+      setUploadingResume(false);
 
       const payload = {
         cover_letter: formData.cover_letter.trim(),
         experience: formData.experience.trim(),
+        resume_url: resumeUrl,
+        position_id: formData.position_id,
+        portfolio_url: formData.portfolio_url.trim()
       };
 
-      if (formData.position_id) {
-        payload.position_id = formData.position_id;
-      }
-
-      if (portfolioUrl) {
-        payload.portfolio_url = portfolioUrl;
-      }
-
-      payload.resume_url = resumeUrl;
-
       await apiClient.post(`/api/collaborations/${normalizedStartupId}/apply`, payload);
-      
       toast.success('Application submitted successfully! You can track the status from your dashboard.');
-      setFormData({
-        position_id: '',
-        cover_letter: '',
-        experience: '',
-        portfolio_url: '',
-        resume: null
-      });
-      const resumeInput = document.getElementById('resume-input');
-      if (resumeInput) {
-        resumeInput.value = '';
-      }
-      setSelectedPosition(null);
       navigate('/dashboard?tab=applications');
     } catch (error) {
-      console.error('Failed to submit application:', error);
-      const errorMessage = error.response?.data?.error || error.response?.data?.detail || 'Failed to submit application. Please try again.';
-      toast.error(errorMessage);
+      console.error('Submission failed:', error);
+      toast.error(error.response?.data?.error || 'Failed to submit application');
     } finally {
       setSubmitting(false);
+      setUploadingResume(false);
     }
   };
 
   if (loading) {
     return (
       <>
-        <Navbar/>
-        <div className={styles.container}>
-          <div className={styles.loading}>Loading startup details...</div>
+        <Navbar />
+        <div className={styles.loadingContainer}>
+          <div className={styles.premiumSpinner} />
+          <p className={styles.loadingText}>Initializing application process...</p>
         </div>
       </>
     );
   }
-
   if (!startup) {
     return (
       <>
-        <Navbar/>
-        <div className={styles.container}>
-          <div className={styles.error}>Startup not found</div>
+        <Navbar />
+        <div className={styles.loadingContainer}>
+          <p className={styles.loadingText}>Startup information could not be retrieved.</p>
+          <button onClick={() => navigate('/collaboration')} className={styles.submitButton} style={{ marginTop: '1rem' }}>
+            Return to Collaboration
+          </button>
         </div>
       </>
     );
@@ -271,153 +219,92 @@ const ApplyJob = () => {
 
   return (
     <>
-    <Navbar/>
-    <div className={styles.container}>
-      {/* Header */}
-      <h1 className={styles.title}>Apply for Collaboration</h1>
-      <h2 className={styles.startupName}>{startup.title}</h2>
+      <Navbar/>
+      <div className={styles.container}>
+        <h1 className={styles.title}>Apply for Collaboration</h1>
+        <h2 className={styles.startupName}>{startup.title}</h2>
+        <div className={styles.tags}>
+          <span className={`${styles.tag} ${styles.fund}`}>{startup.category}</span>
+          <span className={`${styles.tag} ${styles.equity}`}>{startup.type}</span>
+          <span className={`${styles.tag} ${styles.collab}`}>{startup.field}</span>
+        </div>
 
-      {/* Tags */}
-      <div className={styles.tags}>
-        <span className={`${styles.tag} ${styles.fund}`}>{startup.category}</span>
-        <span className={`${styles.tag} ${styles.equity}`}>{startup.type}</span>
-        <span className={`${styles.tag} ${styles.collab}`}>{startup.field}</span>
-      </div>
+        <h3 className={styles.sectionTitle}>{selectedPosition ? 'Position' : 'Company'} Description</h3>
+        <p className={styles.description}>
+          {selectedPosition ? selectedPosition.description || startup.description : startup.description}
+        </p>
 
-      {/* Description */}
-      <h3 className={styles.sectionTitle}>{selectedPosition ? 'Position' : 'Company'} Description</h3>
-      <p className={styles.description}>
-        {selectedPosition ? selectedPosition.description || startup.description : startup.description}
-      </p>
+        {selectedPosition && selectedPosition.requirements && (
+          <>
+            <h4 className={styles.requirementsTitle}>Requirements</h4>
+            <p className={styles.requirements}>{selectedPosition.requirements}</p>
+          </>
+        )}
 
-      {selectedPosition && selectedPosition.requirements && (
-        <>
-          <h4 className={styles.requirementsTitle}>Requirements</h4>
-          <p className={styles.requirements}>
-            {selectedPosition.requirements}
-          </p>
-        </>
-      )}
+        <form onSubmit={handleSubmit}>
+          {positions.length > 0 && (
+            <div className={`${styles.formGroup} ${styles.positionFormGroup}`}>
+              <label>Select Position *</label>
+              <div className={styles.positionDropdown} ref={positionDropdownRef}>
+                <button
+                  type="button"
+                  className={styles.positionSelect}
+                  onClick={() => setIsPositionMenuOpen(prev => !prev)}
+                >
+                  <span className={styles.positionSelectText}>{selectedPositionTitle}</span>
+                  <span className={`${styles.positionChevron} ${isPositionMenuOpen ? styles.positionChevronOpen : ''}`} />
+                </button>
+                {isPositionMenuOpen && (
+                  <div className={styles.positionMenu}>
+                    <button type="button" className={`${styles.positionOption} ${!formData.position_id ? styles.positionOptionActive : ''}`} onClick={() => handlePositionSelect('')}>Select Position</button>
+                    {positions.map(p => (
+                      <button key={p.id} type="button" className={`${styles.positionOption} ${formData.position_id === p.id ? styles.positionOptionActive : ''}`} onClick={() => handlePositionSelect(p.id)}>{p.title}</button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
-      <form onSubmit={handleSubmit}>
-        {positions.length > 0 && (
-          <div className={`${styles.formGroup} ${styles.positionFormGroup}`}>
-            <label>Select Position *</label>
-            <div className={styles.positionDropdown} ref={positionDropdownRef}>
-              <button
-                type="button"
-                className={styles.positionSelect}
-                onClick={() => setIsPositionMenuOpen(prev => !prev)}
-                aria-haspopup="listbox"
-                aria-expanded={isPositionMenuOpen}
-              >
-                <span className={styles.positionSelectText}>
-                  {selectedPositionTitle}
-                </span>
-                <span
-                  className={`${styles.positionChevron} ${isPositionMenuOpen ? styles.positionChevronOpen : ''}`}
-                  aria-hidden="true"
-                />
-              </button>
+          <div className={styles.formGroup}>
+            <label>Attach Resume *</label>
+            <div className={styles.fileInputWrapper}>
+              <input type="file" accept=".pdf,.doc,.docx" onChange={handleFileChange} className={styles.fileInput} id="resume-input" required />
+              <label htmlFor="resume-input" className={styles.fileInputLabel}>Choose File</label>
+            </div>
+            {formData.resume && <p className={styles.fileName}>Selected: {formData.resume.name}</p>}
+          </div>
 
-              {isPositionMenuOpen && (
-                <div className={styles.positionMenu} role="listbox">
-                  <button
-                    type="button"
-                    className={`${styles.positionOption} ${!formData.position_id ? styles.positionOptionActive : ''}`}
-                    onClick={() => handlePositionSelect('')}
-                  >
-                    Select Position
-                  </button>
-                  {positions.map(position => (
-                    <button
-                      key={position.id}
-                      type="button"
-                      className={`${styles.positionOption} ${formData.position_id === position.id ? styles.positionOptionActive : ''}`}
-                      onClick={() => handlePositionSelect(position.id)}
-                    >
-                      {position.title}
-                    </button>
-                  ))}
-                </div>
-              )}
+          <div className={styles.formGroup}>
+            <label>Cover Letter *</label>
+            <textarea name="cover_letter" value={formData.cover_letter} onChange={handleInputChange} rows="4" required />
+            <div className={`${styles.wordCount} ${formData.cover_letter.trim().split(/\s+/).filter(w => w.length > 0).length > 300 ? styles.wordCountError : ''}`}>
+              {formData.cover_letter.trim().split(/\s+/).filter(w => w.length > 0).length} / 300 words
             </div>
           </div>
-        )}
-        <div className={styles.formGroup}>
-          <label>Attach Resume *</label>
-          <div className={styles.fileInputWrapper}>
-            <input 
-              type="file" 
-              accept=".pdf,.doc,.docx"
-              onChange={handleFileChange}
-              className={styles.fileInput}
-              id="resume-input"
-              required
-            />
-            <label htmlFor="resume-input" className={styles.fileInputLabel}>
-              Choose File
-            </label>
+
+          <div className={styles.formGroup}>
+            <label>Experience & Skills *</label>
+            <textarea name="experience" value={formData.experience} onChange={handleInputChange} rows="4" required />
+            <div className={`${styles.wordCount} ${formData.experience.trim().split(/\s+/).filter(w => w.length > 0).length > 200 ? styles.wordCountError : ''}`}>
+              {formData.experience.trim().split(/\s+/).filter(w => w.length > 0).length} / 200 words
+            </div>
           </div>
-          {formData.resume && (
-            <p className={styles.fileName}>Selected: {formData.resume.name}</p>
-          )}
-        </div>
 
-        <div className={styles.formGroup}>
-          <label>Cover Letter *</label>
-          <textarea 
-            name="cover_letter"
-            value={formData.cover_letter}
-            onChange={handleInputChange}
-            placeholder="Why do you want to join this team? What makes you a good fit?" 
-            rows="4"
-            required
-          ></textarea>
-        </div>
-
-        <div className={styles.formGroup}>
-          <label>Experience & Skills *</label>
-          <textarea 
-            name="experience"
-            value={formData.experience}
-            onChange={handleInputChange}
-            placeholder="Describe your relevant experience, skills, and achievements" 
-            rows="4"
-            required
-          ></textarea>
-        </div>
-
-        <div className={styles.formGroup}>
-          <label>Portfolio URL (Optional)</label>
-          <input 
-            type="url"
-            name="portfolio_url"
-            value={formData.portfolio_url}
-            onChange={handleInputChange}
-            placeholder="https://yourportfolio.com"
-          />
-        </div>
-        
-        <div className={styles.actionButtons}>
-          <button 
-            type="button" 
-            className={styles.cancelBtn}
-            onClick={() => navigate('/collaboration')}
-          >
-            Cancel
-          </button>
-          <button 
-            type="submit" 
-            className={styles.submitBtn}
-            disabled={submitting || uploadingResume}
-          >
-            {uploadingResume ? 'Uploading resume...' : (submitting ? 'Submitting...' : 'Submit Application')}
-          </button>
-        </div>
-      </form>
-
-</div>
+          <div className={styles.formGroup}>
+            <label>Portfolio URL (Optional)</label>
+            <input type="url" name="portfolio_url" value={formData.portfolio_url} onChange={handleInputChange} placeholder="https://yourportfolio.com" />
+          </div>
+          
+          <div className={styles.actionButtons}>
+            <button type="button" onClick={() => navigate('/collaboration')} className={styles.cancelBtn}>Cancel</button>
+            <button type="submit" className={styles.submitBtn} disabled={submitting || uploadingResume}>
+              {uploadingResume ? 'Uploading resume...' : (submitting ? 'Submitting...' : 'Submit Application')}
+            </button>
+          </div>
+        </form>
+      </div>
+      <Footer/>
     </>
   );
 };

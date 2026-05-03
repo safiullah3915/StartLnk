@@ -672,3 +672,13 @@
     padding: 1.25rem;
   }
 }
+
+.usernameLabel {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-weight: 400;
+  margin-left: 0.4rem;
+  text-transform: none;
+  display: inline-block;
+  vertical-align: middle;
+}

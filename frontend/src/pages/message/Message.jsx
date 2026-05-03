@@ -17,6 +17,28 @@ const Message = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('conversations');
   const [error, setError] = useState(null);
+  
+  const getDateLabel = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const messageDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+    if (messageDate.getTime() === today.getTime()) {
+      return 'Today';
+    } else if (messageDate.getTime() === yesterday.getTime()) {
+      return 'Yesterday';
+    } else {
+      return date.toLocaleDateString(undefined, {
+        month: 'long',
+        day: 'numeric',
+        year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+      });
+    }
+  };
   const [unreadConversations, setUnreadConversations] = useState(new Set());
   const chatAreaRef = useRef(null);
   const processedUserIdRef = useRef(null);
@@ -792,7 +814,7 @@ const Message = () => {
                       const title = MessageService.getConversationTitle(conversation, user?.id);
                       const isUnread = unreadConversations.has(conversation.id);
                       const isActive = currentConversation?.id === conversation.id;
-                      const presence = otherUser?.id ? presenceByUser[String(otherUser.id)] : null;
+                      const presence = (!conversation.team_id && otherUser?.id) ? presenceByUser[String(otherUser.id)] : null;
                       const presenceLabel = presence ? MessageService.formatPresenceLabel(presence) : '';
                       return (
                         <div 
@@ -860,22 +882,83 @@ const Message = () => {
                 </div>
               ) : messages.length > 0 ? (
                 messages.map((msg, index) => {
+                  const msgDateLabel = getDateLabel(msg.created_at);
+                  const prevMsgDateLabel = index > 0 ? getDateLabel(messages[index - 1].created_at) : null;
+                  const showDateSeparator = msgDateLabel !== prevMsgDateLabel;
+
+                  const dateSeparator = showDateSeparator && (
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'center',
+                      marginTop: '0.5rem',
+                      marginBottom: '0.5rem',
+                      width: '100%'
+                    }}>
+                      <span style={{
+                        fontSize: '0.65rem',
+                        fontWeight: 800,
+                        letterSpacing: '0.15em',
+                        color: '#6b7280',
+                        textTransform: 'uppercase',
+                        textAlign: 'center',
+                        backgroundColor: '#f3f4f6',
+                        padding: '6px 16px',
+                        borderRadius: '20px',
+                        border: '1px solid #e5e7eb'
+                      }}>
+                        {msgDateLabel}
+                      </span>
+                    </div>
+                  );
+
+                  if (msg.is_system) {
+                    return (
+                      <React.Fragment key={msg.id || index}>
+                        {dateSeparator}
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'center',
+                          marginTop: '0.5rem',
+                          marginBottom: '0.5rem',
+                          width: '100%'
+                        }}>
+                          <span style={{
+                            fontSize: '0.65rem',
+                            fontWeight: 800,
+                            letterSpacing: '0.15em',
+                            color: '#6b7280',
+                            textTransform: 'uppercase',
+                            textAlign: 'center',
+                            backgroundColor: '#f3f4f6',
+                            padding: '6px 16px',
+                            borderRadius: '20px',
+                            border: '1px solid #e5e7eb'
+                          }}>
+                            {msg.content}
+                          </span>
+                        </div>
+                      </React.Fragment>
+                    );
+                  }
+
                   const isCurrentUser = msg.sender.id === user?.id;
                   return (
-                    <div
-                      key={msg.id || index}
-                      className={`chat-message ${isCurrentUser ? 'user' : 'other'}`}
-                    >
-                      {!isCurrentUser && (
-                        <div style={{ fontSize: '0.8em', color: '#666', marginBottom: '4px' }}>
-                          {msg.sender.username}
+                    <React.Fragment key={msg.id || index}>
+                      {dateSeparator}
+                      <div
+                        className={`chat-message ${isCurrentUser ? 'user' : 'other'}`}
+                      >
+                        {!isCurrentUser && (
+                          <div style={{ fontSize: '0.8em', color: '#666', marginBottom: '4px' }}>
+                            {msg.sender.username}
+                          </div>
+                        )}
+                        <div>{msg.content}</div>
+                        <div style={{ fontSize: '0.7em', color: isCurrentUser ? 'rgba(255,255,255,0.7)' : '#999', marginTop: '4px' }}>
+                          {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </div>
-                      )}
-                      <div>{msg.content}</div>
-                      <div style={{ fontSize: '0.7em', color: '#999', marginTop: '4px' }}>
-                        {new Date(msg.created_at).toLocaleTimeString()}
                       </div>
-                    </div>
+                    </React.Fragment>
                   );
                 })
               ) : (

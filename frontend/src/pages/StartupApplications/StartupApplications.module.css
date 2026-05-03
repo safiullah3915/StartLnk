@@ -1,473 +1,642 @@
 .container {
-  padding: 20px;
-  max-width: 1400px;
+  max-width: 1250px;
   margin: 0 auto;
-  margin-top: 8rem;
-  min-height: calc(100vh - 200px);
+  padding: 100px 20px 60px;
+  min-height: 80vh;
 }
 
-.loading {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 300px;
-  font-size: 1.2rem;
-  color: #555;
+.loading, .error, .emptyState {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: #6b7280;
 }
 
 .header {
-  margin-bottom: 2rem;
-  padding: 2rem;
-  background: white;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-}
-
-.headerContent h1 {
-  font-size: 2rem;
-  color: #343434;
-  font-weight: bold;
-  margin-bottom: 0.5rem;
-}
-
-.backLink {
-  display: inline-block;
-  margin-bottom: 1rem;
-  color: #25224A;
-  text-decoration: none;
-  font-weight: 500;
-  transition: color 0.3s ease;
-}
-
-.backLink:hover {
-  color: #312c69;
-  text-decoration: underline;
-}
-
-.startupInfo {
-  margin-top: 1rem;
-}
-
-.startupInfo h2 {
-  font-size: 1.4rem;
-  color: #444444;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-}
-
-.startupDescription {
-  color: #555555;
-  font-size: 0.95rem;
-  line-height: 1.4;
-  margin: 0;
-}
-
-.applicationsSection {
   margin-bottom: 3rem;
 }
 
-.sectionHeader {
-  margin-bottom: 2rem;
+.backLink {
+  color: #6366f1;
+  text-decoration: none;
+  font-weight: 500;
+  display: inline-block;
+  margin-bottom: 1rem;
+  transition: transform 0.2s;
 }
 
-.sectionHeader h3 {
-  font-size: 1.5rem;
-  color: #343434;
-  font-weight: bold;
-  margin-bottom: 0.5rem;
+.backLink:hover {
+  transform: translateX(-5px);
 }
 
-.sectionHeader p {
-  color: #555;
-  font-size: 1rem;
-}
-
-.emptyState {
-  background: white;
-  border-radius: 10px;
-  padding: 3rem;
-  text-align: center;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-}
-
-.emptyState h4 {
-  font-size: 1.3rem;
-  color: #343434;
-  margin-bottom: 0.5rem;
-  font-weight: bold;
-}
-
-.emptyState p {
-  color: #555;
-  margin-bottom: 2rem;
-  font-size: 1rem;
+.header h1 {
+  font-size: 2.25rem;
+  font-weight: 800;
+  color: #111827;
 }
 
 .positionsContainer {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 4rem;
 }
 
 .positionGroup {
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  padding: 1.5rem;
-  box-shadow: 0 2px 8px rgba(106, 106, 106, 0.04);
+  background: #fcfcfd;
+  border-radius: 32px;
+  padding: 2.5rem;
+  border: 1px solid #f3f4f6;
 }
 
 .positionHeader {
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 2px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.positionTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
 .positionTitle {
-  font-size: 1.3rem;
-  font-weight: 600;
-  color: #343434;
-  margin: 0 0 0.5rem 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.filledBadge {
+  background: #fef2f2;
+  color: #ef4444;
+  padding: 0.35rem 0.85rem;
+  border-radius: 2rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border: 1px solid #fee2e2;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
 }
 
 .viewPositionLink {
-  display: inline-block;
-  color: #25224A;
+  color: #6366f1;
   text-decoration: none;
-  font-weight: 500;
+  font-weight: 600;
   font-size: 0.9rem;
-  transition: color 0.3s ease;
+  display: inline-block;
+  margin-top: 0.5rem;
 }
 
 .viewPositionLink:hover {
-  color: #312c69;
   text-decoration: underline;
 }
 
 .applicationsList {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 2rem;
 }
 
+.moreIndicator {
+  text-align: center;
+  padding: 1.5rem 0 0.5rem;
+}
+
+.moreLink {
+  color: #6366f1;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 0.75rem 1.5rem;
+  border: 1.5px dashed #e0e7ff;
+  border-radius: 12px;
+  background: #f5f7ff;
+  display: inline-block;
+  transition: all 0.2s;
+}
+
+.moreLink:hover {
+  background: #eef2ff;
+  border-color: #6366f1;
+  transform: translateY(-2px);
+}
+
+/* Application Card */
 .applicationCard {
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 1.25rem;
-  transition: box-shadow 0.3s ease;
-}
-
-.applicationCard:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: white;
+  border-radius: 24px;
+  padding: 2rem;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.03);
+  border: 1px solid #f1f5f9;
 }
 
 .applicationHeader {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 1rem;
-  flex-wrap: wrap;
+  margin-bottom: 2rem;
+}
+
+.applicantInfo {
+  display: flex;
+  align-items: center;
   gap: 1rem;
 }
 
-.applicantInfo h5 {
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #444444;
-  margin: 0 0 0.25rem 0;
-}
-
-.applicantEmail {
-  color: #666;
-  font-size: 0.85rem;
-  margin: 0 0 0.25rem 0;
-}
-
-.applicationDate {
-  color: #888;
-  font-size: 0.8rem;
-  margin: 0;
-}
-
-.statusBadge {
-  padding: 0.4rem 0.8rem;
-  border-radius: 5px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.statusPending {
-  background-color: #fef3c7;
-  color: #92400e;
-}
-
-.statusApproved {
-  background-color: #d1fae5;
-  color: #065f46;
-}
-
-.statusRejected {
-  background-color: #fee2e2;
-  color: #991b1b;
-}
-
-.applicationContent {
-  margin-bottom: 1rem;
-}
-
-.contentSection {
-  margin-bottom: 0.75rem;
-}
-
-.contentSection:last-child {
-  margin-bottom: 0;
-}
-
-.contentSection h6 {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #343434;
-  margin: 0 0 0.25rem 0;
-}
-
-.contentSection p {
-  color: #555555;
-  font-size: 0.9rem;
-  line-height: 1.5;
-  margin: 0;
-}
-
-.portfolioLink,
-.resumeLink {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  background-color: #25224a;
-  color: #ffffff;
-  padding: 0.6rem 1.2rem;
-  border-radius: 8px;
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 0.9rem;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
-  word-break: break-word;
-}
-
-.portfolioLink:hover,
-.resumeLink:hover {
-  background-color: #1b1837;
-  box-shadow: 0 6px 12px rgba(37, 34, 74, 0.2);
-  transform: translateY(-1px);
-  color: #ffffff;
-}
-
-.applicationActions {
-  display: flex;
-  gap: 0.75rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid #e5e7eb;
-}
-
-.approveButton {
-  flex: 1;
-  padding: 8px 16px;
-  background-color: #10b981;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 0.85rem;
-  transition: background 0.3s ease;
-}
-
-.approveButton:hover {
-  background-color: #059669;
-}
-
-.declineButton {
-  flex: 1;
-  padding: 8px 16px;
-  background-color: #ef4444;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 0.85rem;
-  transition: background 0.3s ease;
-}
-
-.declineButton:hover {
-  background-color: #dc2626;
-}
-
-.confirmOverlay {
-  position: fixed;
-  inset: 0;
+.profileAvatarRing {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  padding: 2px;
+  background: linear-gradient(135deg, #EC4899, #8B5CF6, #3B82F6);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1.5rem;
-  background: rgba(15, 23, 42, 0.45);
+}
+
+.profileAvatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: #25224A;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.25rem;
+  font-weight: 700;
+  overflow: hidden;
+}
+
+.profileAvatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.nameSection h4 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.usernameHandle {
+  color: #9ca3af;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.metaSection {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+.appliedOnCapsule {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: #fffbeb;
+  color: #92400e;
+  padding: 0.4rem 0.8rem;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border: 1px solid #fef3c7;
+}
+
+.statusLabel {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #9ca3af;
+}
+
+.statusText {
+  color: #f97316;
+}
+
+/* Body Grid */
+.applicationBodyGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+.participationBox, .resumeBox {
+  background: #f8fafc;
+  border-radius: 16px;
+  padding: 1.25rem;
+  border: 1px solid #f1f5f9;
+}
+
+.participationBox h6, .resumeBox h6 {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #9ca3af;
+  letter-spacing: 0.05em;
+  margin-bottom: 1rem;
+}
+
+.participationContent {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.miniInitial {
+  width: 40px;
+  height: 40px;
+  background: #1e293b;
+  color: white;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.participationContent p {
+  color: #64748b;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.participationContent strong {
+  color: #6366f1;
+  display: block;
+}
+
+.resumeContent {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.resumeIconWrapper {
+  width: 40px;
+  height: 40px;
+  background: #eff6ff;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.resumeDetails {
+  flex-grow: 1;
+}
+
+.resumeName {
+  font-weight: 700;
+  color: #1e293b;
+  font-size: 0.85rem;
+}
+
+.downloadButton {
+  background: white;
+  border: 1px solid #e2e8f0;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #475569;
+  text-decoration: none;
+}
+
+/* Expandable Text */
+.textSections {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+}
+
+.sectionHeading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.iconCircle {
+  width: 28px;
+  height: 28px;
+  background: #f5f3ff;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sectionHeading h6 {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #9ca3af;
+  margin: 0;
+}
+
+.expandableTextContent {
+  color: #4b5563;
+  line-height: 1.6;
+  font-size: 0.95rem;
+  margin-bottom: 0.5rem;
+}
+
+.expandToggle {
+  background: none;
+  border: none;
+  color: #6366f1;
+  font-weight: 700;
+  font-size: 0.7rem;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* Actions */
+.applicationActions {
+  display: flex;
+  gap: 1rem;
+}
+
+.approveButton, .declineButton {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  border: none;
+  color: white;
+  transition: all 0.2s ease;
+}
+
+.approveButton { background: #10b981; }
+.declineButton { background: #ef4444; }
+
+.approveButton:hover:not(:disabled), .declineButton:hover {
+  transform: translateY(-1px);
+}
+
+.approveButton:disabled {
+  background: #cbd5e1;
+  cursor: not-allowed;
+}
+
+/* Pagination */
+.paginationContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+.pageButton {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: white;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.pageButton:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.pageInfo { font-size: 0.85rem; color: #64748b; }
+
+/* Confirmation Modal Styles */
+.confirmOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 5000;
   backdrop-filter: blur(4px);
-  z-index: 2200;
 }
 
 .confirmCard {
-  width: 100%;
-  max-width: 520px;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 24px;
-  box-shadow: 0 25px 60px rgba(15, 23, 42, 0.18);
-  padding: 2rem;
+  background: white;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 400px;
+  padding: 1.5rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
 }
 
 .confirmHeader {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+  align-items: center;
+  margin-bottom: 1.25rem;
 }
 
 .confirmTitle {
-  margin: 0;
-  color: #111827;
-  font-size: 1.45rem;
+  font-size: 1.2rem;
   font-weight: 700;
+  color: #111827;
+  margin: 0;
 }
 
 .confirmClose {
+  background: none;
   border: none;
-  background: transparent;
-  color: #6b7280;
-  font-size: 2rem;
-  line-height: 1;
+  font-size: 1.5rem;
+  color: #000;
   cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s;
+}
+
+.confirmClose:hover {
+  opacity: 0.6;
 }
 
 .confirmWarning {
+  background: #fff1f2;
+  border-radius: 12px;
+  padding: 1rem;
   display: flex;
+  align-items: center;
   gap: 1rem;
-  align-items: flex-start;
-  padding: 1.2rem 1.25rem;
-  border: 1px solid #fecaca;
-  border-radius: 18px;
-  background: #fff7f7;
+  margin-bottom: 1.5rem;
+  border: 1px solid #fee2e2;
 }
 
 .confirmWarningApprove {
-  border-color: #bbf7d0;
   background: #f0fdf4;
+  border-color: #dcfce7;
 }
 
 .confirmWarningIcon {
-  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  background: #ef4444;
+  color: white;
+  border-radius: 50%;
+  display: flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
+  font-weight: 700;
+  font-size: 0.9rem;
   flex-shrink: 0;
-  border-radius: 999px;
-  background: #fee2e2;
-  color: #dc2626;
-  font-weight: 800;
 }
 
 .confirmWarningApprove .confirmWarningIcon {
-  background: #dcfce7;
-  color: #16a34a;
-}
-
-.confirmWarningApprove p {
-  color: #166534;
+  background: #10b981;
 }
 
 .confirmWarning p {
+  font-size: 0.9rem;
+  color: #4b5563;
   margin: 0;
-  color: #374151;
-  font-size: 1rem;
-  line-height: 1.6;
+  line-height: 1.5;
 }
 
 .confirmActions {
   display: flex;
-  justify-content: flex-end;
-  gap: 0.85rem;
-  margin-top: 1.75rem;
+  gap: 0.75rem;
 }
 
-.confirmCancel,
-.confirmDelete {
-  border-radius: 12px;
-  padding: 0.8rem 1.2rem;
-  font-size: 0.95rem;
-  font-weight: 700;
+.confirmCancel, .confirmDelete {
+  flex: 1;
+  padding: 0.7rem;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.85rem;
   cursor: pointer;
-  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  border: none;
 }
 
 .confirmCancel {
-  background: #ffffff;
-  border-color: #d1d5db;
-  color: #374151;
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.confirmCancel:hover {
+  background: #e5e7eb;
 }
 
 .confirmDelete {
+  background: #ef4444;
+  color: white;
+}
+
+.confirmDelete:hover {
   background: #dc2626;
-  color: #ffffff;
 }
 
 .confirmApprove {
-  background: #16a34a;
+  background: #10b981;
 }
 
-/* Mobile Styles */
+.confirmApprove:hover {
+  background: #059669;
+}
+
 @media (max-width: 768px) {
   .container {
-    padding: 1rem;
-    margin-top: 5rem;
+    padding: 80px 12px 40px;
   }
 
-  .header {
-    padding: 1.5rem;
+  .positionGroup {
+    padding: 1.5rem 1rem;
+    border-radius: 20px;
   }
 
-  .headerContent h1 {
-    font-size: 1.5rem;
+  .positionHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding-bottom: 1rem;
   }
 
+  .positionTitleRow {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .positionTitle {
+    font-size: 1.25rem;
+  }
+
+  .viewPositionLink {
+    margin-top: 0;
+  }
+
+  .applicationBodyGrid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
   .applicationHeader {
     flex-direction: column;
+    align-items: flex-start;
+    gap: 1.25rem;
+  }
+  
+  .metaSection {
+    align-items: flex-start;
+    width: 100%;
+    gap: 0.5rem;
   }
 
+  .appliedOnCapsule {
+    padding: 0.4rem 0.75rem;
+    width: fit-content;
+  }
+
+  .statusLabel {
+    padding-left: 0;
+    margin-left: 0;
+  }
+  
   .applicationActions {
     flex-direction: column;
   }
 
-  .approveButton,
-  .declineButton {
-    width: 100%;
+  .applicationCard {
+    padding: 1.25rem 1rem;
+    margin: 0;
   }
 
-  .confirmCard {
-    padding: 1.5rem;
-    border-radius: 20px;
-  }
-
-  .confirmActions {
+  .resumeContent {
     flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .downloadButton {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .expandableSection {
+    padding-right: 0.5rem;
   }
 }
-
-
-
-
-
-
-
-

@@ -88,8 +88,8 @@ const CollaborationCard = ({
           <p className={styles.description}>{startupData.description || 'No description available'}</p>
           <div className={styles.stats}>
             <div className={styles.statsheading}>
-              <span className={styles.statsLabel}>Earn Through</span>
-              <p>{startupData.earn_through || 'Equity'}</p>
+              <span className={styles.statsLabel}>Industry</span>
+              <p>{startupData.field || 'N/A'}</p>
             </div>
             <div className={styles.statsheading}>
               <span className={styles.statsLabel}>Phase</span>

@@ -26,6 +26,7 @@ const PUBLIC_ENDPOINTS = [
   '/auth/cookie-test',
   '/api/marketplace',
   '/api/collaborations',
+  '/api/positions',
   '/api/stats',
   '/api/search',
   '/'

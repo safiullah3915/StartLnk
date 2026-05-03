@@ -19,9 +19,49 @@
   word-break: break-word; /* Fallback for older browsers */
 }
 
-/* Ensure all elements in this module respect border-box */
 .container * {
   box-sizing: border-box;
+}
+
+/* -- Loading State -- */
+.loadingContainer {
+  max-width: 780px;
+  margin: 7rem auto 0;
+  padding: 4rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 1.5rem;
+}
+
+.loadingText {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #4b5563;
+  letter-spacing: -0.01em;
+  animation: loadingFade 2s infinite ease-in-out;
+}
+
+.premiumSpinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid #f3f4f6;
+  border-top: 4px solid #4f46e5;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.1);
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes loadingFade {
+  0%, 100% { opacity: 0.6; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-2px); }
 }
 
 /* -- Page header -- */
@@ -495,4 +535,17 @@ textarea::placeholder {
     min-width: 0 !important;
     font-size: 16px !important; 
   }
+}
+
+.wordCount {
+  font-size: 0.75rem;
+  color: #6b7280;
+  text-align: right;
+  margin-top: 0.25rem;
+  font-weight: 500;
+}
+
+.wordCountError {
+  color: #ef4444;
+  font-weight: 700;
 }

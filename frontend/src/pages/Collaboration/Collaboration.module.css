@@ -123,11 +123,9 @@
   width: 100%;
   max-width: 100%;
   margin: 0 auto;
-  padding: 0 0.65rem;
-  min-height: 3.45rem;
-  /*border: 1px solid #d7e1ef;*/
-  border-radius: 14px;
-  background: #ffffff;
+  padding: 0;
+  background: transparent;
+  border: none !important;
 }
 
 .searchFieldIcon {
@@ -144,21 +142,30 @@
 .mainSearch input.searchInput[type='text'] {
   flex: 1;
   width: 100%;
-  height: 100%;
-  padding: 0.5rem 0.75rem !important;
+  height: 48px;
+  padding: 0.75rem 1.25rem !important;
   margin: 0;
-  border: none;
-  background: transparent;
+  border: 1px solid #d7e1ef !important;
+  border-radius: 12px;
+  background: #ffffff;
   outline: none;
   color: #25224A;
   font-size: 0.95rem;
-  font-weight: 600;
+  font-weight: 500;
   font-family: 'Inter', sans-serif;
   box-sizing: border-box;
   appearance: none;
   -webkit-appearance: none;
   pointer-events: auto;
   cursor: text;
+  transition: all 0.2s ease;
+}
+
+.mainSearch .searchInput:focus,
+.mainSearch input.searchInput[type='text']:focus,
+.mainSearch .searchInput:not(:placeholder-shown) {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.05);
 }
 
 .mainSearch .searchInput::placeholder,
@@ -169,8 +176,6 @@
 .mainSearch .searchInput:focus,
 .mainSearch input.searchInput[type='text']:focus {
   outline: none;
-  border: 1 !important;
-  box-shadow: none !important;
 }
 
 .filtersPanel {
