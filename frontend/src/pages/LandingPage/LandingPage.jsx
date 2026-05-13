@@ -21,10 +21,10 @@ function LandingPage() {
           {/* Content */}
           <div className={styles.hero_section_content}>
             <p className={styles.p1}>
-            Empowering Startups Through Connection
+              Empowering Startups Through Connection
             </p>
             <p className={styles.p2}>
-            Join a vibrant network of entrepreneurs and students. Build teams, pitch ideas, and collaborate to turn innovation into real ventures.
+              Join a vibrant network of entrepreneurs, students, and investors. Build teams, pitch ideas, and collaborate to turn innovation into real ventures.
             </p>
 
             <div className={styles.button_container}>
@@ -47,12 +47,12 @@ function LandingPage() {
       <AnimatedStats />
       <RightTextLeftImage />
 
-    <div className={styles.bottombanner}>
-    <h1>Join 500k+ founders and buyers already doing business on StartLink</h1>
-    <Link to="/signup" className={styles.joinNowLink}>
-    <Submit btn1text={"Join Now"} extraClass={styles.joinNowBtn}/>  
-    </Link>
-    </div>
+      <div className={styles.bottombanner}>
+        <h1>Join 500k+ founders and buyers already doing business on StartLnk</h1>
+        <Link to="/signup" className={styles.joinNowLink}>
+          <Submit btn1text={"Join Now"} extraClass={styles.joinNowBtn} />
+        </Link>
+      </div>
 
       <Footer />
     </>

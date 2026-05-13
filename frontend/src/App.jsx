@@ -3,7 +3,7 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import './App.css';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Login } from './components/login/Login';
-import { Signup } from './components/Signup/Signup';
+import Signup from './components/Signup/Signup';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import EmailVerification from './components/EmailVerification/EmailVerification';
@@ -32,6 +32,11 @@ import RoleBasedRoute from './components/RoleBasedRoute/RoleBasedRoute';
 import CompleteProfile from './pages/CompleteProfile/CompleteProfile';
 import People from './pages/People/People';
 import Favorites from './pages/Favorites/Favorites';
+import About from './pages/About/About';
+import Contact from './pages/Contact/Contact';
+import FAQ from './pages/FAQ/FAQ';
+import PrivacyPolicy from './pages/PrivacyPolicy/PrivacyPolicy';
+import TermsOfService from './pages/TermsOfService/TermsOfService';
 
 // Component to scroll to top on route change
 function ScrollToTop() {
@@ -41,7 +46,7 @@ function ScrollToTop() {
     window.scrollTo({
       top: 0,
       left: 0,
-      behavior: 'instant' // Use 'instant' for immediate scroll, or 'smooth' for animated scroll
+      behavior: 'instant'
     });
   }, [pathname]);
 
@@ -52,11 +57,10 @@ function ScrollToTop() {
 function usePullToRefresh(onRefresh) {
   const startY = useRef(0);
   const isPulling = useRef(false);
-  const THRESHOLD = 80; // px pull distance required to trigger
+  const THRESHOLD = 80;
 
   useEffect(() => {
     const onTouchStart = (e) => {
-      // Only trigger when at the very top of the page
       if (window.scrollY === 0) {
         startY.current = e.touches[0].clientY;
         isPulling.current = true;
@@ -66,7 +70,6 @@ function usePullToRefresh(onRefresh) {
     const onTouchMove = (e) => {
       if (!isPulling.current) return;
       const deltaY = e.touches[0].clientY - startY.current;
-      // If pulling DOWN and past threshold, mark as triggered
       if (deltaY > THRESHOLD) {
         isPulling.current = 'triggered';
       }
@@ -99,7 +102,6 @@ function AppRoutes() {
   const [transitionStage, setTransitionStage] = React.useState('fade-in');
   const [isRefreshing, setIsRefreshing] = React.useState(false);
 
-  // Debug: Log current auth status
   React.useEffect(() => {
     const status = getAuthStatus();
     console.log('🔐 Current Auth Status:', status);
@@ -115,14 +117,10 @@ function AppRoutes() {
     if (isRefreshing) return;
     setIsRefreshing(true);
 
-    // Inject @keyframes spin as a <style> tag so animation works
-    // on dynamically created elements regardless of CSS load order
     const styleTag = document.createElement('style');
     styleTag.textContent = '@keyframes ptr-spin { to { transform: rotate(360deg); } }';
     document.head.appendChild(styleTag);
 
-    // Inline SVG: white refresh arrow on app-theme circle (#25224A).
-    // Using data URI means ZERO network request — guaranteed to render before unload.
     const svgContent = `
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
            stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
@@ -134,7 +132,6 @@ function AppRoutes() {
       </svg>`;
     const svgUri = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgContent);
 
-    // Build overlay
     const overlay = document.createElement('div');
     overlay.style.cssText = [
       'position:fixed', 'inset:0', 'display:flex', 'flex-direction:column',
@@ -161,7 +158,6 @@ function AppRoutes() {
     overlay.appendChild(circle);
     document.body.appendChild(overlay);
 
-    // Two rAFs guarantee the browser has painted the overlay before reload fires
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         window.location.reload();
@@ -183,160 +179,149 @@ function AppRoutes() {
     <>
       <ScrollToTop />
       <ToastContainer position="top-right" autoClose={3000} />
-      {isRefreshing && (
-        <div className="refresh-overlay">
-          <div className="refresh-icon-container">
-            <img src={refreshIcon} alt="Refreshing..." className="refresh-icon" />
-          </div>
-        </div>
-      )}
       <div className={`page-transition ${transitionStage}`}>
         <Routes>
-      {/* Public routes */}
-      <Route path="/" element={<LandingPage />} />
-      <Route 
-        path="/login" 
-        element={
-          isAuthenticated 
-            ? (user?.onboarding_completed ? <Navigate to="/dashboard" /> : <Navigate to="/onboarding-preferences" />)
-            : <Login />
-        } 
-      />
-      <Route 
-        path="/signup" 
-        element={<Signup />} 
-      />
-      <Route 
-        path="/complete-profile" 
-        element={<CompleteProfile />} 
-      />
-      <Route 
-        path="/verify-email" 
-        element={isAuthenticated ? <Navigate to="/dashboard" /> : <EmailVerification />} 
-      />
+          {/* Public routes */}
+          <Route path="/" element={<LandingPage />} />
+          <Route
+            path="/login"
+            element={
+              isAuthenticated
+                ? (user?.onboarding_completed ? <Navigate to="/dashboard" /> : <Navigate to="/onboarding-preferences" />)
+                : <Login />
+            }
+          />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/complete-profile" element={<CompleteProfile />} />
+          <Route path="/about"   element={<About />}   />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/faq"     element={<FAQ />}     />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/terms"   element={<TermsOfService />} />
+          <Route
+            path="/verify-email"
+            element={isAuthenticated ? <Navigate to="/dashboard" /> : <EmailVerification />}
+          />
 
-      {/* Protected routes */}
-      <Route path="/dashboard" element={
-        <ProtectedRoute>
-          <Dashboard />
-        </ProtectedRoute>
-      } />
+          {/* Protected routes */}
+          <Route path="/dashboard" element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          } />
 
-      <Route path="/people" element={
-        <ProtectedRoute>
-          <People />
-        </ProtectedRoute>
-      } />
+          <Route path="/people" element={
+            <ProtectedRoute>
+              <People />
+            </ProtectedRoute>
+          } />
 
-      {/* Role-based routes */}
-      <Route path="/marketplace" element={
-        <ProtectedRoute>
-          <Marketplace />
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/collaboration" element={
-        <ProtectedRoute>
-          <Collaboration />
-        </ProtectedRoute>
-      } />
+          <Route path="/marketplace" element={
+            <ProtectedRoute>
+              <Marketplace />
+            </ProtectedRoute>
+          } />
 
-      <Route path="/startupdetail/:id" element={
-        <ProtectedRoute>
-          <StartupDetails />
-        </ProtectedRoute>
-      } />
+          <Route path="/collaboration" element={
+            <ProtectedRoute>
+              <Collaboration />
+            </ProtectedRoute>
+          } />
 
-      {/* Entrepreneur-only routes */}
-      <Route path="/createstartup" element={
-        <RoleBasedRoute allowedRoles={['entrepreneur']}>
-          <CreateStartupProject />
-        </RoleBasedRoute>
-      } />
-      
-      <Route path="/pitch-idea" element={
-        <RoleBasedRoute allowedRoles={['entrepreneur']}>
-          <PitchIdea />
-        </RoleBasedRoute>
-      } />
-      
+          <Route path="/startupdetail/:id" element={
+            <ProtectedRoute>
+              <StartupDetails />
+            </ProtectedRoute>
+          } />
 
+          {/* Entrepreneur-only routes */}
+          <Route path="/createstartup" element={
+            <RoleBasedRoute allowedRoles={['entrepreneur']}>
+              <CreateStartupProject />
+            </RoleBasedRoute>
+          } />
 
-      {/* Search routes - accessible to all authenticated users */}
-      <Route path="/search" element={
-        <ProtectedRoute>
-          <SearchStartups />
-        </ProtectedRoute>
-      } />
+          <Route path="/pitch-idea" element={
+            <RoleBasedRoute allowedRoles={['entrepreneur']}>
+              <PitchIdea />
+            </RoleBasedRoute>
+          } />
 
-      <Route path="/favorites" element={
-        <ProtectedRoute>
-          <Favorites />
-        </ProtectedRoute>
-      } />
+          {/* Search routes */}
+          <Route path="/search" element={
+            <ProtectedRoute>
+              <SearchStartups />
+            </ProtectedRoute>
+          } />
 
-      {/* Onboarding Preferences - accessible to all authenticated users */}
-      <Route path="/onboarding-preferences" element={
-        <ProtectedRoute>
-          <OnboardingPreferences />
-        </ProtectedRoute>
-      } />
-      
-      {/* Entrepreneur-only routes */}
-      <Route path="/startups/:startupId/positions" element={
-        <RoleBasedRoute allowedRoles={['entrepreneur']}>
-          <PositionManagement />
-        </RoleBasedRoute>
-      } />
-      
-      <Route path="/positions/:positionId/applications" element={
-        <RoleBasedRoute allowedRoles={['entrepreneur']}>
-          <PositionApplications />
-        </RoleBasedRoute>
-      } />
-      
-      <Route path="/startups-with-applications" element={
-        <RoleBasedRoute allowedRoles={['entrepreneur']}>
-          <StartupsWithApplications />
-        </RoleBasedRoute>
-      } />
-      
-      <Route path="/startups/:startupId/applications" element={
-        <RoleBasedRoute allowedRoles={['entrepreneur']}>
-          <StartupApplications />
-        </RoleBasedRoute>
-      } />
-      
-      {/* Investor-only routes */}
-      <Route path="/investor-dashboard" element={
-        <RoleBasedRoute allowedRoles={['investor']}>
-          <InvestorDashboard />
-        </RoleBasedRoute>
-      } />
+          <Route path="/favorites" element={
+            <ProtectedRoute>
+              <Favorites />
+            </ProtectedRoute>
+          } />
 
-      {/* Student/Professional and Entrepreneur routes */}
-      <Route path="/apply-for-collaboration/:startupId" element={
-        <RoleBasedRoute allowedRoles={['student', 'entrepreneur']}>
-          <ApplyJob />
-        </RoleBasedRoute>
-      } />
+          {/* Onboarding */}
+          <Route path="/onboarding-preferences" element={
+            <ProtectedRoute>
+              <OnboardingPreferences />
+            </ProtectedRoute>
+          } />
 
-      {/* General protected routes */}
-      <Route path="/account" element={
-        <ProtectedRoute>
-          <AccountSettingsII />
-        </ProtectedRoute>
-      } />
+          {/* Entrepreneur-only position routes */}
+          <Route path="/startups/:startupId/positions" element={
+            <RoleBasedRoute allowedRoles={['entrepreneur']}>
+              <PositionManagement />
+            </RoleBasedRoute>
+          } />
 
-      <Route path="/message" element={
-        <ProtectedRoute>
-          <MessageDark />
-        </ProtectedRoute>
-      } />
+          <Route path="/positions/:positionId/applications" element={
+            <RoleBasedRoute allowedRoles={['entrepreneur']}>
+              <PositionApplications />
+            </RoleBasedRoute>
+          } />
 
-      {/* Catch all route */}
-      <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
+          <Route path="/startups-with-applications" element={
+            <RoleBasedRoute allowedRoles={['entrepreneur']}>
+              <StartupsWithApplications />
+            </RoleBasedRoute>
+          } />
+
+          <Route path="/startups/:startupId/applications" element={
+            <RoleBasedRoute allowedRoles={['entrepreneur']}>
+              <StartupApplications />
+            </RoleBasedRoute>
+          } />
+
+          {/* Investor-only routes */}
+          <Route path="/investor-dashboard" element={
+            <RoleBasedRoute allowedRoles={['investor']}>
+              <InvestorDashboard />
+            </RoleBasedRoute>
+          } />
+
+          {/* Student/Entrepreneur routes */}
+          <Route path="/apply-for-collaboration/:startupId" element={
+            <RoleBasedRoute allowedRoles={['student', 'entrepreneur']}>
+              <ApplyJob />
+            </RoleBasedRoute>
+          } />
+
+          {/* General protected routes */}
+          <Route path="/account" element={
+            <ProtectedRoute>
+              <AccountSettingsII />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/message" element={
+            <ProtectedRoute>
+              <MessageDark />
+            </ProtectedRoute>
+          } />
+
+          {/* Catch all */}
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
       </div>
     </>
   );
