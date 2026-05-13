@@ -13,20 +13,32 @@ User = get_user_model()
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
 	"""Serializer for user registration"""
-	password = serializers.CharField(write_only=True, min_length=8)
+	password = serializers.CharField(write_only=True, min_length=8, required=False, allow_blank=True)
 	role = serializers.ChoiceField(choices=User.ROLE_CHOICES, default='entrepreneur')
 	phone_number = serializers.CharField(required=False, allow_blank=True)
 	full_name = serializers.CharField(required=False, allow_blank=True)
+	is_google_user = serializers.BooleanField(default=False, write_only=True)
 	
 	class Meta:
 		model = User
-		fields = ('username', 'email', 'password', 'role', 'phone_number', 'full_name')
+		fields = ('username', 'email', 'password', 'role', 'phone_number', 'full_name', 'is_google_user')
 	
+	def validate(self, data):
+		"""Custom validation for Google vs Manual signup"""
+		is_google_user = data.get('is_google_user', False)
+		password = data.get('password')
+		
+		if not is_google_user and not password:
+			raise serializers.ValidationError({"password": "Password is required for manual signup."})
+		
+		return data
+
 	def validate_password(self, value):
-		try:
-			validate_password(value)
-		except ValidationError as e:
-			raise serializers.ValidationError(e.messages)
+		if value:  # Only validate if password is provided
+			try:
+				validate_password(value)
+			except ValidationError as e:
+				raise serializers.ValidationError(e.messages)
 		return value
 	
 	def validate_email(self, value):
@@ -35,7 +47,8 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 		return value
 	
 	def create(self, validated_data):
-		password = validated_data.pop('password')
+		is_google_user = validated_data.pop('is_google_user', False)
+		password = validated_data.pop('password', None)
 		full_name = validated_data.pop('full_name', None)
 		
 		user = User(**validated_data)
@@ -47,9 +60,13 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 			if len(parts) > 1:
 				user.last_name = parts[1]
 		
-		# Hash password with bcrypt
-		hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-		user.password = hashed_password.decode('utf-8')
+		if is_google_user:
+			user.set_unusable_password()
+		else:
+			# Hash password with bcrypt
+			hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+			user.password = hashed_password.decode('utf-8')
+		
 		user.save()
 		return user
 

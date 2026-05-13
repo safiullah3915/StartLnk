@@ -1,3 +1,5 @@
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
 from rest_framework import status, generics, permissions
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.decorators import api_view, permission_classes
@@ -209,6 +211,91 @@ class CheckEmailView(generics.GenericAPIView):
 
 @method_decorator(ratelimit(key='ip', rate='5/m', method='POST'), name='post')
 @method_decorator(csrf_exempt, name='dispatch')
+class GoogleVerifyView(generics.GenericAPIView):
+	"""Verify Google ID token and return user info for pre-filling"""
+	permission_classes = [AllowAny]
+
+	def post(self, request):
+		token = request.data.get('token')
+		if not token:
+			return Response({'error': 'Token is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+		try:
+			# Verify the Access Token by calling Google's tokeninfo endpoint
+			import requests
+			verify_url = f"https://www.googleapis.com/oauth2/v3/userinfo?access_token={token}"
+			response = requests.get(verify_url)
+			
+			if response.status_code != 200:
+				return Response({'error': 'Invalid token'}, status=status.HTTP_400_BAD_REQUEST)
+
+			idinfo = response.json()
+
+			# Extract user info
+			email = idinfo.get('email')
+			name = idinfo.get('name')
+			
+			if not email:
+				return Response({'error': 'Email not found in token'}, status=status.HTTP_400_BAD_REQUEST)
+
+			# Check if user already exists
+			user = User.objects.filter(email=email).first()
+			
+			if user:
+				# CASE 1: USER EXISTS -> Log them in directly
+				print(f"✅ Existing Google user found: {user.email}")
+				
+				# Ensure session exists
+				if not request.session.session_key:
+					request.session.create()
+				
+				# Use Django's login to create session
+				from django.contrib.auth import login
+				login(request, user, backend='api.backends.BcryptAuthBackend')
+				
+				# Store user data in session
+				request.session['user_id'] = str(user.id)
+				request.session['user_email'] = user.email
+				request.session['user_role'] = user.role
+				request.session['is_authenticated'] = True
+				
+				# Create auth token for frontend
+				import hashlib
+				import time
+				auth_token = hashlib.sha256(f"{user.id}{user.email}{time.time()}".encode()).hexdigest()[:32]
+				request.session['auth_token'] = auth_token
+				request.session.save()
+
+				# Check onboarding status
+				from .recommendation_models import UserOnboardingPreferences
+				onboarding_prefs, _ = UserOnboardingPreferences.objects.get_or_create(user=user)
+
+				return Response({
+					'is_existing_user': True,
+					'auth_token': auth_token,
+					'user': {
+						"id": str(user.id),
+						"username": user.username,
+						"email": user.email,
+						"role": user.role,
+						"onboarding_completed": onboarding_prefs.onboarding_completed,
+						"emailVerified": user.email_verified,
+					}
+				}, status=status.HTTP_200_OK)
+			
+			else:
+				# CASE 2: NEW USER -> Proceed to pre-fill Complete Profile
+				print(f"🆕 New Google user: {email}")
+				return Response({
+					'is_existing_user': False,
+					'email': email,
+					'full_name': name
+				}, status=status.HTTP_200_OK)
+
+		except Exception as e:
+			return Response({'error': f'Verification failed: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 class SignupView(generics.CreateAPIView):
 	"""User registration endpoint"""
 	queryset = User.objects.all()

@@ -10,6 +10,7 @@ urlpatterns = [
 	# Authentication endpoints
 	path('check-username', views.CheckUsernameView.as_view(), name='check_username'),
 	path('check-email', views.CheckEmailView.as_view(), name='check_email'),
+	path('auth/google-verify', views.GoogleVerifyView.as_view(), name='google_verify'),
 	path('signup', views.SignupView.as_view(), name='signup'),
 	path('auth/login', views.LoginView.as_view(), name='login'),
 	path('auth/test', views.auth_test, name='auth_test'),

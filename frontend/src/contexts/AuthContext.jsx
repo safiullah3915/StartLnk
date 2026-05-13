@@ -208,13 +208,14 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const signup = async (username, email, password, role = 'entrepreneur', phone_number = '', full_name = '') => {
+  const signup = async (username, email, password, role = 'entrepreneur', phone_number = '', full_name = '', is_google_user = false) => {
     try {
       const requestData = {
         username,
         email,
         password,
-        role
+        role,
+        is_google_user
       };
       
       // Only include phone_number if provided
@@ -331,6 +332,15 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const setAuthData = (userData, authToken) => {
+    if (authToken) {
+      localStorage.setItem('auth_token', authToken);
+      console.log('🔑 Auth token stored in localStorage via setAuthData');
+    }
+    setUser(userData);
+    setIsAuthenticated(true);
+  };
+
   const updateUser = (userData) => {
     setUser(prevUser => ({ ...prevUser, ...userData }));
   };
@@ -373,7 +383,8 @@ export const AuthProvider = ({ children }) => {
     isInvestor,
     canCreateStartups,
     canApplyToJobs,
-    canInvest
+    canInvest,
+    setAuthData
   };
 
   return (

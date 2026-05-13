@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { Bounce, ToastContainer, toast } from "react-toastify";
 import { API_BASE_URL } from "../../utils/api";
@@ -18,10 +18,14 @@ const USERNAME_REGEX = /^[a-zA-Z0-9@.+\-_]+$/;
 
 function CompleteProfile() {
     const navigate   = useNavigate();
+    const location   = useLocation();
     const { signup, isAuthenticated } = useAuth();
 
+    const googleData = location.state || {};
+    const isGoogleUser = googleData.isGoogleUser || false;
+
     const [step,       setStep]       = useState(1);
-    const [fullName,   setFullName]   = useState("");
+    const [fullName,   setFullName]   = useState(googleData.full_name || "");
     const [name,       setName]       = useState("");
     const [fullNameError, setFullNameError] = useState("");
     const [nameError,  setNameError]  = useState("");
@@ -30,13 +34,15 @@ function CompleteProfile() {
     const [checking,   setChecking]   = useState(false);   // step-1 username check spinner
     const [error,      setError]      = useState("");
 
-    const email    = sessionStorage.getItem("signup_email")    || "";
+    const email    = googleData.email || sessionStorage.getItem("signup_email")    || "";
     const password = sessionStorage.getItem("signup_password") || "";
 
     // Guard: no credentials → back to signup
     useEffect(() => {
-        if (!email || !password) navigate("/signup", { replace: true });
-    }, []);
+        if (!email || (!password && !isGoogleUser)) {
+            navigate("/signup", { replace: true });
+        }
+    }, [email, password, isGoogleUser, navigate]);
 
     // Guard: already logged in → dashboard
     useEffect(() => {
@@ -96,7 +102,7 @@ function CompleteProfile() {
         setLoading(true);
 
         try {
-            const result = await signup(name.trim(), email, password, role, "", fullName.trim());
+            const result = await signup(name.trim(), email, password, role, "", fullName.trim(), isGoogleUser);
 
             if (result.success) {
                 sessionStorage.removeItem("signup_email");
