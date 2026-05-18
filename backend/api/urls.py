@@ -2,6 +2,25 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views
 
+# SEO module imports (isolated layer)
+from .seo.views import (
+    robots_txt_view,
+    page_metadata_view,
+    schema_organization_view,
+    schema_website_view,
+    schema_faq_view,
+    schema_startup_view,
+    programmatic_metadata_view,
+)
+from .seo.sitemap import (
+    sitemap_index_view,
+    sitemap_static_view,
+    sitemap_startups_view,
+    sitemap_collaboration_view,
+    sitemap_marketplace_view,
+    sitemap_programmatic_view,
+)
+
 # URL patterns for the API
 urlpatterns = [
 	# Home endpoint
@@ -104,5 +123,23 @@ urlpatterns = [
 	path('api/startups/<uuid:pk>/dislike', views.dislike_startup, name='dislike_startup'),
 	path('api/startups/<uuid:pk>/undislike', views.undislike_startup, name='undislike_startup'),
 	path('api/startups/<uuid:pk>/interaction-status', views.startup_interaction_status, name='startup_interaction_status'),
+
+	# ==================== SEO ISOLATED LAYER ====================
+	# Robots & Sitemaps
+	path('robots.txt', robots_txt_view, name='robots_txt'),
+	path('sitemap.xml', sitemap_index_view, name='sitemap_index'),
+	path('sitemap-static.xml', sitemap_static_view, name='sitemap_static'),
+	path('sitemap-startups.xml', sitemap_startups_view, name='sitemap_startups'),
+	path('sitemap-collaboration.xml', sitemap_collaboration_view, name='sitemap_collaboration'),
+	path('sitemap-marketplace.xml', sitemap_marketplace_view, name='sitemap_marketplace'),
+	path('sitemap-programmatic.xml', sitemap_programmatic_view, name='sitemap_programmatic'),
+
+	# Metadata & Structured Data API
+	path('api/seo/metadata', page_metadata_view, name='seo_metadata'),
+	path('api/seo/schema/organization', schema_organization_view, name='seo_schema_org'),
+	path('api/seo/schema/website', schema_website_view, name='seo_schema_website'),
+	path('api/seo/schema/faq', schema_faq_view, name='seo_schema_faq'),
+	path('api/seo/schema/startup/<uuid:pk>', schema_startup_view, name='seo_schema_startup'),
+	path('api/seo/programmatic', programmatic_metadata_view, name='seo_programmatic_meta'),
 ]
 
