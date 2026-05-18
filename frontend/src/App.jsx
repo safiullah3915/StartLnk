@@ -37,6 +37,7 @@ import Contact from './pages/Contact/Contact';
 import FAQ from './pages/FAQ/FAQ';
 import PrivacyPolicy from './pages/PrivacyPolicy/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService/TermsOfService';
+import ProgrammaticSEOPage from './pages/ProgrammaticSEO/ProgrammaticSEOPage';
 
 // Component to scroll to top on route change
 function ScrollToTop() {
@@ -198,6 +199,14 @@ function AppRoutes() {
           <Route path="/faq"     element={<FAQ />}     />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/terms"   element={<TermsOfService />} />
+
+          {/* Programmatic SEO public routes — isolated SEO layer */}
+          <Route path="/jobs/:param" element={<ProgrammaticSEOPage />} />
+          <Route path="/internships/:param" element={<ProgrammaticSEOPage />} />
+          <Route path="/startups/:param" element={<ProgrammaticSEOPage />} />
+          <Route path="/collaborate/:param" element={<ProgrammaticSEOPage />} />
+          <Route path="/remote/:param" element={<ProgrammaticSEOPage />} />
+          <Route path="/opportunities/:param" element={<ProgrammaticSEOPage />} />
           <Route
             path="/verify-email"
             element={isAuthenticated ? <Navigate to="/dashboard" /> : <EmailVerification />}
