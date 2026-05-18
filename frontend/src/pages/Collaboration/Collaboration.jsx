@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import SEOHead from '../../components/SEOHead/SEOHead';
 import { Navbar } from '../../components/Navbar/Navbar';
 import { Footer } from '../../components/Footer/Footer';
 import CollaborationCard from "../../components/CollaborationCard/CollaborationCard";
@@ -272,6 +273,37 @@ const Collaboration = () => {
 
   return (
     <>
+    <SEOHead
+      title="Startup Collaboration Opportunities — Join a Startup Team"
+      description="Browse startup collaboration opportunities on StartLnk. Join early-stage startups, find co-founders, and build innovative products. Startup team building for founders, developers, designers & marketers."
+      canonical="https://startlnk.xyz/collaboration"
+      og={{
+        title: "Startup Collaboration Opportunities | StartLnk",
+        description: "Find startup collaboration, join teams, and build your startup career.",
+        url: "https://startlnk.xyz/collaboration",
+      }}
+      twitter={{
+        title: "Startup Collaboration | StartLnk",
+        description: "Join startup teams and collaborate with founders on innovative projects.",
+      }}
+      schema={[
+        {
+          "@context": "https://schema.org",
+          "@type": "CollectionPage",
+          "name": "Startup Collaboration Opportunities",
+          "description": "Browse and join startup collaboration projects on StartLnk.",
+          "url": "https://startlnk.xyz/collaboration"
+        },
+        {
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://startlnk.xyz"},
+            {"@type": "ListItem", "position": 2, "name": "Collaboration", "item": "https://startlnk.xyz/collaboration"}
+          ]
+        }
+      ]}
+    />
     <div className={styles.main}>
       <Navbar />
       <div className={styles.marketplace}>

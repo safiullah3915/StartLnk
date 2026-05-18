@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import SEOHead from '../../components/SEOHead/SEOHead';
 import styles from "./StartupDetails.module.css";
 import { Navbar } from "../../components/Navbar/Navbar";
 import { Footer } from "../../components/Footer/Footer";
@@ -556,8 +557,66 @@ const StartupDetails = () => {
     );
   }
 
+  const SITE_URL = 'https://startlnk.xyz';
+  const startupUrl = startup ? `${SITE_URL}/startupdetail/${startup.id}` : SITE_URL;
+  const founderName = startup?.owner?.full_name || startup?.owner?.username || 'Founder';
+  const descExcerpt = startup?.description
+    ? startup.description.slice(0, 155) + (startup.description.length > 155 ? '...' : '')
+    : '';
+  const typeLabel = startup?.type === 'collaboration' ? 'Startup Collaboration' : 'Startup Marketplace';
+
+  const startupSchema = startup ? [
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": startup.title,
+      "description": startup.description,
+      "url": startupUrl,
+      "founder": { "@type": "Person", "name": founderName }
+    },
+    ...(positions || []).slice(0, 5).map(p => ({
+      "@context": "https://schema.org",
+      "@type": "JobPosting",
+      "title": p.title,
+      "description": p.description || `Join ${startup.title} as ${p.title}`,
+      "datePosted": (p.created_at || '').slice(0, 10),
+      "employmentType": "OTHER",
+      "hiringOrganization": { "@type": "Organization", "name": startup.title, "sameAs": startupUrl },
+      "jobLocation": { "@type": "Place", "address": { "@type": "PostalAddress", "addressCountry": "PK" } },
+      "directApply": true,
+      "url": startupUrl
+    })),
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {"@type": "ListItem", "position": 1, "name": "Home", "item": SITE_URL},
+        {"@type": "ListItem", "position": 2, "name": typeLabel, "item": `${SITE_URL}/${startup.type}`},
+        {"@type": "ListItem", "position": 3, "name": startup.title, "item": startupUrl}
+      ]
+    }
+  ] : null;
+
   return (
     <>
+      {startup && (
+        <SEOHead
+          title={`${startup.title} — ${typeLabel}`}
+          description={`${descExcerpt} Founded by ${founderName}. Explore this ${startup.category} startup on StartLnk.`}
+          canonical={startupUrl}
+          og={{
+            title: `${startup.title} | StartLnk Startup`,
+            description: descExcerpt,
+            url: startupUrl,
+            type: "website",
+          }}
+          twitter={{
+            title: `${startup.title} | StartLnk`,
+            description: descExcerpt,
+          }}
+          schema={startupSchema}
+        />
+      )}
       <Navbar />
       <div className={styles.container}>
         {/* Header with Title and Action Buttons */}

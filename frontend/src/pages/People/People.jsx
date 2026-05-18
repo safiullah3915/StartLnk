@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import SEOHead from '../../components/SEOHead/SEOHead';
 import { Navbar } from '../../components/Navbar/Navbar';
 import { Footer } from '../../components/Footer/Footer';
 import { userAPI } from '../../utils/apiServices';
@@ -204,6 +205,20 @@ export default function People() {
 
   return (
     <>
+      <SEOHead
+        title="Startup Founders, Developers & Investors Directory"
+        description="Discover founders, co-founders, developers, designers, investors, and startup professionals on StartLnk. Build your startup network and find the right people for your team."
+        canonical="https://startlnk.xyz/people"
+        og={{ title: "Startup People Directory | StartLnk", description: "Find founders, investors, developers, and startup professionals.", url: "https://startlnk.xyz/people" }}
+        twitter={{ title: "Startup People Directory | StartLnk", description: "Connect with startup founders, investors, and professionals on StartLnk." }}
+        schema={{
+          "@context": "https://schema.org",
+          "@type": "CollectionPage",
+          "name": "Startup People Directory",
+          "description": "Directory of founders, investors, and startup professionals on StartLnk.",
+          "url": "https://startlnk.xyz/people"
+        }}
+      />
       <Navbar />
       <div className={styles.page}>
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import SEOHead from '../../components/SEOHead/SEOHead';
 import { Navbar } from '../../components/Navbar/Navbar';
 import { Footer } from '../../components/Footer/Footer';
 import MarketPlaceCard from "../../components/MarketplaceCard/MarketPlaceCard";
@@ -109,6 +110,37 @@ const Marketplace = () => {
 
   return (
     <>
+    <SEOHead
+      title="Startup Marketplace — Buy & Sell Startups"
+      description="Discover startups for sale on StartLnk Marketplace. Buy established startups, SaaS products, ecommerce businesses, and digital assets. Connect with founders and investors."
+      canonical="https://startlnk.xyz/marketplace"
+      og={{
+        title: "Startup Marketplace — Buy & Sell Startups | StartLnk",
+        description: "Browse startups for sale, investment opportunities, and digital businesses.",
+        url: "https://startlnk.xyz/marketplace",
+      }}
+      twitter={{
+        title: "Startup Marketplace | StartLnk",
+        description: "Buy and sell startups. Discover investment opportunities on StartLnk.",
+      }}
+      schema={[
+        {
+          "@context": "https://schema.org",
+          "@type": "CollectionPage",
+          "name": "StartLnk Startup Marketplace",
+          "description": "Buy and sell startups on Pakistan's leading startup marketplace.",
+          "url": "https://startlnk.xyz/marketplace"
+        },
+        {
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://startlnk.xyz"},
+            {"@type": "ListItem", "position": 2, "name": "Marketplace", "item": "https://startlnk.xyz/marketplace"}
+          ]
+        }
+      ]}
+    />
     <div className={styles.main}>
 
     

@@ -1,12 +1,28 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from './About.module.css';
+import SEOHead from '../../components/SEOHead/SEOHead';
 
 const About = () => {
   const navigate = useNavigate();
 
   return (
-    <div className={styles.aboutContainer}>
+    <>
+      <SEOHead
+        title="About StartLnk — the Startup Collaboration Ecosystem"
+        description="StartLnk is Pakistan's leading startup ecosystem connecting founders, investors, developers, and students. Learn about our mission to empower startup collaboration and innovation across Pakistan."
+        canonical="https://startlnk.xyz/about"
+        og={{ title: "About StartLnk", description: "Pakistan's #1 startup collaboration ecosystem.", url: "https://startlnk.xyz/about" }}
+        twitter={{ title: "About StartLnk", description: "Learn about StartLnk's mission to power the startup ecosystem." }}
+        schema={{
+          "@context": "https://schema.org",
+          "@type": "AboutPage",
+          "name": "About StartLnk",
+          "url": "https://startlnk.xyz/about",
+          "description": "Pakistan's leading startup collaboration ecosystem."
+        }}
+      />
+      <div className={styles.aboutContainer}>
       {/* Header */}
       <header className={styles.header}>
         <div className={styles.headerContent}>
@@ -78,6 +94,7 @@ const About = () => {
         <p className={styles.copyright}>&copy; 2026 STARTLNK GLOBAL ECOSYSTEM . ALL RIGHTS RESERVED</p>
       </footer>
     </div>
+    </>
   );
 };
 

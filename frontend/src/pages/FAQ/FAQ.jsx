@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from './FAQ.module.css';
+import SEOHead from '../../components/SEOHead/SEOHead';
 
 const faqs = [
   {
@@ -29,7 +30,24 @@ const FAQ = () => {
   const navigate = useNavigate();
 
   return (
-    <div className={styles.faqContainer}>
+    <>
+      <SEOHead
+        title="FAQ — StartLnk Startup Collaboration Platform"
+        description="Frequently asked questions about StartLnk. Learn how to join startups, find co-founders, discover internships, and grow your startup network in Pakistan."
+        canonical="https://startlnk.xyz/faq"
+        og={{ title: "FAQ | StartLnk", description: "Everything you need to know about StartLnk.", url: "https://startlnk.xyz/faq" }}
+        twitter={{ title: "FAQ | StartLnk", description: "Everything you need to know about StartLnk." }}
+        schema={{
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          "mainEntity": faqs.map(f => ({
+            "@type": "Question",
+            "name": f.question,
+            "acceptedAnswer": { "@type": "Answer", "text": f.answer }
+          }))
+        }}
+      />
+      <div className={styles.faqContainer}>
       {/* Header — identical structure to About & Contact */}
       <header className={styles.header}>
         <div className={styles.headerContent}>
@@ -64,6 +82,7 @@ const FAQ = () => {
         </p>
       </footer>
     </div>
+    </>
   );
 };
 

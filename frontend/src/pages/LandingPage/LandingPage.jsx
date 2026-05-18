@@ -1,4 +1,5 @@
 import React from "react";
+import SEOHead from "../../components/SEOHead/SEOHead";
 import { Navbar } from "../../components/Navbar/Navbar";
 import { Footer } from "../../components/Footer/Footer";
 import { Link } from "react-router-dom";
@@ -11,6 +12,43 @@ import { Submit } from "../../components/Submit/Submit";
 function LandingPage() {
   return (
     <>
+      <SEOHead
+        title="StartLnk — Startup Collaboration, Internships & Opportunities"
+        description="Join StartLnk, Pakistan's #1 startup ecosystem. Find co-founders, join startup teams, discover internships, remote jobs, and startup opportunities. Connect with founders and investors."
+        canonical="https://startlnk.xyz"
+        og={{
+          title: "StartLnk — Connect, Collaborate, Build Startups",
+          description: "Pakistan's leading startup collaboration platform. Find startup jobs, internships, co-founders, and investors.",
+          image: "https://startlnk.xyz/og-default.png",
+          type: "website",
+          url: "https://startlnk.xyz",
+        }}
+        twitter={{
+          card: "summary_large_image",
+          title: "StartLnk — Startup Collaboration & Opportunities",
+          description: "Find co-founders, startup internships, and remote jobs.",
+        }}
+        schema={[
+          {
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            "name": "StartLnk",
+            "url": "https://startlnk.xyz",
+            "logo": "https://startlnk.xyz/logo.png",
+            "description": "Pakistan's leading startup collaboration ecosystem.",
+            "potentialAction": {
+              "@type": "SearchAction",
+              "target": { "@type": "EntryPoint", "urlTemplate": "https://startlnk.xyz/search?q={search_term_string}" },
+              "query-input": "required name=search_term_string"
+            }
+          },
+          {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Home", "item": "https://startlnk.xyz"}]
+          }
+        ]}
+      />
       <Navbar />
 
       <div className={styles.home_container}>
