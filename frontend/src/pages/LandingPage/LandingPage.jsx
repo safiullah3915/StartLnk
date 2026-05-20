@@ -13,7 +13,7 @@ function LandingPage() {
   return (
     <>
       <SEOHead
-        title="StartLnk — Startup Collaboration, Internships & Opportunities"
+        title="StartLnk — Startup Collaboration & Opportunities"
         description="Join StartLnk, Pakistan's #1 startup ecosystem. Find co-founders, join startup teams, discover internships, remote jobs, and startup opportunities. Connect with founders and investors."
         canonical="https://startlnk.xyz"
         og={{

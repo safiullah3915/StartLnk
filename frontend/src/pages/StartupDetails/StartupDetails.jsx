@@ -537,8 +537,16 @@ const StartupDetails = () => {
     return (
       <>
         <Navbar />
-        <div className={styles.container}>
-          <div className={styles.loading}>Loading startup details...</div>
+        <div style={{ minHeight: 'calc(100vh - 120px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{
+            width: '48px',
+            height: '48px',
+            border: '4px solid #e2e8f0',
+            borderTop: '4px solid #25224A',
+            borderRadius: '50%',
+            animation: 'spin 0.8s linear infinite',
+          }} />
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
         <Footer />
       </>
