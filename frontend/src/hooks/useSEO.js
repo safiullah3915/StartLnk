@@ -4,36 +4,46 @@
  * ISOLATED layer — does NOT modify any existing component logic.
  *
  * Production safeguards:
- * - Zero keywords output
+ * - Zero keywords output (deprecated by Google/Bing)
  * - Canonical validation: strips query params, trailing slashes
  * - Safe defaults for all metadata fields
+ * - SITE_URL driven by VITE_APP_URL env var — no hardcoding
  *
  * Usage:
  *   buildSEOConfig({ title, description, canonical, og, twitter, schema, robots })
  */
 
 const SITE_NAME = 'StartLnk';
-const SITE_URL = 'https://startlnk.xyz';
-const DEFAULT_OG_IMAGE = `${SITE_URL}/og-default.png`;
+
+// Driven by environment variable — changes automatically between dev and prod
+// Dev:  VITE_APP_URL=http://localhost:5173
+// Prod: VITE_APP_URL=https://startlnk.xyz
+export const SITE_URL = import.meta.env.VITE_APP_URL || 'https://startlnk.xyz';
+
+export const DEFAULT_OG_IMAGE = `${SITE_URL}/og-default.png`;
 
 /**
  * Validates and normalizes a canonical URL.
- * - Strips query parameters (pagination, filters)
- * - Strips trailing slashes
+ * - Strips query parameters (pagination, filters must not be indexed)
+ * - Strips trailing slashes (canonical consistency)
  * - Ensures absolute URL
  */
-function validateCanonical(url) {
+export function validateCanonical(url) {
   if (!url) return SITE_URL;
-  // Strip query parameters
+
+  // Strip query parameters — filtered/paginated pages share the canonical with the root page
   let clean = url.split('?')[0];
-  // Strip trailing slash (except root)
+
+  // Strip trailing slash (except bare domain root)
   if (clean !== SITE_URL && clean.endsWith('/')) {
     clean = clean.replace(/\/+$/, '');
   }
-  // Ensure absolute URL
+
+  // Ensure absolute URL — relative paths get the site prefix
   if (!clean.startsWith('http')) {
-    clean = `${SITE_URL}${clean}`;
+    clean = `${SITE_URL}${clean.startsWith('/') ? '' : '/'}${clean}`;
   }
+
   return clean;
 }
 
@@ -42,13 +52,13 @@ function validateCanonical(url) {
  * Keywords are intentionally excluded — deprecated by all major search engines.
  */
 export function buildSEOConfig({
-  title = '',
+  title       = '',
   description = '',
-  canonical = '',
-  robots = 'index, follow',
-  og = {},
-  twitter = {},
-  schema = null,
+  canonical   = '',
+  robots      = 'index, follow',
+  og          = {},
+  twitter     = {},
+  schema      = null,
 } = {}) {
   const resolvedTitle = title
     ? (title.includes('|') || title.includes('—') ? title : `${title} | ${SITE_NAME}`)
@@ -59,26 +69,23 @@ export function buildSEOConfig({
     "StartLnk is Pakistan's leading startup collaboration ecosystem. Connect with founders, join startups, and discover opportunities.";
 
   const resolvedCanonical = validateCanonical(canonical);
-  const resolvedOGImage = og.image || DEFAULT_OG_IMAGE;
+  const resolvedOGImage   = og.image || DEFAULT_OG_IMAGE;
 
   let resolvedRobots = robots;
 
-  // Frontend Explicit noindex strategy for crawl budget protection
+  // Crawl budget protection — noindex thin/duplicate pages automatically
   if (typeof window !== 'undefined') {
     const search = window.location.search.toLowerCase();
-    const path = window.location.pathname.toLowerCase();
-    
-    // Internal search pages
+    const path   = window.location.pathname.toLowerCase();
+
     if (path.includes('/search') || search.includes('?q=') || search.includes('?query=')) {
       resolvedRobots = 'noindex, follow';
-    }
-    // Pagination, sorting, and filtered combinations
-    else if (
-      search.includes('page=') || 
-      search.includes('filter=') || 
-      search.includes('sort=') || 
-      search.includes('sortby=') || 
-      search.includes('category=') || 
+    } else if (
+      search.includes('page=')   ||
+      search.includes('filter=') ||
+      search.includes('sort=')   ||
+      search.includes('sortby=') ||
+      search.includes('category=') ||
       search.includes('type=')
     ) {
       resolvedRobots = 'noindex, follow';
@@ -86,27 +93,27 @@ export function buildSEOConfig({
   }
 
   return {
-    title: resolvedTitle,
+    title:       resolvedTitle,
     description: resolvedDesc,
-    canonical: resolvedCanonical,
-    robots: resolvedRobots,
+    canonical:   resolvedCanonical,
+    robots:      resolvedRobots,
     og: {
-      title: og.title || resolvedTitle,
+      title:       og.title       || resolvedTitle,
       description: og.description || resolvedDesc,
-      image: resolvedOGImage,
-      type: og.type || 'website',
-      url: og.url || resolvedCanonical,
-      site_name: og.site_name || SITE_NAME,
+      image:       resolvedOGImage,
+      type:        og.type        || 'website',
+      url:         og.url         || resolvedCanonical,
+      site_name:   og.site_name   || SITE_NAME,
     },
     twitter: {
-      card: twitter.card || 'summary_large_image',
-      title: twitter.title || resolvedTitle,
+      card:        twitter.card        || 'summary_large_image',
+      title:       twitter.title       || resolvedTitle,
       description: twitter.description || resolvedDesc,
-      image: twitter.image || resolvedOGImage,
-      site: twitter.site || '@StartLnk',
+      image:       twitter.image       || resolvedOGImage,
+      site:        twitter.site        || '@StartLnk',
     },
     schema,
   };
 }
 
-export { SITE_NAME, SITE_URL, DEFAULT_OG_IMAGE, validateCanonical };
+export { SITE_NAME, DEFAULT_OG_IMAGE as DEFAULT_OG_IMAGE_URL };

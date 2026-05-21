@@ -4,8 +4,21 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <!-- Base SEO fallback — overridden per-page by react-helmet-async -->
-    <title>StartLnk — Startup Collaboration & Opportunities</title>
+    <!-- ── Preconnect hints ──────────────────────────────────────────────────
+         Tells the browser to open TCP/TLS connections to these origins before
+         they are explicitly requested. Saves ~100-300ms on first API / OAuth call.
+    -->
+    <link rel="preconnect" href="https://accounts.google.com" crossorigin />
+    <link rel="preconnect" href="https://apis.google.com" crossorigin />
+    <link rel="dns-prefetch" href="https://accounts.google.com" />
+
+    <!-- ── Base SEO fallback ─────────────────────────────────────────────────
+         These are the FALLBACK values shown to:
+         - Social bots (Twitter, LinkedIn) that don't run JavaScript
+         - Google before it renders the JS
+         Per-page values are overridden dynamically by react-helmet-async <SEOHead>.
+    -->
+    <title>StartLnk — Startup Collaboration &amp; Opportunities</title>
     <meta name="description" content="StartLnk is Pakistan's leading startup collaboration ecosystem. Connect with founders, join startup teams, discover internships, remote jobs, and startup opportunities." />
     <meta name="robots" content="index, follow" />
     <meta name="author" content="StartLnk" />
@@ -14,25 +27,30 @@
     <!--
       NOTE: No <meta name="keywords"> tag.
       Keywords meta is deprecated by Google, Bing, and all major engines.
-      Its presence can signal low-quality SEO practices.
     -->
 
     <!--
-      NOTE: No root-level JSON-LD schema here.
-      All structured data is injected per-page via react-helmet-async <SEOHead>.
-      This prevents duplicate/conflicting/stale schema definitions.
+      NOTE: No root-level JSON-LD schema or canonical here.
+      All structured data and canonicals are injected per-page via react-helmet-async <SEOHead>.
+      Adding them here would create stale/duplicate schema on every page.
     -->
 
-    <!--
-      NOTE: No root-level canonical tag here.
-      Canonical is injected dynamically per-page to avoid pointing all pages
-      to the homepage URL. react-helmet-async handles this.
-    -->
-
-    <!-- Open Graph base (overridden per-page) -->
-    <meta property="og:type" content="website" />
+    <!-- ── Open Graph base (overridden per-page by SEOHead) ──────────────── -->
+    <meta property="og:type"      content="website" />
     <meta property="og:site_name" content="StartLnk" />
-    <meta property="og:locale" content="en_US" />
+    <meta property="og:locale"    content="en_US" />
+    <meta property="og:title"     content="StartLnk — Startup Collaboration &amp; Opportunities" />
+    <meta property="og:description" content="Pakistan's leading startup collaboration ecosystem. Connect with founders, discover internships and remote jobs." />
+    <meta property="og:url"       content="https://startlnk.xyz" />
+
+    <!-- ── Twitter Card base (overridden per-page by SEOHead) ────────────── -->
+    <meta name="twitter:card"        content="summary_large_image" />
+    <meta name="twitter:site"        content="@StartLnk" />
+    <meta name="twitter:title"       content="StartLnk — Startup Collaboration &amp; Opportunities" />
+    <meta name="twitter:description" content="Pakistan's leading startup collaboration ecosystem." />
+
+    <!-- ── Favicon ───────────────────────────────────────────────────────── -->
+    <link rel="icon" type="image/png" href="/logo.png" />
   </head>
   <body>
     <div id="root"></div>
