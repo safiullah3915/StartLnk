@@ -6,7 +6,8 @@ import { BrowserRouter } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { HelmetProvider } from 'react-helmet-async';
 
-const GOOGLE_CLIENT_ID = '107351568402-etjf2vg4auc5iguelv5i7ghpfg4fkep2.apps.googleusercontent.com';
+// Google Client ID comes from environment variable — no hardcoded values in source code
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

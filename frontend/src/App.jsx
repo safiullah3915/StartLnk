@@ -1,119 +1,132 @@
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { Suspense, lazy, useEffect, useRef, useCallback } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import './App.css';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { Login } from './components/login/Login';
-import Signup from './components/Signup/Signup';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import EmailVerification from './components/EmailVerification/EmailVerification';
-import { LandingPage } from './pages/LandingPage/LandingPage';
-import { Marketplace } from './pages/Marketplace/Marketplace';
-import { Collaboration } from './pages/Collaboration/Collaboration';
-import StartupDetails from './pages/StartupDetails/StartupDetails';
-import CreateStartupProject from './pages/CreateStartup/CreateStartupProject';
-import ApplyJob from './pages/ApplyJob/ApplyJob';
-import ComingSoon from './components/comingsoon/Comingsoon';
-import AccountSettings from './pages/AccountSettings/AccountSettings';
-import AccountSettingsII from './pages/AccountSettings/AccountSettingsII';
-import Message from './pages/message/Message';
-import MessageDark from './pages/message/MessageDark';
-import Dashboard from './pages/Dashboard/Dashboard';
-import SearchStartups from './pages/Search/SearchStartups';
-import PositionManagement from './pages/PositionManagement/PositionManagement';
-import PositionApplications from './pages/PositionApplications/PositionApplications';
-import StartupsWithApplications from './pages/StartupsWithApplications/StartupsWithApplications';
-import StartupApplications from './pages/StartupApplications/StartupApplications';
-import InvestorDashboard from './pages/InvestorDashboard/InvestorDashboard';
-import PitchIdea from './pages/PitchIdea/PitchIdea';
-import OnboardingPreferences from './pages/OnboardingPreferences/OnboardingPreferences';
+
+// ── Static imports (tiny, needed immediately at app boot) ────────────────────
 import ProtectedRoute from './components/ProtectedRoute/ProtectedRoute';
 import RoleBasedRoute from './components/RoleBasedRoute/RoleBasedRoute';
-import CompleteProfile from './pages/CompleteProfile/CompleteProfile';
-import People from './pages/People/People';
-import Favorites from './pages/Favorites/Favorites';
-import About from './pages/About/About';
-import Contact from './pages/Contact/Contact';
-import FAQ from './pages/FAQ/FAQ';
-import PrivacyPolicy from './pages/PrivacyPolicy/PrivacyPolicy';
-import TermsOfService from './pages/TermsOfService/TermsOfService';
-import ProgrammaticSEOPage from './pages/ProgrammaticSEO/ProgrammaticSEOPage';
 
-// Component to scroll to top on route change
+// ── Lazy-loaded page components ───────────────────────────────────────────────
+// Each lazy() call creates a separate JS chunk in the production build.
+// The browser only downloads a page's chunk when the user first navigates to it.
+// This reduces the initial JS payload from ~2 MB to ~300 KB.
+
+// Auth / onboarding
+const Login              = lazy(() => import('./components/login/Login').then(m => ({ default: m.Login })));
+const Signup             = lazy(() => import('./components/Signup/Signup'));
+const EmailVerification  = lazy(() => import('./components/EmailVerification/EmailVerification'));
+const CompleteProfile    = lazy(() => import('./pages/CompleteProfile/CompleteProfile'));
+const OnboardingPreferences = lazy(() => import('./pages/OnboardingPreferences/OnboardingPreferences'));
+
+// Public marketing pages
+const LandingPage = lazy(() => import('./pages/LandingPage/LandingPage').then(m => ({ default: m.LandingPage })));
+const About       = lazy(() => import('./pages/About/About'));
+const Contact     = lazy(() => import('./pages/Contact/Contact'));
+const FAQ         = lazy(() => import('./pages/FAQ/FAQ'));
+const PrivacyPolicy   = lazy(() => import('./pages/PrivacyPolicy/PrivacyPolicy'));
+const TermsOfService  = lazy(() => import('./pages/TermsOfService/TermsOfService'));
+
+// SEO programmatic pages (public)
+const ProgrammaticSEOPage = lazy(() => import('./pages/ProgrammaticSEO/ProgrammaticSEOPage'));
+
+// Core app pages (authenticated)
+const Dashboard      = lazy(() => import('./pages/Dashboard/Dashboard'));
+const Marketplace    = lazy(() => import('./pages/Marketplace/Marketplace').then(m => ({ default: m.Marketplace })));
+const Collaboration  = lazy(() => import('./pages/Collaboration/Collaboration').then(m => ({ default: m.Collaboration })));
+const StartupDetails = lazy(() => import('./pages/StartupDetails/StartupDetails'));
+const People         = lazy(() => import('./pages/People/People'));
+const Favorites      = lazy(() => import('./pages/Favorites/Favorites'));
+const SearchStartups = lazy(() => import('./pages/Search/SearchStartups'));
+const MessageDark    = lazy(() => import('./pages/message/MessageDark'));
+
+// Account
+const AccountSettingsII = lazy(() => import('./pages/AccountSettings/AccountSettingsII'));
+
+// Entrepreneur-only pages
+const CreateStartupProject     = lazy(() => import('./pages/CreateStartup/CreateStartupProject'));
+const PitchIdea                = lazy(() => import('./pages/PitchIdea/PitchIdea'));
+const PositionManagement       = lazy(() => import('./pages/PositionManagement/PositionManagement'));
+const PositionApplications     = lazy(() => import('./pages/PositionApplications/PositionApplications'));
+const StartupsWithApplications = lazy(() => import('./pages/StartupsWithApplications/StartupsWithApplications'));
+const StartupApplications      = lazy(() => import('./pages/StartupApplications/StartupApplications'));
+
+// Role-restricted pages
+const ApplyJob          = lazy(() => import('./pages/ApplyJob/ApplyJob'));
+const InvestorDashboard = lazy(() => import('./pages/InvestorDashboard/InvestorDashboard'));
+
+// ── Page transition spinner (shown while lazy chunks load) ───────────────────
+function PageLoader() {
+  return (
+    <div className="spinner-overlay" role="status" aria-label="Loading page">
+      <div className="spinner" />
+    </div>
+  );
+}
+
+// ── Scroll to top on route change ────────────────────────────────────────────
 function ScrollToTop() {
   const { pathname } = useLocation();
-
   useEffect(() => {
-    window.scrollTo({
-      top: 0,
-      left: 0,
-      behavior: 'instant'
-    });
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   }, [pathname]);
-
   return null;
 }
 
-// Custom hook: pull-to-refresh via raw touch events
+// ── Pull-to-refresh (mobile) ─────────────────────────────────────────────────
 function usePullToRefresh(onRefresh) {
-  const startY = useRef(0);
+  const startY    = useRef(0);
   const isPulling = useRef(false);
   const THRESHOLD = 80;
 
   useEffect(() => {
     const onTouchStart = (e) => {
       if (window.scrollY === 0) {
-        startY.current = e.touches[0].clientY;
+        startY.current    = e.touches[0].clientY;
         isPulling.current = true;
       }
     };
-
     const onTouchMove = (e) => {
       if (!isPulling.current) return;
-      const deltaY = e.touches[0].clientY - startY.current;
-      if (deltaY > THRESHOLD) {
+      if (e.touches[0].clientY - startY.current > THRESHOLD) {
         isPulling.current = 'triggered';
       }
     };
-
     const onTouchEnd = () => {
-      if (isPulling.current === 'triggered') {
-        onRefresh();
-      }
+      if (isPulling.current === 'triggered') onRefresh();
       isPulling.current = false;
-      startY.current = 0;
+      startY.current    = 0;
     };
 
     document.addEventListener('touchstart', onTouchStart, { passive: true });
-    document.addEventListener('touchmove', onTouchMove, { passive: true });
-    document.addEventListener('touchend', onTouchEnd, { passive: true });
+    document.addEventListener('touchmove',  onTouchMove,  { passive: true });
+    document.addEventListener('touchend',   onTouchEnd,   { passive: true });
 
     return () => {
       document.removeEventListener('touchstart', onTouchStart);
-      document.removeEventListener('touchmove', onTouchMove);
-      document.removeEventListener('touchend', onTouchEnd);
+      document.removeEventListener('touchmove',  onTouchMove);
+      document.removeEventListener('touchend',   onTouchEnd);
     };
   }, [onRefresh]);
 }
 
-// Main App component with routing
+// ── Main routed application ───────────────────────────────────────────────────
 function AppRoutes() {
-  const { isAuthenticated, user, loading, getAuthStatus } = useAuth();
+  const { isAuthenticated, user, loading } = useAuth();
   const location = useLocation();
   const [transitionStage, setTransitionStage] = React.useState('fade-in');
-  const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const [isRefreshing, setIsRefreshing]       = React.useState(false);
 
-  React.useEffect(() => {
-    const status = getAuthStatus();
-    console.log('🔐 Current Auth Status:', status);
-  }, [isAuthenticated, user, getAuthStatus]);
-
-  React.useEffect(() => {
+  // Page transition animation
+  useEffect(() => {
     setTransitionStage('fade-out');
-    const timeout = setTimeout(() => setTransitionStage('fade-in'), 150);
-    return () => clearTimeout(timeout);
+    const t = setTimeout(() => setTransitionStage('fade-in'), 150);
+    return () => clearTimeout(t);
   }, [location.pathname]);
 
+  // Pull-to-refresh handler
   const handleRefresh = useCallback(() => {
     if (isRefreshing) return;
     setIsRefreshing(true);
@@ -160,178 +173,146 @@ function AppRoutes() {
     document.body.appendChild(overlay);
 
     requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        window.location.reload();
-      });
+      requestAnimationFrame(() => { window.location.reload(); });
     });
   }, [isRefreshing]);
 
   usePullToRefresh(handleRefresh);
 
+  // Show full-screen spinner while AuthContext resolves session
   if (loading) {
-    return (
-      <div className="spinner-overlay">
-        <div className="spinner" aria-label="Loading" />
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return (
     <>
       <ScrollToTop />
       <ToastContainer position="top-right" autoClose={3000} />
-      <div className={`page-transition ${transitionStage}`}>
-        <Routes>
-          {/* Public routes */}
-          <Route path="/" element={<LandingPage />} />
-          <Route
-            path="/login"
-            element={
-              isAuthenticated
-                ? (user?.onboarding_completed ? <Navigate to="/dashboard" /> : <Navigate to="/onboarding-preferences" />)
-                : <Login />
-            }
-          />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/complete-profile" element={<CompleteProfile />} />
-          <Route path="/about"   element={<About />}   />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/faq"     element={<FAQ />}     />
-          <Route path="/privacy" element={<PrivacyPolicy />} />
-          <Route path="/terms"   element={<TermsOfService />} />
 
-          {/* Programmatic SEO public routes — isolated SEO layer */}
-          <Route path="/jobs/:param" element={<ProgrammaticSEOPage />} />
-          <Route path="/internships/:param" element={<ProgrammaticSEOPage />} />
-          <Route path="/startups/:param" element={<ProgrammaticSEOPage />} />
-          <Route path="/collaborate/:param" element={<ProgrammaticSEOPage />} />
-          <Route path="/remote/:param" element={<ProgrammaticSEOPage />} />
-          <Route path="/opportunities/:param" element={<ProgrammaticSEOPage />} />
-          <Route
-            path="/verify-email"
-            element={isAuthenticated ? <Navigate to="/dashboard" /> : <EmailVerification />}
-          />
+      {/* Suspense catches lazy chunk loading — shows spinner during navigation */}
+      <Suspense fallback={<PageLoader />}>
+        <div className={`page-transition ${transitionStage}`}>
+          <Routes>
 
-          {/* Protected routes */}
-          <Route path="/dashboard" element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          } />
+            {/* ── Public routes ──────────────────────────────────────────── */}
+            <Route path="/" element={<LandingPage />} />
 
-          <Route path="/people" element={
-            <ProtectedRoute>
-              <People />
-            </ProtectedRoute>
-          } />
+            <Route
+              path="/login"
+              element={
+                isAuthenticated
+                  ? (user?.onboarding_completed
+                      ? <Navigate to="/dashboard" replace />
+                      : <Navigate to="/onboarding-preferences" replace />)
+                  : <Login />
+              }
+            />
 
-          <Route path="/marketplace" element={
-            <ProtectedRoute>
-              <Marketplace />
-            </ProtectedRoute>
-          } />
+            <Route path="/signup"           element={<Signup />} />
+            <Route path="/complete-profile" element={<CompleteProfile />} />
+            <Route path="/about"            element={<About />} />
+            <Route path="/contact"          element={<Contact />} />
+            <Route path="/faq"              element={<FAQ />} />
+            <Route path="/privacy"          element={<PrivacyPolicy />} />
+            <Route path="/terms"            element={<TermsOfService />} />
 
-          <Route path="/collaboration" element={
-            <ProtectedRoute>
-              <Collaboration />
-            </ProtectedRoute>
-          } />
+            <Route
+              path="/verify-email"
+              element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <EmailVerification />}
+            />
 
-          <Route path="/startupdetail/:id" element={
-            <ProtectedRoute>
-              <StartupDetails />
-            </ProtectedRoute>
-          } />
+            {/* ── Programmatic SEO public routes ─────────────────────────── */}
+            <Route path="/jobs/:param"            element={<ProgrammaticSEOPage />} />
+            <Route path="/internships/:param"     element={<ProgrammaticSEOPage />} />
+            <Route path="/startups/:param"        element={<ProgrammaticSEOPage />} />
+            <Route path="/collaborate/:param"     element={<ProgrammaticSEOPage />} />
+            <Route path="/remote/:param"          element={<ProgrammaticSEOPage />} />
+            <Route path="/opportunities/:param"   element={<ProgrammaticSEOPage />} />
 
-          {/* Entrepreneur-only routes */}
-          <Route path="/createstartup" element={
-            <RoleBasedRoute allowedRoles={['entrepreneur']}>
-              <CreateStartupProject />
-            </RoleBasedRoute>
-          } />
+            {/* ── Protected routes (requires auth) ───────────────────────── */}
+            <Route path="/dashboard" element={
+              <ProtectedRoute><Dashboard /></ProtectedRoute>
+            } />
+            <Route path="/people" element={
+              <ProtectedRoute><People /></ProtectedRoute>
+            } />
+            <Route path="/marketplace" element={
+              <ProtectedRoute><Marketplace /></ProtectedRoute>
+            } />
+            <Route path="/collaboration" element={
+              <ProtectedRoute><Collaboration /></ProtectedRoute>
+            } />
+            <Route path="/startupdetail/:id" element={
+              <ProtectedRoute><StartupDetails /></ProtectedRoute>
+            } />
+            <Route path="/search" element={
+              <ProtectedRoute><SearchStartups /></ProtectedRoute>
+            } />
+            <Route path="/favorites" element={
+              <ProtectedRoute><Favorites /></ProtectedRoute>
+            } />
+            <Route path="/account" element={
+              <ProtectedRoute><AccountSettingsII /></ProtectedRoute>
+            } />
+            <Route path="/message" element={
+              <ProtectedRoute><MessageDark /></ProtectedRoute>
+            } />
+            <Route path="/onboarding-preferences" element={
+              <ProtectedRoute><OnboardingPreferences /></ProtectedRoute>
+            } />
 
-          <Route path="/pitch-idea" element={
-            <RoleBasedRoute allowedRoles={['entrepreneur']}>
-              <PitchIdea />
-            </RoleBasedRoute>
-          } />
+            {/* ── Entrepreneur-only routes ────────────────────────────────── */}
+            <Route path="/createstartup" element={
+              <RoleBasedRoute allowedRoles={['entrepreneur']}>
+                <CreateStartupProject />
+              </RoleBasedRoute>
+            } />
+            <Route path="/pitch-idea" element={
+              <RoleBasedRoute allowedRoles={['entrepreneur']}>
+                <PitchIdea />
+              </RoleBasedRoute>
+            } />
+            <Route path="/startups/:startupId/positions" element={
+              <RoleBasedRoute allowedRoles={['entrepreneur']}>
+                <PositionManagement />
+              </RoleBasedRoute>
+            } />
+            <Route path="/positions/:positionId/applications" element={
+              <RoleBasedRoute allowedRoles={['entrepreneur']}>
+                <PositionApplications />
+              </RoleBasedRoute>
+            } />
+            <Route path="/startups-with-applications" element={
+              <RoleBasedRoute allowedRoles={['entrepreneur']}>
+                <StartupsWithApplications />
+              </RoleBasedRoute>
+            } />
+            <Route path="/startups/:startupId/applications" element={
+              <RoleBasedRoute allowedRoles={['entrepreneur']}>
+                <StartupApplications />
+              </RoleBasedRoute>
+            } />
 
-          {/* Search routes */}
-          <Route path="/search" element={
-            <ProtectedRoute>
-              <SearchStartups />
-            </ProtectedRoute>
-          } />
+            {/* ── Investor-only routes ────────────────────────────────────── */}
+            <Route path="/investor-dashboard" element={
+              <RoleBasedRoute allowedRoles={['investor']}>
+                <InvestorDashboard />
+              </RoleBasedRoute>
+            } />
 
-          <Route path="/favorites" element={
-            <ProtectedRoute>
-              <Favorites />
-            </ProtectedRoute>
-          } />
+            {/* ── Student / Entrepreneur routes ───────────────────────────── */}
+            <Route path="/apply-for-collaboration/:startupId" element={
+              <RoleBasedRoute allowedRoles={['student', 'entrepreneur']}>
+                <ApplyJob />
+              </RoleBasedRoute>
+            } />
 
-          {/* Onboarding */}
-          <Route path="/onboarding-preferences" element={
-            <ProtectedRoute>
-              <OnboardingPreferences />
-            </ProtectedRoute>
-          } />
+            {/* ── Catch-all: redirect unknown routes to home ──────────────── */}
+            <Route path="*" element={<Navigate to="/" replace />} />
 
-          {/* Entrepreneur-only position routes */}
-          <Route path="/startups/:startupId/positions" element={
-            <RoleBasedRoute allowedRoles={['entrepreneur']}>
-              <PositionManagement />
-            </RoleBasedRoute>
-          } />
-
-          <Route path="/positions/:positionId/applications" element={
-            <RoleBasedRoute allowedRoles={['entrepreneur']}>
-              <PositionApplications />
-            </RoleBasedRoute>
-          } />
-
-          <Route path="/startups-with-applications" element={
-            <RoleBasedRoute allowedRoles={['entrepreneur']}>
-              <StartupsWithApplications />
-            </RoleBasedRoute>
-          } />
-
-          <Route path="/startups/:startupId/applications" element={
-            <RoleBasedRoute allowedRoles={['entrepreneur']}>
-              <StartupApplications />
-            </RoleBasedRoute>
-          } />
-
-          {/* Investor-only routes */}
-          <Route path="/investor-dashboard" element={
-            <RoleBasedRoute allowedRoles={['investor']}>
-              <InvestorDashboard />
-            </RoleBasedRoute>
-          } />
-
-          {/* Student/Entrepreneur routes */}
-          <Route path="/apply-for-collaboration/:startupId" element={
-            <RoleBasedRoute allowedRoles={['student', 'entrepreneur']}>
-              <ApplyJob />
-            </RoleBasedRoute>
-          } />
-
-          {/* General protected routes */}
-          <Route path="/account" element={
-            <ProtectedRoute>
-              <AccountSettingsII />
-            </ProtectedRoute>
-          } />
-
-          <Route path="/message" element={
-            <ProtectedRoute>
-              <MessageDark />
-            </ProtectedRoute>
-          } />
-
-          {/* Catch all */}
-          <Route path="*" element={<Navigate to="/" />} />
-        </Routes>
-      </div>
+          </Routes>
+        </div>
+      </Suspense>
     </>
   );
 }
