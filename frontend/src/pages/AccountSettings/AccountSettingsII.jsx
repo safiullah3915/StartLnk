@@ -8,6 +8,16 @@ import { useAuth } from '../../contexts/AuthContext';
 import { userAPI, applicationAPI, uploadAPI } from '../../utils/apiServices';
 import Cropper from 'react-easy-crop';
 import getCroppedImg from '../../utils/cropImage';
+import { API_BASE_URL } from '../../utils/api';
+
+// Resolves a relative media path to a full URL using the configured API base.
+// In development: API_BASE_URL = 'http://127.0.0.1:8000' → full URL.
+// In production:  API_BASE_URL = '' → path stays relative, served by Nginx.
+const resolveMediaUrl = (path) => {
+  if (!path) return '';
+  if (path.startsWith('http')) return path;
+  return `${API_BASE_URL}${path}`;
+};
 
 // This is the main component that renders the settings page.
 const App = () => {
@@ -255,7 +265,7 @@ const App = () => {
     if (!isUploadingPicture) {
       if (dbOriginalPicture) {
         // If an original picture exists, open the crop modal with it
-        setCropImageSrc(dbOriginalPicture.startsWith('http') ? dbOriginalPicture : `http://localhost:8000${dbOriginalPicture}`);
+        setCropImageSrc(resolveMediaUrl(dbOriginalPicture));
         setCropError('');
         setIsCropModalOpen(true);
       } else {
@@ -1405,7 +1415,7 @@ const App = () => {
                     <span className="finalize-spinner" style={{ borderColor: 'rgba(255,255,255,0.2)', borderLeftColor: '#fff', width: '2rem', height: '2rem' }} />
                   ) : profilePicture ? (
                     <img
-                      src={profilePicture.startsWith('http') ? profilePicture : `http://localhost:8000${profilePicture}`}
+                      src={resolveMediaUrl(profilePicture)}
                       alt="Profile"
                       style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
                       onError={(e) => {

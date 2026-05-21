@@ -50,6 +50,11 @@ export default defineConfig(({ mode }) => ({
 
           // SEO library (small, but separate for caching clarity)
           'seo-vendor': ['react-helmet-async'],
+
+          // country-state-city bundles the ENTIRE world geo-database (~16 MB raw).
+          // Isolating it means it's downloaded once and cached permanently.
+          // Without this, it inflates AccountSettingsII to 8.2 MB.
+          'geo-vendor': ['country-state-city'],
         },
 
         // Content-hashed filenames enable long-term browser caching
