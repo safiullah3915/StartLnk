@@ -1,0 +1,37 @@
+User-agent: *
+Allow: /
+Allow: /jobs/
+Allow: /internships/
+Allow: /startups/
+Allow: /collaborate/
+Allow: /remote/
+Allow: /opportunities/
+Allow: /about
+Allow: /contact
+Allow: /faq
+Allow: /privacy
+Allow: /terms
+
+# Block authenticated-only pages — no crawl value, protects user data
+Disallow: /dashboard
+Disallow: /account
+Disallow: /message
+Disallow: /createstartup
+Disallow: /onboarding-preferences
+Disallow: /investor-dashboard
+Disallow: /apply-for-collaboration/
+Disallow: /positions/
+Disallow: /startups-with-applications
+Disallow: /search
+Disallow: /favorites
+Disallow: /pitch-idea
+Disallow: /complete-profile
+Disallow: /verify-email
+
+# Block dev/test artifacts if ever accidentally deployed
+Disallow: /debug_auth.html
+Disallow: /test-api-endpoints.js
+Disallow: /test_auth_console.js
+Disallow: /verify-messaging-fix.js
+
+Sitemap: https://startlnk.xyz/sitemap.xml

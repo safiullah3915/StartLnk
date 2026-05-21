@@ -6,6 +6,7 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+build.log
 
 node_modules
 dist
@@ -22,3 +23,18 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Environment files — never commit real secrets
+.env
+.env.production
+.env.local
+.env.*.local
+
+# Development debug artifacts — should not be committed or deployed
+debug_auth.html
+debug_cookies.js
+test-api-endpoints.js
+test_auth_console.js
+verify-messaging-fix.js
+fix_signup.py
+TestForm.jsx
