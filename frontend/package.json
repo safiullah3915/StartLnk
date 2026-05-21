@@ -3,14 +3,12 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://mshamilkhan.github.io/Startup-Sales-Purchase-Frontend",
+
   "scripts": {
     "dev": "vite",
-    "start": "vite",
-    "deploy": "gh-pages -d dist",
     "build": "vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint": "eslint ."
   },
   "dependencies": {
     "@react-oauth/google": "^0.13.5",
