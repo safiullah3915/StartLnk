@@ -204,7 +204,7 @@ function Signup() {
 
                 {/* ── Left side ── */}
                 <div className="left">
-                    <div className="leftimg"><video src="./bs2.mp4" autoPlay muted loop></video></div>
+                    <div className="leftimg"><video src="/bs2.mp4" autoPlay muted loop playsInline><source src="/bs2.mp4" type="video/mp4" /></video></div>
                 </div>
 
                 {/* ── Right side ── */}
