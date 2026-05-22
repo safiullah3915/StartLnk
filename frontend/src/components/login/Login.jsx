@@ -266,9 +266,8 @@ function Login({ leftimg, logo, line1, line2, paragraph }) {
             )}
             <div className="main signin-page">
 
-                {/* ── Left side — untouched ── */}
                 <div className="left">
-                    <div className="leftimg"><img src="./login-banner.png" alt="Login Banner" /></div>
+                    <div className="leftimg"><img src="/login-banner.png" alt="Login Banner" loading="eager" decoding="async" /></div>
                 </div>
 
                 {/* ── Right side — redesigned ── */}
