@@ -11,6 +11,7 @@ import rest_framework.parsers
 from django_ratelimit.decorators import ratelimit
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.http import JsonResponse
 from django.db.models import Q, Count
 from typing import Dict
@@ -36,6 +37,9 @@ from .services.presence_service import PresenceService
 
 User = get_user_model()
 
+# Cache key helper for auth tokens
+_AUTH_TOKEN_TTL = 86400  # 24 hours — matches session lifetime
+
 
 def _make_params_fingerprint(params: Dict[str, str]) -> str:
 	normalized = json.dumps(
@@ -59,17 +63,39 @@ def _invalidate_user_cache(user_id: str, startup_id: str, interaction_type: str)
 
 # Helper function to get authenticated user from session or token
 def get_session_user(request):
-	"""Get authenticated user from session or auth token"""
+	"""Get authenticated user from session or auth token.
+
+	Lookup priority:
+	  1. Redis/cache O(1) lookup by auth_token header  ← fast path (production)
+	  2. Fallback: Django session table scan            ← backwards compat only
+	  3. Django auth middleware                          ← cookie-based sessions
+	  4. Session data direct read                        ← last resort
+	"""
 	print(f"🔍 get_session_user called for path: {getattr(request, 'path', 'unknown')}")
 	print(f"🔍 Request headers: Authorization={request.META.get('HTTP_AUTHORIZATION', 'None')}, Cookie={request.META.get('HTTP_COOKIE', 'None')}")
-	
-	# First, check for auth token in Authorization header
+
+	# ── Fast path: Redis / cache lookup (O(1), replaces table scan) ──────────
 	auth_header = request.META.get('HTTP_AUTHORIZATION')
 	if auth_header and auth_header.startswith('Bearer '):
 		auth_token = auth_header.split(' ')[1]
 		print(f"🔑 Found auth token in header: {auth_token[:10]}...")
-		
-		# Validate token by checking all active sessions
+
+		# Primary: direct cache lookup — O(1), ~0.1 ms
+		cached_user_id = cache.get(f"auth_token:{auth_token}")
+		if cached_user_id:
+			try:
+				user = User.objects.get(id=cached_user_id, is_active=True)
+				print(f"✅ Found user from cache (fast path): {user.username}")
+				return user
+			except (User.DoesNotExist, ValueError):
+				# Token in cache but user gone — clean up stale entry
+				cache.delete(f"auth_token:{auth_token}")
+				print(f"❌ Stale auth_token in cache — deleted")
+
+		# Fallback: session table scan for tokens issued before Redis was active.
+		# On first match, backfills cache so subsequent requests use the fast path.
+		# This fallback can be removed once all pre-Redis sessions expire (24h).
+		print(f"⚠️ Cache miss — falling back to session table scan")
 		from django.contrib.sessions.models import Session
 		for session in Session.objects.all():
 			try:
@@ -77,24 +103,24 @@ def get_session_user(request):
 				if session_data.get('auth_token') == auth_token and 'user_id' in session_data:
 					user_id = session_data['user_id']
 					user = User.objects.get(id=user_id, is_active=True)
-					print(f"✅ Found user from auth token: {user.username}")
+					# Backfill cache so next request skips the table scan
+					cache.set(f"auth_token:{auth_token}", str(user_id), timeout=_AUTH_TOKEN_TTL)
+					print(f"✅ Found user via session scan (backfilled cache): {user.username}")
 					return user
 			except (User.DoesNotExist, ValueError, KeyError, TypeError):
 				continue
-		
+
 		print(f"❌ Invalid or expired auth token")
-	
-	# Check if user is authenticated via Django auth middleware
+
+	# ── Django auth middleware (cookie-based sessions) ─────────────────────────
 	if hasattr(request, 'user') and request.user.is_authenticated and hasattr(request.user, 'id'):
 		print(f"✅ Found authenticated user via Django auth: {request.user.username}")
 		return request.user
-	
-	# Check session data (fallback)
+
+	# ── Session data direct read (last resort) ─────────────────────────────────
 	if hasattr(request, 'session'):
 		print(f"📝 Session key: {request.session.session_key}")
 		print(f"📝 Session data: {dict(request.session)}")
-		
-		# Check if session has authentication flag and user_id
 		if request.session.get('is_authenticated') and 'user_id' in request.session:
 			try:
 				user_id = request.session['user_id']
@@ -103,12 +129,11 @@ def get_session_user(request):
 				return user
 			except (User.DoesNotExist, ValueError) as e:
 				print(f"❌ Error getting user from session: {e}")
-				pass
 		else:
 			print(f"❌ Session missing authentication data: is_authenticated={request.session.get('is_authenticated')}, has_user_id={'user_id' in request.session}")
 	else:
 		print(f"❌ No session available on request")
-	
+
 	return None
 
 
@@ -265,6 +290,8 @@ class GoogleVerifyView(generics.GenericAPIView):
 				auth_token = hashlib.sha256(f"{user.id}{user.email}{time.time()}".encode()).hexdigest()[:32]
 				request.session['auth_token'] = auth_token
 				request.session.save()
+				# Store token in Redis for O(1) lookup on subsequent requests
+				cache.set(f"auth_token:{auth_token}", str(user.id), timeout=_AUTH_TOKEN_TTL)
 
 				# Check onboarding status
 				from .recommendation_models import UserOnboardingPreferences
@@ -355,6 +382,8 @@ class SignupView(generics.CreateAPIView):
 				# Store the auth token in session for validation
 				request.session['auth_token'] = auth_token
 				request.session.save()
+				# Store token in Redis for O(1) lookup on subsequent requests
+				cache.set(f"auth_token:{auth_token}", str(user.id), timeout=_AUTH_TOKEN_TTL)
 				print(f"🔑 Auth token created and stored: {auth_token[:10]}...")
 				
 				response_data = {
@@ -491,6 +520,8 @@ class LoginView(generics.GenericAPIView):
 					# Store the auth token in session for validation
 					request.session['auth_token'] = auth_token
 					request.session.save()
+					# Store token in Redis for O(1) lookup on subsequent requests
+					cache.set(f"auth_token:{auth_token}", str(user.id), timeout=_AUTH_TOKEN_TTL)
 					
 					# Check onboarding status
 					from .recommendation_models import UserOnboardingPreferences
@@ -597,16 +628,23 @@ class RefreshTokenView(generics.GenericAPIView):
 @permission_classes([AllowAny])
 @csrf_exempt
 def logout(request):
-	"""Logout endpoint with session cleanup"""
+	"""Logout endpoint with session cleanup and cache token invalidation"""
 	try:
+		# Invalidate auth token from Redis/cache before clearing session
+		if hasattr(request, 'session'):
+			auth_token = request.session.get('auth_token')
+			if auth_token:
+				cache.delete(f"auth_token:{auth_token}")
+				print(f"🗑️ Auth token invalidated in cache on logout")
+
 		# Use Django's logout to clear session
 		from django.contrib.auth import logout as django_logout
 		django_logout(request)
-		
-		# Clear session data
+
+		# Clear remaining session data
 		if hasattr(request, 'session'):
 			request.session.flush()
-		
+
 		return Response({"message": "Logged out successfully"}, status=status.HTTP_200_OK)
 	except Exception as e:
 		return Response({"message": "Logged out successfully"}, status=status.HTTP_200_OK)

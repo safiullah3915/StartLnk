@@ -225,38 +225,37 @@ RATELIMIT_ENABLE = True
 RATELIMIT_USE_CACHE = 'default'
 
 # Cache settings
-# Currently using LocMemCache for development.
-# SEO sitemaps and metadata are cached here (30min TTL).
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'unique-snowflake',
-    }
-}
+# ─── Auto-selects Redis (production) or LocMemCache (local dev) ───────────────
+# Production: set REDIS_URL=redis://127.0.0.1:6379/0 in your .env file
+#             and install django-redis (already in requirements.txt).
+# Development: leave REDIS_URL unset — falls back to LocMemCache automatically.
+# ─────────────────────────────────────────────────────────────────────────────
+_REDIS_URL = config('REDIS_URL', default='')
 
-# ─── REDIS CACHE (Plug-and-play — uncomment when credentials are ready) ───
-# To activate Redis caching for SEO + general cache:
-# 1. Add to your .env file:
-#      REDIS_URL=redis://:<password>@<host>:<port>/0
-# 2. Install: pip install django-redis
-# 3. Replace the CACHES block above with:
-#
-# import os
-# CACHES = {
-#     'default': {
-#         'BACKEND': 'django_redis.cache.RedisCache',
-#         'LOCATION': config('REDIS_URL', default='redis://127.0.0.1:6379/0'),
-#         'OPTIONS': {
-#             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-#             'SOCKET_CONNECT_TIMEOUT': 5,
-#             'SOCKET_TIMEOUT': 5,
-#             'IGNORE_EXCEPTIONS': True,  # Fall back gracefully if Redis is down
-#         },
-#         'KEY_PREFIX': 'startlnk',
-#         'TIMEOUT': 300,  # Default 5-minute TTL
-#     }
-# }
-# ─────────────────────────────────────────────────────────────────────────
+if _REDIS_URL:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': _REDIS_URL,
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+                'SOCKET_CONNECT_TIMEOUT': 5,   # seconds to wait for Redis connection
+                'SOCKET_TIMEOUT': 5,            # seconds to wait for Redis response
+                'IGNORE_EXCEPTIONS': True,      # degrade gracefully if Redis is down
+            },
+            'KEY_PREFIX': 'startlnk',
+            'TIMEOUT': 300,  # default 5-minute TTL for all cache keys
+        }
+    }
+else:
+    # Local development fallback — no Redis required
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'unique-snowflake',
+        }
+    }
+
 
 
 # Email Configuration

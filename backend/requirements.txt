@@ -14,3 +14,4 @@ sentence-transformers
 APScheduler
 django-apscheduler
 requests
+django-redis
