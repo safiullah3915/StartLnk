@@ -95,7 +95,7 @@ const Footer = () => {
       )}
 
       <div className={styles.footer_bottom}>
-        <p>&copy; 2026 StartLnk. All rights reserved. Product by SpectraMind AI</p>
+        <p>&copy; 2026 StartLnk. All rights reserved. Product by <a href="https://www.linkedin.com/company/spectramind-ai/" target="_blank" rel="noopener noreferrer" style={{color: 'inherit', textDecoration: 'underline', cursor: 'pointer'}}>SpectraMind AI</a></p>
       </div>
     </footer>
   );
