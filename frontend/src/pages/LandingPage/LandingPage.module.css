@@ -249,6 +249,7 @@
   .hero_section_content {
     width: 100%;
     padding: 0 1rem;
+    transform: translateY(-3rem);
   }
   
   .hero_section_content .p1 {
@@ -279,6 +280,10 @@
 @media (max-width: 576px) {
   .hero_section_content .p1 {
     font-size: 2.5rem;
+  }
+
+  .hero_section_content {
+    transform: translateY(-2rem);
   }
 
   .hero_section_content .p2 {

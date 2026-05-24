@@ -118,11 +118,28 @@ function AppRoutes() {
   const location = useLocation();
   const [transitionStage, setTransitionStage] = React.useState('fade-in');
   const [isRefreshing, setIsRefreshing]       = React.useState(false);
+  const [showAuthRouteLoader, setShowAuthRouteLoader] = React.useState(false);
+  const previousPathRef = useRef(location.pathname);
 
   // Page transition animation
   useEffect(() => {
     setTransitionStage('fade-out');
     const t = setTimeout(() => setTransitionStage('fade-in'), 150);
+    return () => clearTimeout(t);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const previousPath = previousPathRef.current;
+    const isAuthRoute = location.pathname === '/login' || location.pathname === '/signup';
+    previousPathRef.current = location.pathname;
+
+    if (!isAuthRoute || previousPath === location.pathname) {
+      setShowAuthRouteLoader(false);
+      return undefined;
+    }
+
+    setShowAuthRouteLoader(true);
+    const t = setTimeout(() => setShowAuthRouteLoader(false), 350);
     return () => clearTimeout(t);
   }, [location.pathname]);
 
@@ -188,6 +205,7 @@ function AppRoutes() {
     <>
       <ScrollToTop />
       <ToastContainer position="top-right" autoClose={3000} />
+      {showAuthRouteLoader && <PageLoader />}
 
       {/* Suspense catches lazy chunk loading — shows spinner during navigation */}
       <Suspense fallback={<PageLoader />}>
