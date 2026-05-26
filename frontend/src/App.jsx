@@ -15,46 +15,46 @@ import RoleBasedRoute from './components/RoleBasedRoute/RoleBasedRoute';
 // This reduces the initial JS payload from ~2 MB to ~300 KB.
 
 // Auth / onboarding
-const Login              = lazy(() => import('./components/login/Login').then(m => ({ default: m.Login })));
-const Signup             = lazy(() => import('./components/Signup/Signup'));
-const EmailVerification  = lazy(() => import('./components/EmailVerification/EmailVerification'));
-const CompleteProfile    = lazy(() => import('./pages/CompleteProfile/CompleteProfile'));
+const Login = lazy(() => import('./components/login/Login').then(m => ({ default: m.Login })));
+const Signup = lazy(() => import('./components/Signup/Signup'));
+const EmailVerification = lazy(() => import('./components/EmailVerification/EmailVerification'));
+const CompleteProfile = lazy(() => import('./pages/CompleteProfile/CompleteProfile'));
 const OnboardingPreferences = lazy(() => import('./pages/OnboardingPreferences/OnboardingPreferences'));
 
 // Public marketing pages
 const LandingPage = lazy(() => import('./pages/LandingPage/LandingPage').then(m => ({ default: m.LandingPage })));
-const About       = lazy(() => import('./pages/About/About'));
-const Contact     = lazy(() => import('./pages/Contact/Contact'));
-const FAQ         = lazy(() => import('./pages/FAQ/FAQ'));
-const PrivacyPolicy   = lazy(() => import('./pages/PrivacyPolicy/PrivacyPolicy'));
-const TermsOfService  = lazy(() => import('./pages/TermsOfService/TermsOfService'));
+const About = lazy(() => import('./pages/About/About'));
+const Contact = lazy(() => import('./pages/Contact/Contact'));
+const FAQ = lazy(() => import('./pages/FAQ/FAQ'));
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy/PrivacyPolicy'));
+const TermsOfService = lazy(() => import('./pages/TermsOfService/TermsOfService'));
 
 // SEO programmatic pages (public)
 const ProgrammaticSEOPage = lazy(() => import('./pages/ProgrammaticSEO/ProgrammaticSEOPage'));
 
 // Core app pages (authenticated)
-const Dashboard      = lazy(() => import('./pages/Dashboard/Dashboard'));
-const Marketplace    = lazy(() => import('./pages/Marketplace/Marketplace').then(m => ({ default: m.Marketplace })));
-const Collaboration  = lazy(() => import('./pages/Collaboration/Collaboration').then(m => ({ default: m.Collaboration })));
+const Dashboard = lazy(() => import('./pages/Dashboard/Dashboard'));
+const Marketplace = lazy(() => import('./pages/Marketplace/Marketplace').then(m => ({ default: m.Marketplace })));
+const Collaboration = lazy(() => import('./pages/Collaboration/Collaboration').then(m => ({ default: m.Collaboration })));
 const StartupDetails = lazy(() => import('./pages/StartupDetails/StartupDetails'));
-const People         = lazy(() => import('./pages/People/People'));
-const Favorites      = lazy(() => import('./pages/Favorites/Favorites'));
+const People = lazy(() => import('./pages/People/People'));
+const Favorites = lazy(() => import('./pages/Favorites/Favorites'));
 const SearchStartups = lazy(() => import('./pages/Search/SearchStartups'));
-const MessageDark    = lazy(() => import('./pages/message/MessageDark'));
+const MessageDark = lazy(() => import('./pages/message/MessageDark'));
 
 // Account
 const AccountSettingsII = lazy(() => import('./pages/AccountSettings/AccountSettingsII'));
 
 // Entrepreneur-only pages
-const CreateStartupProject     = lazy(() => import('./pages/CreateStartup/CreateStartupProject'));
-const PitchIdea                = lazy(() => import('./pages/PitchIdea/PitchIdea'));
-const PositionManagement       = lazy(() => import('./pages/PositionManagement/PositionManagement'));
-const PositionApplications     = lazy(() => import('./pages/PositionApplications/PositionApplications'));
+const CreateStartupProject = lazy(() => import('./pages/CreateStartup/CreateStartupProject'));
+const PitchIdea = lazy(() => import('./pages/PitchIdea/PitchIdea'));
+const PositionManagement = lazy(() => import('./pages/PositionManagement/PositionManagement'));
+const PositionApplications = lazy(() => import('./pages/PositionApplications/PositionApplications'));
 const StartupsWithApplications = lazy(() => import('./pages/StartupsWithApplications/StartupsWithApplications'));
-const StartupApplications      = lazy(() => import('./pages/StartupApplications/StartupApplications'));
+const StartupApplications = lazy(() => import('./pages/StartupApplications/StartupApplications'));
 
 // Role-restricted pages
-const ApplyJob          = lazy(() => import('./pages/ApplyJob/ApplyJob'));
+const ApplyJob = lazy(() => import('./pages/ApplyJob/ApplyJob'));
 const InvestorDashboard = lazy(() => import('./pages/InvestorDashboard/InvestorDashboard'));
 
 // ── Page transition spinner (shown while lazy chunks load) ───────────────────
@@ -77,14 +77,14 @@ function ScrollToTop() {
 
 // ── Pull-to-refresh (mobile) ─────────────────────────────────────────────────
 function usePullToRefresh(onRefresh) {
-  const startY    = useRef(0);
+  const startY = useRef(0);
   const isPulling = useRef(false);
   const THRESHOLD = 80;
 
   useEffect(() => {
     const onTouchStart = (e) => {
       if (window.scrollY === 0) {
-        startY.current    = e.touches[0].clientY;
+        startY.current = e.touches[0].clientY;
         isPulling.current = true;
       }
     };
@@ -97,17 +97,17 @@ function usePullToRefresh(onRefresh) {
     const onTouchEnd = () => {
       if (isPulling.current === 'triggered') onRefresh();
       isPulling.current = false;
-      startY.current    = 0;
+      startY.current = 0;
     };
 
     document.addEventListener('touchstart', onTouchStart, { passive: true });
-    document.addEventListener('touchmove',  onTouchMove,  { passive: true });
-    document.addEventListener('touchend',   onTouchEnd,   { passive: true });
+    document.addEventListener('touchmove', onTouchMove, { passive: true });
+    document.addEventListener('touchend', onTouchEnd, { passive: true });
 
     return () => {
       document.removeEventListener('touchstart', onTouchStart);
-      document.removeEventListener('touchmove',  onTouchMove);
-      document.removeEventListener('touchend',   onTouchEnd);
+      document.removeEventListener('touchmove', onTouchMove);
+      document.removeEventListener('touchend', onTouchEnd);
     };
   }, [onRefresh]);
 }
@@ -117,7 +117,7 @@ function AppRoutes() {
   const { isAuthenticated, user, loading } = useAuth();
   const location = useLocation();
   const [transitionStage, setTransitionStage] = React.useState('fade-in');
-  const [isRefreshing, setIsRefreshing]       = React.useState(false);
+  const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [showAuthRouteLoader, setShowAuthRouteLoader] = React.useState(false);
   const previousPathRef = useRef(location.pathname);
 
@@ -220,19 +220,19 @@ function AppRoutes() {
               element={
                 isAuthenticated
                   ? (user?.onboarding_completed
-                      ? <Navigate to="/dashboard" replace />
-                      : <Navigate to="/onboarding-preferences" replace />)
+                    ? <Navigate to="/dashboard" replace />
+                    : <Navigate to="/onboarding-preferences" replace />)
                   : <Login />
               }
             />
 
-            <Route path="/signup"           element={<Signup />} />
+            <Route path="/signup" element={<Signup />} />
             <Route path="/complete-profile" element={<CompleteProfile />} />
-            <Route path="/about"            element={<About />} />
-            <Route path="/contact"          element={<Contact />} />
-            <Route path="/faq"              element={<FAQ />} />
-            <Route path="/privacy"          element={<PrivacyPolicy />} />
-            <Route path="/terms"            element={<TermsOfService />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/faq" element={<FAQ />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/terms" element={<TermsOfService />} />
 
             <Route
               path="/verify-email"
@@ -240,12 +240,12 @@ function AppRoutes() {
             />
 
             {/* ── Programmatic SEO public routes ─────────────────────────── */}
-            <Route path="/jobs/:param"            element={<ProgrammaticSEOPage />} />
-            <Route path="/internships/:param"     element={<ProgrammaticSEOPage />} />
-            <Route path="/startups/:param"        element={<ProgrammaticSEOPage />} />
-            <Route path="/collaborate/:param"     element={<ProgrammaticSEOPage />} />
-            <Route path="/remote/:param"          element={<ProgrammaticSEOPage />} />
-            <Route path="/opportunities/:param"   element={<ProgrammaticSEOPage />} />
+            <Route path="/jobs/:param" element={<ProgrammaticSEOPage />} />
+            <Route path="/internships/:param" element={<ProgrammaticSEOPage />} />
+            <Route path="/startups/:param" element={<ProgrammaticSEOPage />} />
+            <Route path="/collaborate/:param" element={<ProgrammaticSEOPage />} />
+            <Route path="/remote/:param" element={<ProgrammaticSEOPage />} />
+            <Route path="/opportunities/:param" element={<ProgrammaticSEOPage />} />
 
             {/* ── Protected routes (requires auth) ───────────────────────── */}
             <Route path="/dashboard" element={
@@ -275,6 +275,7 @@ function AppRoutes() {
             <Route path="/message" element={
               <ProtectedRoute><MessageDark /></ProtectedRoute>
             } />
+
             <Route path="/onboarding-preferences" element={
               <ProtectedRoute><OnboardingPreferences /></ProtectedRoute>
             } />

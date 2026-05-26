@@ -824,6 +824,8 @@ const MessageDark = () => {
           font-weight: 600;
           color: var(--text-muted);
           background: transparent;
+          border: none;
+          outline: none;
           transition: all 0.2s;
           cursor: pointer;
         }
@@ -982,6 +984,8 @@ const MessageDark = () => {
           color: white;
           padding: 0.6rem;
           border-radius: 0.75rem;
+          border: none;
+          outline: none;
           font-weight: 600;
           font-size: 0.875rem;
           cursor: pointer;
@@ -1375,8 +1379,11 @@ const MessageDark = () => {
           background: #020617 !important;
           color: #ffffff !important;
           border: 1px solid var(--glass-border) !important;
+          border-radius: 0.75rem !important;
           width: 100% !important;
-          padding-left: 3.5rem !important;
+          padding: 0.65rem 1rem 0.65rem 3.5rem !important;
+          font-size: 0.875rem !important;
+          outline: none !important;
         }
 
         .member-list-scroll {
@@ -1559,6 +1566,8 @@ const MessageDark = () => {
           transition: all 0.2s;
           padding: 0.5rem 1rem;
           border-radius: 0.5rem;
+          border: none;
+          outline: none;
           font-size: 0.875rem;
         }
 
@@ -1567,16 +1576,15 @@ const MessageDark = () => {
           background: rgba(255, 255, 255, 0.05);
         }
 
-        .cancel-btn:hover {
-          color: white;
-        }
-
         .launch-btn {
           background: linear-gradient(135deg, var(--primary), var(--accent-purple));
           padding: 0.875rem 2.5rem;
           border-radius: 0.875rem;
+          border: none;
+          outline: none;
           font-weight: 800;
           color: white;
+          cursor: pointer;
           box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
           transition: transform 0.2s;
         }
