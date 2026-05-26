@@ -224,6 +224,23 @@ X_FRAME_OPTIONS = 'DENY'
 RATELIMIT_ENABLE = True
 RATELIMIT_USE_CACHE = 'default'
 
+# ── Reverse proxy IP forwarding ──────────────────────────────────────────────
+# REMOTE_ADDR is empty when Gunicorn runs via Unix socket (Nginx → Gunicorn).
+# django-ratelimit reads REMOTE_ADDR by default → raises ImproperlyConfigured.
+# Fix: tell ratelimit to read HTTP_X_REAL_IP instead, which Nginx sets to
+# $remote_addr (the actual client IP connecting to Nginx). This header is
+# set by our own Nginx and cannot be spoofed by the client.
+RATELIMIT_IP_META_KEY = 'HTTP_X_REAL_IP'
+
+# ── HTTPS / proxy trust settings ─────────────────────────────────────────────
+# Tell Django to trust X-Forwarded-Proto from Nginx to detect HTTPS correctly.
+# Required for secure cookies, CSRF, and redirects to work behind the proxy.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Do NOT trust X-Forwarded-Host — prevents host header injection attacks.
+# Django should always read the Host header directly from Nginx.
+USE_X_FORWARDED_HOST = False
+
 # Cache settings
 # ─── Auto-selects Redis (production) or LocMemCache (local dev) ───────────────
 # Production: set REDIS_URL=redis://127.0.0.1:6379/0 in your .env file
