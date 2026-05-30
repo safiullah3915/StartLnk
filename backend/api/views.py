@@ -818,6 +818,18 @@ class StartupDetailView(generics.RetrieveDestroyAPIView):
 				status=status.HTTP_404_NOT_FOUND
 			)
 		
+		# Block public access to non-verified startups.
+		# Owner can still view their own startup (to see its status).
+		# Admin (is_staff/is_superuser) can see all startups.
+		request_user = get_session_user(request)
+		is_owner = request_user and instance.owner == request_user
+		is_admin = request_user and (request_user.is_staff or request_user.is_superuser)
+		if not is_owner and not is_admin and instance.verification_status != 'verified':
+			return Response(
+				{"error": "Startup not found"},
+				status=status.HTTP_404_NOT_FOUND
+			)
+
 		# Increment view count (for backward compatibility)
 		try:
 			instance.views += 1
@@ -1265,10 +1277,11 @@ class AllPositionsView(generics.ListAPIView):
     permission_classes = [permissions.AllowAny]
     
     def get_queryset(self):
-        # Return all active positions from active startups (both collaboration and marketplace)
+        # Only show positions from active + verified startups to the public
         return Position.objects.filter(
             is_active=True,
-            startup__status='active'
+            startup__status='active',
+            startup__verification_status='verified'
         ).select_related('startup', 'startup__owner').order_by('-created_at')
     
     def list(self, request, *args, **kwargs):
@@ -1343,13 +1356,15 @@ class StartupPositionsView(generics.ListCreateAPIView):
         
         # For listing (GET): 
         # - Show all positions (active and closed) to startup owner
-        # - Show only active positions to everyone else
+        # - Show only active positions to everyone else, but ONLY if the startup is verified
         if self.request.method == 'GET':
             if user and startup and startup.owner == user:
-                # Owner sees all positions (active and closed)
+                # Owner sees all their positions regardless of verification
                 return Position.objects.filter(startup_id=startup_id)
             else:
-                # Public sees only active positions
+                # Public sees only active positions from verified startups
+                if not startup or startup.verification_status != 'verified':
+                    return Position.objects.none()
                 return Position.objects.filter(startup_id=startup_id, is_active=True)
         else:
             # For creating (POST), only allow startup owner
@@ -1959,7 +1974,8 @@ class SearchView(generics.ListAPIView):
 		funding_stage = self.request.query_params.get('funding_stage', '')
 		limit = int(self.request.query_params.get('limit', 20))
 		
-		queryset = Startup.objects.filter(status='active')
+		# Only return verified active startups to the public
+		queryset = Startup.objects.filter(status='active', verification_status='verified')
 		
 		# Apply text search
 		if query:
@@ -2001,8 +2017,8 @@ class SearchView(generics.ListAPIView):
 		team_size = self.request.query_params.get('team_size', '')
 		funding_stage = self.request.query_params.get('funding_stage', '')
 		
-		# Build queryset for count
-		full_queryset = Startup.objects.filter(status='active')
+		# Build queryset for count — only verified active startups
+		full_queryset = Startup.objects.filter(status='active', verification_status='verified')
 		
 		if query:
 			full_queryset = full_queryset.filter(
