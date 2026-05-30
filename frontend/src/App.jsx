@@ -57,6 +57,19 @@ const StartupApplications = lazy(() => import('./pages/StartupApplications/Start
 const ApplyJob = lazy(() => import('./pages/ApplyJob/ApplyJob'));
 const InvestorDashboard = lazy(() => import('./pages/InvestorDashboard/InvestorDashboard'));
 
+// Admin portal pages (lazy loaded, only fetched when navigating to /portal)
+const PortalOverview = lazy(() => import('./pages/Portal/PortalOverview'));
+const PortalStartups = lazy(() => import('./pages/Portal/PortalStartups'));
+const PortalUsers = lazy(() => import('./pages/Portal/PortalUsers'));
+
+// ── Admin-only route guard ────────────────────────────────────────────────────
+function AdminRoute({ children }) {
+  const { isAuthenticated, isAdmin, loading } = useAuth();
+  if (loading) return <PageLoader />;
+  if (!isAuthenticated || !isAdmin()) return <Navigate to="/login" replace />;
+  return children;
+}
+
 // ── Page transition spinner (shown while lazy chunks load) ───────────────────
 function PageLoader() {
   return (
@@ -324,6 +337,17 @@ function AppRoutes() {
               <RoleBasedRoute allowedRoles={['student', 'entrepreneur']}>
                 <ApplyJob />
               </RoleBasedRoute>
+            } />
+
+            {/* ── Admin portal routes ─────────────────────────────────────── */}
+            <Route path="/portal" element={
+              <AdminRoute><PortalOverview /></AdminRoute>
+            } />
+            <Route path="/portal/startups" element={
+              <AdminRoute><PortalStartups /></AdminRoute>
+            } />
+            <Route path="/portal/users" element={
+              <AdminRoute><PortalUsers /></AdminRoute>
             } />
 
             {/* ── Catch-all: redirect unknown routes to home ──────────────── */}

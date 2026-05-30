@@ -141,5 +141,10 @@ urlpatterns = [
 	path('api/seo/schema/faq', schema_faq_view, name='seo_schema_faq'),
 	path('api/seo/schema/startup/<uuid:pk>', schema_startup_view, name='seo_schema_startup'),
 	path('api/seo/programmatic', programmatic_metadata_view, name='seo_programmatic_meta'),
+	# ==================== ADMIN PORTAL ====================
+	path('api/portal/stats', views.AdminStatsView.as_view(), name='admin_stats'),
+	path('api/portal/startups', views.AdminStartupListView.as_view(), name='admin_startups'),
+	path('api/portal/startups/<uuid:pk>/verify', views.AdminVerifyStartupView.as_view(), name='admin_verify_startup'),
+	path('api/portal/users', views.AdminUserListView.as_view(), name='admin_users'),
 ]
 

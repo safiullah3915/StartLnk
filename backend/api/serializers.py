@@ -85,7 +85,7 @@ class UserSerializer(serializers.ModelSerializer):
 	
 	class Meta:
 		model = User
-		fields = ('id', 'username', 'full_name', 'profile_picture', 'email', 'created_at', 'stats', 'role', 'email_verified')
+		fields = ('id', 'username', 'full_name', 'profile_picture', 'email', 'created_at', 'stats', 'role', 'email_verified', 'is_staff', 'is_superuser')
 	
 	def get_full_name(self, obj):
 		if obj.first_name or obj.last_name:
@@ -157,7 +157,8 @@ class StartupListSerializer(serializers.ModelSerializer):
 		fields = (
 			'id', 'name', 'title', 'description', 'revenue', 'profit', 
 			'asking_price', 'tag', 'type', 'field', 'category', 'created_at', 
-			'owner', 'earn_through', 'phase', 'team_size', 'time_commitment'
+			'owner', 'earn_through', 'phase', 'team_size', 'time_commitment',
+			'verification_status'
 		)
 	
 	def get_team_size(self, obj):
@@ -455,6 +456,7 @@ class UserStartupSerializer(serializers.ModelSerializer):
 		model = Startup
 		fields = (
 			'id', 'title', 'description', 'type', 'category', 'status', 
+			'verification_status',
 			'revenue', 'profit', 'asking_price', 'ttm_revenue', 'ttm_profit',
 			'last_month_revenue', 'last_month_profit', 'earn_through', 
 			'phase', 'team_size', 'field', 'website_url', 'applications', 
@@ -1171,3 +1173,56 @@ class StartupInteractionStatusSerializer(serializers.Serializer):
     has_favorite = serializers.BooleanField()
     has_interest = serializers.BooleanField()
     has_application = serializers.BooleanField()
+
+
+# ── Admin Portal Serializers ─────────────────────────────────────────────────
+
+class AdminStartupSerializer(serializers.ModelSerializer):
+    """Full startup info for admin portal review"""
+    owner_username = serializers.CharField(source='owner.username', read_only=True)
+    owner_email = serializers.CharField(source='owner.email', read_only=True)
+    owner_role = serializers.CharField(source='owner.role', read_only=True)
+    tags = serializers.SerializerMethodField()
+    applications_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Startup
+        fields = (
+            'id', 'title', 'description', 'type', 'category', 'field',
+            'status', 'verification_status', 'website_url',
+            'revenue', 'profit', 'asking_price',
+            'earn_through', 'phase', 'team_size',
+            'owner_username', 'owner_email', 'owner_role',
+            'tags', 'applications_count', 'views', 'created_at', 'updated_at',
+        )
+
+    def get_tags(self, obj):
+        return [t.tag for t in obj.tags.all()]
+
+    def get_applications_count(self, obj):
+        return obj.applications.count()
+
+
+class AdminUserSerializer(serializers.ModelSerializer):
+    """User info for admin portal"""
+    full_name = serializers.SerializerMethodField()
+    startups_count = serializers.SerializerMethodField()
+    applications_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = (
+            'id', 'username', 'email', 'full_name', 'role',
+            'is_active', 'is_staff', 'is_superuser',
+            'email_verified', 'onboarding_completed',
+            'startups_count', 'applications_count', 'created_at',
+        )
+
+    def get_full_name(self, obj):
+        return f"{obj.first_name} {obj.last_name}".strip() or obj.username
+
+    def get_startups_count(self, obj):
+        return obj.startups.count()
+
+    def get_applications_count(self, obj):
+        return obj.applications.count()

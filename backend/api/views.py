@@ -30,7 +30,8 @@ from .serializers import (
 	SearchResultSerializer, NotificationSerializer, FavoriteSerializer, InterestSerializer,
 	MessageSerializer, ConversationSerializer, ConversationCreateSerializer, MessageCreateSerializer,
 	UserProfileSerializer, UserProfileUpdateSerializer, FileUploadSerializer, FileUploadCreateSerializer,
-	UserOnboardingPreferencesSerializer, UserInteractionSerializer, StartupInteractionStatusSerializer
+	UserOnboardingPreferencesSerializer, UserInteractionSerializer, StartupInteractionStatusSerializer,
+	AdminStartupSerializer, AdminUserSerializer
 )
 from .services.cache_service import RecommendationCacheService
 from .services.presence_service import PresenceService
@@ -693,8 +694,8 @@ class StartupCreateView(generics.CreateAPIView):
         
         print(f"💾 Creating startup with owner: {user.username}")
         
-        # Save startup with authenticated user as owner
-        startup = serializer.save(owner=user)
+        # Save startup — new submissions start as under_verification
+        startup = serializer.save(owner=user, verification_status='under_verification')
         
         print(f"✅ Startup created: {startup.title} (ID: {startup.id})")
         
@@ -715,7 +716,9 @@ class MarketplaceListView(generics.ListAPIView):
     permission_classes = [AllowAny]
     
     def get_queryset(self):
-        queryset = Startup.objects.filter(type='marketplace', status='active')
+        queryset = Startup.objects.filter(
+            type='marketplace', status='active', verification_status='verified'
+        )
         
         # Apply filters
         sort_by = self.request.query_params.get('sortBy', 'date')
@@ -766,7 +769,9 @@ class CollaborationListView(generics.ListAPIView):
 	permission_classes = [AllowAny]
 	
 	def get_queryset(self):
-		queryset = Startup.objects.filter(type='collaboration', status='active')
+		queryset = Startup.objects.filter(
+			type='collaboration', status='active', verification_status='verified'
+		)
 		
 		# Apply filters
 		sort_by = self.request.query_params.get('sortBy', 'date')
@@ -2987,3 +2992,130 @@ def startup_interaction_status(request, pk):
 	})
 	
 	return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+# ── Admin Portal Views ────────────────────────────────────────────────────────
+
+class IsStaffUser(permissions.BasePermission):
+	"""Allow access only to staff/superuser accounts."""
+	def has_permission(self, request, view):
+		user = get_session_user(request)
+		return bool(user and (user.is_staff or user.is_superuser))
+
+
+class AdminStatsView(generics.GenericAPIView):
+	"""Platform overview stats for admin portal."""
+	permission_classes = [AllowAny]
+
+	def get(self, request):
+		user = get_session_user(request)
+		if not user or not (user.is_staff or user.is_superuser):
+			return Response({'error': 'Admin access required'}, status=status.HTTP_403_FORBIDDEN)
+
+		total_users = User.objects.count()
+		total_startups = Startup.objects.count()
+		pending = Startup.objects.filter(verification_status='under_verification').count()
+		verified = Startup.objects.filter(verification_status='verified').count()
+		rejected = Startup.objects.filter(verification_status='rejected').count()
+		more_info = Startup.objects.filter(verification_status='more_info_required').count()
+		suspended = Startup.objects.filter(verification_status='suspended').count()
+		total_applications = Application.objects.count()
+
+		return Response({
+			'total_users': total_users,
+			'total_startups': total_startups,
+			'total_applications': total_applications,
+			'verification': {
+				'under_verification': pending,
+				'verified': verified,
+				'rejected': rejected,
+				'more_info_required': more_info,
+				'suspended': suspended,
+			}
+		})
+
+
+class AdminStartupListView(generics.ListAPIView):
+	"""List all startups for admin portal with optional status filter."""
+	serializer_class = AdminStartupSerializer
+	permission_classes = [AllowAny]
+
+	def get_queryset(self):
+		user = get_session_user(self.request)
+		if not user or not (user.is_staff or user.is_superuser):
+			return Startup.objects.none()
+
+		qs = Startup.objects.select_related('owner').prefetch_related('tags', 'applications').order_by('-created_at')
+		v_status = self.request.query_params.get('verification_status')
+		search = self.request.query_params.get('search', '').strip()
+		if v_status:
+			qs = qs.filter(verification_status=v_status)
+		if search:
+			qs = qs.filter(Q(title__icontains=search) | Q(owner__username__icontains=search) | Q(owner__email__icontains=search))
+		return qs
+
+	def list(self, request, *args, **kwargs):
+		user = get_session_user(request)
+		if not user or not (user.is_staff or user.is_superuser):
+			return Response({'error': 'Admin access required'}, status=status.HTTP_403_FORBIDDEN)
+		qs = self.get_queryset()
+		serializer = self.get_serializer(qs, many=True)
+		return Response({'results': serializer.data, 'count': qs.count()})
+
+
+class AdminVerifyStartupView(generics.GenericAPIView):
+	"""Update verification_status of a startup (admin only)."""
+	permission_classes = [AllowAny]
+
+	VALID_STATUSES = {'under_verification', 'verified', 'rejected', 'more_info_required', 'suspended'}
+
+	def patch(self, request, pk):
+		user = get_session_user(request)
+		if not user or not (user.is_staff or user.is_superuser):
+			return Response({'error': 'Admin access required'}, status=status.HTTP_403_FORBIDDEN)
+
+		new_status = request.data.get('verification_status')
+		if not new_status or new_status not in self.VALID_STATUSES:
+			return Response(
+				{'error': f'Invalid status. Choose from: {", ".join(sorted(self.VALID_STATUSES))}'},
+				status=status.HTTP_400_BAD_REQUEST
+			)
+
+		try:
+			startup = Startup.objects.get(pk=pk)
+		except Startup.DoesNotExist:
+			return Response({'error': 'Startup not found'}, status=status.HTTP_404_NOT_FOUND)
+
+		startup.verification_status = new_status
+		startup.save(update_fields=['verification_status', 'updated_at'])
+
+		serializer = AdminStartupSerializer(startup)
+		return Response({'message': f'Status updated to {new_status}', 'startup': serializer.data})
+
+
+class AdminUserListView(generics.ListAPIView):
+	"""List all users for admin portal."""
+	serializer_class = AdminUserSerializer
+	permission_classes = [AllowAny]
+
+	def get_queryset(self):
+		user = get_session_user(self.request)
+		if not user or not (user.is_staff or user.is_superuser):
+			return User.objects.none()
+
+		qs = User.objects.prefetch_related('startups', 'applications').order_by('-created_at')
+		search = self.request.query_params.get('search', '').strip()
+		role = self.request.query_params.get('role', '').strip()
+		if search:
+			qs = qs.filter(Q(username__icontains=search) | Q(email__icontains=search))
+		if role:
+			qs = qs.filter(role=role)
+		return qs
+
+	def list(self, request, *args, **kwargs):
+		user = get_session_user(request)
+		if not user or not (user.is_staff or user.is_superuser):
+			return Response({'error': 'Admin access required'}, status=status.HTTP_403_FORBIDDEN)
+		qs = self.get_queryset()
+		serializer = self.get_serializer(qs, many=True)
+		return Response({'results': serializer.data, 'count': qs.count()})

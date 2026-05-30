@@ -84,7 +84,15 @@ class Startup(models.Model):
 		('sold', 'Sold'),
 		('paused', 'Paused'),
 	]
-	
+
+	VERIFICATION_STATUS_CHOICES = [
+		('under_verification', 'Under Verification'),
+		('verified', 'Verified'),
+		('rejected', 'Rejected'),
+		('more_info_required', 'More Info Required'),
+		('suspended', 'Suspended'),
+	]
+
 	id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 	owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='startups')
 	title = models.CharField(max_length=200, validators=[MinLengthValidator(5)])
@@ -107,6 +115,12 @@ class Startup(models.Model):
 	type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='marketplace')
 	category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='other')
 	status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+	verification_status = models.CharField(
+		max_length=30,
+		choices=VERIFICATION_STATUS_CHOICES,
+		default='verified',  # existing rows stay visible; overridden to under_verification on new creates
+		db_index=True
+	)
 	views = models.IntegerField(default=0)
 	featured = models.BooleanField(default=False)
 	

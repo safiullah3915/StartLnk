@@ -64,6 +64,31 @@ const Dashboard = () => {
       .replace(/\b\w/g, (char) => char.toUpperCase());
   };
 
+  const getVerificationBadge = (vStatus) => {
+    const map = {
+      under_verification: { label: '⏳ Under Review', color: '#b45309', bg: 'rgba(251,191,36,0.12)' },
+      verified:           { label: '✅ Verified',       color: '#047857', bg: 'rgba(52,211,153,0.12)' },
+      rejected:           { label: '🔴 Rejected',       color: '#b91c1c', bg: 'rgba(248,113,113,0.12)' },
+      more_info_required: { label: '🟠 More Info Needed', color: '#c2410c', bg: 'rgba(251,146,60,0.12)' },
+      suspended:          { label: '⚫ Suspended',      color: '#374151', bg: 'rgba(107,114,128,0.12)' },
+    };
+    const entry = map[vStatus] || map.under_verification;
+    return (
+      <span style={{
+        display: 'inline-block',
+        padding: '0.2rem 0.65rem',
+        borderRadius: '9999px',
+        fontSize: '0.72rem',
+        fontWeight: 700,
+        color: entry.color,
+        background: entry.bg,
+        whiteSpace: 'nowrap',
+      }}>
+        {entry.label}
+      </span>
+    );
+  };
+
   const scrollToRecentApplications = () => {
     setCurrentPage(1);
     setTimeout(() => {
@@ -297,6 +322,9 @@ const Dashboard = () => {
                       <div className={styles.cardHeader}>
                         <div className={styles.cardIcon}><h3>{startup.title}</h3></div>
                         <span className={styles.cardTag}>{startup.category ? startup.category.charAt(0).toUpperCase() + startup.category.slice(1) : 'Other'}</span>
+                      </div>
+                      <div style={{ marginBottom: '0.5rem' }}>
+                        {getVerificationBadge(startup.verification_status)}
                       </div>
                       <p className={styles.cardDescription}>{startup.description?.substring(0, 100)}{startup.description && startup.description.length > 100 ? '...' : ''}</p>
                       <div className={styles.cardStats}>

@@ -98,7 +98,9 @@ export const AuthProvider = ({ children }) => {
               email: profile.user?.email || profile.email,
               role: profile.user?.role || profile.role,
               onboarding_completed: response.data.onboarding_completed,
-              emailVerified: true
+              emailVerified: true,
+              is_staff: profile.user?.is_staff || false,
+              is_superuser: profile.user?.is_superuser || false,
             };
             setUser(userData);
             setIsAuthenticated(true);
@@ -127,7 +129,9 @@ export const AuthProvider = ({ children }) => {
                 email: profile.user?.email || profile.email,
                 role: profile.user?.role || profile.role,
                 onboarding_completed: response.data.onboarding_completed,
-                emailVerified: true
+                emailVerified: true,
+                is_staff: profile.user?.is_staff || false,
+                is_superuser: profile.user?.is_superuser || false,
               };
               setUser(userData);
               setIsAuthenticated(true);
@@ -361,6 +365,7 @@ export const AuthProvider = ({ children }) => {
   const isEntrepreneur = () => user?.role === 'entrepreneur';
   const isStudent = () => user?.role === 'student';
   const isInvestor = () => user?.role === 'investor';
+  const isAdmin = () => !!(user?.is_staff || user?.is_superuser);
 
   const canCreateStartups = () => isEntrepreneur();
   const canApplyToJobs = () => isStudent();
@@ -381,6 +386,7 @@ export const AuthProvider = ({ children }) => {
     isEntrepreneur,
     isStudent,
     isInvestor,
+    isAdmin,
     canCreateStartups,
     canApplyToJobs,
     canInvest,
