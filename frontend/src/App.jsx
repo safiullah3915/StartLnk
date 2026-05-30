@@ -61,12 +61,13 @@ const InvestorDashboard = lazy(() => import('./pages/InvestorDashboard/InvestorD
 const PortalOverview = lazy(() => import('./pages/Portal/PortalOverview'));
 const PortalStartups = lazy(() => import('./pages/Portal/PortalStartups'));
 const PortalUsers = lazy(() => import('./pages/Portal/PortalUsers'));
+const PortalLogin = lazy(() => import('./pages/Portal/PortalLogin'));
 
 // ── Admin-only route guard ────────────────────────────────────────────────────
 function AdminRoute({ children }) {
   const { isAuthenticated, isAdmin, loading } = useAuth();
   if (loading) return <PageLoader />;
-  if (!isAuthenticated || !isAdmin()) return <Navigate to="/login" replace />;
+  if (!isAuthenticated || !isAdmin()) return <Navigate to="/portal/login" replace />;
   return children;
 }
 
@@ -340,6 +341,7 @@ function AppRoutes() {
             } />
 
             {/* ── Admin portal routes ─────────────────────────────────────── */}
+            <Route path="/portal/login" element={<PortalLogin />} />
             <Route path="/portal" element={
               <AdminRoute><PortalOverview /></AdminRoute>
             } />
