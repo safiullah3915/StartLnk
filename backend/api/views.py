@@ -538,6 +538,8 @@ class LoginView(generics.GenericAPIView):
 							"role": user.role,
 							"onboarding_completed": onboarding_prefs.onboarding_completed,
 							"emailVerified": user.email_verified,
+							"is_staff": user.is_staff,
+							"is_superuser": user.is_superuser,
 						}
 					}
 					
