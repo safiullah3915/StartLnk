@@ -1214,7 +1214,7 @@ class AdminUserSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'username', 'email', 'full_name', 'role',
             'is_active', 'is_staff', 'is_superuser',
-            'email_verified', 'onboarding_completed',
+            'email_verified',
             'startups_count', 'applications_count', 'created_at',
         )
 

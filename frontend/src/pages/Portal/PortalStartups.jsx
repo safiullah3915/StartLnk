@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import PortalLayout from './PortalLayout';
 import { portalAPI } from '../../utils/portalAPI';
 
@@ -28,6 +29,7 @@ function StatusBadge({ status }) {
 }
 
 export default function PortalStartups() {
+  const navigate = useNavigate();
   const [startups, setStartups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -119,6 +121,7 @@ export default function PortalStartups() {
                   <th>Submitted</th>
                   <th>Current Status</th>
                   <th>Update Status</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -158,6 +161,14 @@ export default function PortalStartups() {
                         {saving[s.id] && <span style={{ color: '#64748b', fontSize: '0.78rem' }}>Saving…</span>}
                         {saved[s.id] && <span className="portal-save-ok">✓ Saved</span>}
                       </div>
+                    </td>
+                    <td>
+                      <button
+                        className="portal-table-link"
+                        onClick={() => navigate(`/portal/startups/${s.id}`)}
+                      >
+                        Open →
+                      </button>
                     </td>
                   </tr>
                 ))}

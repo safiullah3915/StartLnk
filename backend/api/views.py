@@ -3121,3 +3121,67 @@ class AdminUserListView(generics.ListAPIView):
 		qs = self.get_queryset()
 		serializer = self.get_serializer(qs, many=True)
 		return Response({'results': serializer.data, 'count': qs.count()})
+
+
+class AdminStartupDetailView(generics.GenericAPIView):
+	"""GET or PATCH a single startup (admin only) — supports full field editing."""
+	permission_classes = [AllowAny]
+
+	EDITABLE_FIELDS = {
+		'title', 'description', 'field', 'category', 'type', 'status',
+		'verification_status', 'phase', 'team_size', 'website_url',
+		'revenue', 'profit', 'asking_price',
+		'ttm_revenue', 'ttm_profit', 'last_month_revenue', 'last_month_profit',
+		'earn_through',
+	}
+
+	VALID_VERIFICATION_STATUSES = {
+		'under_verification', 'verified', 'rejected', 'more_info_required', 'suspended'
+	}
+
+	def _get_startup(self, pk):
+		try:
+			return Startup.objects.select_related('owner').prefetch_related('tags', 'applications').get(pk=pk)
+		except Startup.DoesNotExist:
+			return None
+
+	def get(self, request, pk):
+		user = get_session_user(request)
+		if not user or not (user.is_staff or user.is_superuser):
+			return Response({'error': 'Admin access required'}, status=status.HTTP_403_FORBIDDEN)
+
+		startup = self._get_startup(pk)
+		if not startup:
+			return Response({'error': 'Startup not found'}, status=status.HTTP_404_NOT_FOUND)
+
+		serializer = AdminStartupSerializer(startup)
+		return Response(serializer.data)
+
+	def patch(self, request, pk):
+		user = get_session_user(request)
+		if not user or not (user.is_staff or user.is_superuser):
+			return Response({'error': 'Admin access required'}, status=status.HTTP_403_FORBIDDEN)
+
+		startup = self._get_startup(pk)
+		if not startup:
+			return Response({'error': 'Startup not found'}, status=status.HTTP_404_NOT_FOUND)
+
+		# Validate verification_status if provided
+		v_status = request.data.get('verification_status')
+		if v_status and v_status not in self.VALID_VERIFICATION_STATUSES:
+			return Response(
+				{'error': f'Invalid verification_status. Choose from: {", ".join(sorted(self.VALID_VERIFICATION_STATUSES))}'},
+				status=status.HTTP_400_BAD_REQUEST
+			)
+
+		# Apply editable fields
+		update_fields = ['updated_at']
+		for field in self.EDITABLE_FIELDS:
+			if field in request.data:
+				setattr(startup, field, request.data[field])
+				update_fields.append(field)
+
+		startup.save(update_fields=update_fields)
+
+		serializer = AdminStartupSerializer(startup)
+		return Response({'message': 'Startup updated successfully', 'startup': serializer.data})

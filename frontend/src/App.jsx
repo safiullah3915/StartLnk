@@ -60,6 +60,7 @@ const InvestorDashboard = lazy(() => import('./pages/InvestorDashboard/InvestorD
 // Admin portal pages (lazy loaded, only fetched when navigating to /portal)
 const PortalOverview = lazy(() => import('./pages/Portal/PortalOverview'));
 const PortalStartups = lazy(() => import('./pages/Portal/PortalStartups'));
+const PortalStartupDetail = lazy(() => import('./pages/Portal/PortalStartupDetail'));
 const PortalUsers = lazy(() => import('./pages/Portal/PortalUsers'));
 const PortalLogin = lazy(() => import('./pages/Portal/PortalLogin'));
 
@@ -347,6 +348,9 @@ function AppRoutes() {
             } />
             <Route path="/portal/startups" element={
               <AdminRoute><PortalStartups /></AdminRoute>
+            } />
+            <Route path="/portal/startups/:id" element={
+              <AdminRoute><PortalStartupDetail /></AdminRoute>
             } />
             <Route path="/portal/users" element={
               <AdminRoute><PortalUsers /></AdminRoute>

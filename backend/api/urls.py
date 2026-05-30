@@ -145,6 +145,7 @@ urlpatterns = [
 	path('api/portal/stats', views.AdminStatsView.as_view(), name='admin_stats'),
 	path('api/portal/startups', views.AdminStartupListView.as_view(), name='admin_startups'),
 	path('api/portal/startups/<uuid:pk>/verify', views.AdminVerifyStartupView.as_view(), name='admin_verify_startup'),
+	path('api/portal/startups/<uuid:pk>/detail', views.AdminStartupDetailView.as_view(), name='admin_startup_detail'),
 	path('api/portal/users', views.AdminUserListView.as_view(), name='admin_users'),
 ]
 
