@@ -34,7 +34,7 @@ function Signup() {
                     setAuthData(data.user, data.auth_token);
                     
                     if (data.user.onboarding_completed) {
-                        navigate("/dashboard");
+                        navigate("/search");
                     } else {
                         navigate("/onboarding-preferences");
                     }

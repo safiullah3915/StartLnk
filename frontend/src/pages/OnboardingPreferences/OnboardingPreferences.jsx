@@ -273,7 +273,7 @@ const OnboardingPreferences = () => {
       // Update global auth state so ProtectedRoute allows access
       updateUser({ onboarding_completed: true });
       
-      navigate('/dashboard');
+      navigate('/search');
     } catch (err) {
       console.error('Error saving preferences:', err);
       alert('Failed to save preferences. Please try again.');

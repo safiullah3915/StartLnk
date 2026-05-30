@@ -35,7 +35,7 @@ function Login({ leftimg, logo, line1, line2, paragraph }) {
                     setAuthData(data.user, data.auth_token);
                     
                     if (data.user.onboarding_completed) {
-                        navigate("/dashboard");
+                        navigate("/search");
                     } else {
                         navigate("/onboarding-preferences");
                     }
@@ -63,7 +63,7 @@ function Login({ leftimg, logo, line1, line2, paragraph }) {
     // Redirect if already authenticated
     useEffect(() => {
         if (isAuthenticated) {
-            navigate("/dashboard");
+            navigate("/search");
         }
     }, [isAuthenticated, navigate]);
 
@@ -168,7 +168,7 @@ function Login({ leftimg, logo, line1, line2, paragraph }) {
 
             if (result.success) {
                 success();
-                navigate("/dashboard");
+                navigate("/search");
             } else {
                 if (result.error === "Wrong credentials") {
                     wrongCredentials();

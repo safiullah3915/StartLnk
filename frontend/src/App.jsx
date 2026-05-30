@@ -220,7 +220,7 @@ function AppRoutes() {
               element={
                 isAuthenticated
                   ? (user?.onboarding_completed
-                    ? <Navigate to="/dashboard" replace />
+                    ? <Navigate to="/search" replace />
                     : <Navigate to="/onboarding-preferences" replace />)
                   : <Login />
               }
