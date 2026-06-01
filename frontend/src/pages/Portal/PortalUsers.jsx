@@ -14,6 +14,8 @@ export default function PortalUsers() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [role, setRole] = useState('');
+  const [deleting, setDeleting] = useState({}); // id → true while request in flight
+  const [confirmId, setConfirmId] = useState(null); // id waiting for confirmation
 
   const load = useCallback(() => {
     setLoading(true);
@@ -25,6 +27,19 @@ export default function PortalUsers() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [search, role]);
+
+  const handleDeleteUser = (id) => {
+    setDeleting(prev => ({ ...prev, [id]: true }));
+    portalAPI.deleteUser(id)
+      .then(() => {
+        setUsers(prev => prev.filter(u => u.id !== id));
+        setConfirmId(null);
+      })
+      .catch(err => {
+        alert(err.response?.data?.error || 'Delete failed.');
+      })
+      .finally(() => setDeleting(prev => ({ ...prev, [id]: false })));
+  };
 
   useEffect(() => { load(); }, [load]);
 
@@ -82,6 +97,7 @@ export default function PortalUsers() {
                   <th>Applications</th>
                   <th>Joined</th>
                   <th>Flags</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -138,6 +154,39 @@ export default function PortalUsers() {
                           </span>
                         )}
                       </div>
+                    </td>
+                    {/* Delete — hidden for staff/superuser to avoid accidents */}
+                    <td>
+                      {!u.is_staff && !u.is_superuser && (
+                        confirmId === u.id ? (
+                          <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                            <span style={{ fontSize: '0.78rem', color: '#f87171' }}>Sure?</span>
+                            <button
+                              className="portal-btn portal-btn-danger"
+                              style={{ padding: '0.3rem 0.65rem', fontSize: '0.75rem' }}
+                              disabled={deleting[u.id]}
+                              onClick={() => handleDeleteUser(u.id)}
+                            >
+                              {deleting[u.id] ? '…' : 'Yes, Delete'}
+                            </button>
+                            <button
+                              className="portal-btn"
+                              style={{ padding: '0.3rem 0.65rem', fontSize: '0.75rem', background: 'rgba(255,255,255,0.05)', color: '#94a3b8' }}
+                              onClick={() => setConfirmId(null)}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            className="portal-btn portal-btn-danger"
+                            style={{ padding: '0.3rem 0.65rem', fontSize: '0.75rem' }}
+                            onClick={() => setConfirmId(u.id)}
+                          >
+                            🗑 Delete
+                          </button>
+                        )
+                      )}
                     </td>
                   </tr>
                 ))}

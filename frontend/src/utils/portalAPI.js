@@ -9,5 +9,7 @@ export const portalAPI = {
   updateStartup: (id, data) => apiClient.patch(`${BASE}/startups/${id}/detail`, data),
   verifyStartup: (id, verification_status) =>
     apiClient.patch(`${BASE}/startups/${id}/verify`, { verification_status }),
+  deleteStartup: (id) => apiClient.delete(`${BASE}/startups/${id}/delete`),
   getUsers: (params = {}) => apiClient.get(`${BASE}/users`, { params }),
+  deleteUser: (id) => apiClient.delete(`${BASE}/users/${id}/delete`),
 };

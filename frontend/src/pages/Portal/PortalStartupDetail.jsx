@@ -89,12 +89,14 @@ export default function PortalStartupDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const [loading, setLoading]   = useState(true);
-  const [saving,  setSaving]    = useState(false);
-  const [saved,   setSaved]     = useState(false);
-  const [error,   setError]     = useState('');
-  const [startup, setStartup]   = useState(null);
-  const [form,    setForm]      = useState(null);
+  const [loading, setLoading]     = useState(true);
+  const [saving,  setSaving]      = useState(false);
+  const [saved,   setSaved]       = useState(false);
+  const [error,   setError]       = useState('');
+  const [startup, setStartup]     = useState(null);
+  const [form,    setForm]        = useState(null);
+  const [deleting, setDeleting]   = useState(false);
+  const [confirmDel, setConfirmDel] = useState(false);
 
   useEffect(() => {
     portalAPI.getStartup(id)
@@ -167,6 +169,20 @@ export default function PortalStartupDetail() {
         last_month_profit:   startup.last_month_profit || '',
         earn_through:        startup.earn_through || '',
       });
+    }
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    setError('');
+    try {
+      await portalAPI.deleteStartup(id);
+      navigate('/portal/startups');
+    } catch (e) {
+      setError(e.response?.data?.error || 'Delete failed. Please try again.');
+      setConfirmDel(false);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -383,14 +399,43 @@ export default function PortalStartupDetail() {
 
       {/* Sticky save bar */}
       <div className="psd-save-bar">
+        {/* Left side: delete */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          {saved && <span className="portal-save-ok">✓ Changes saved successfully</span>}
+          {confirmDel ? (
+            <>
+              <span style={{ fontSize: '0.82rem', color: '#f87171', fontWeight: 600 }}>Delete this startup permanently?</span>
+              <button
+                className="portal-btn portal-btn-danger"
+                disabled={deleting}
+                onClick={handleDelete}
+              >
+                {deleting ? '…' : 'Yes, Delete'}
+              </button>
+              <button
+                className="portal-btn"
+                style={{ background: 'rgba(255,255,255,0.05)', color: '#94a3b8' }}
+                onClick={() => setConfirmDel(false)}
+              >
+                Cancel
+              </button>
+            </>
+          ) : (
+            <button
+              className="portal-btn portal-btn-danger"
+              onClick={() => setConfirmDel(true)}
+            >
+              🗑 Delete Startup
+            </button>
+          )}
         </div>
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
+        {/* Right side: save/discard */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          {saved && <span className="portal-save-ok">✓ Changes saved successfully</span>}
           <button
             className="portal-btn portal-btn-danger"
             onClick={handleCancel}
             disabled={saving}
+            style={{ background: 'rgba(255,255,255,0.06)', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.1)' }}
           >
             Discard Changes
           </button>

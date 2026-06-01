@@ -3201,3 +3201,46 @@ class AdminStartupDetailView(generics.GenericAPIView):
 
 		serializer = AdminStartupSerializer(startup)
 		return Response({'message': 'Startup updated successfully', 'startup': serializer.data})
+
+
+class AdminDeleteStartupView(generics.GenericAPIView):
+	"""DELETE a single startup (admin only). Removes only the startup record."""
+	permission_classes = [AllowAny]
+
+	def delete(self, request, pk):
+		user = get_session_user(request)
+		if not user or not (user.is_staff or user.is_superuser):
+			return Response({'error': 'Admin access required'}, status=status.HTTP_403_FORBIDDEN)
+
+		try:
+			startup = Startup.objects.get(pk=pk)
+		except Startup.DoesNotExist:
+			return Response({'error': 'Startup not found'}, status=status.HTTP_404_NOT_FOUND)
+
+		title = startup.title
+		startup.delete()
+		return Response({'message': f'Startup "{title}" has been deleted.'}, status=status.HTTP_200_OK)
+
+
+class AdminDeleteUserView(generics.GenericAPIView):
+	"""DELETE a user and ALL of their associated data (admin only)."""
+	permission_classes = [AllowAny]
+
+	def delete(self, request, pk):
+		admin = get_session_user(request)
+		if not admin or not (admin.is_staff or admin.is_superuser):
+			return Response({'error': 'Admin access required'}, status=status.HTTP_403_FORBIDDEN)
+
+		try:
+			target_user = User.objects.get(pk=pk)
+		except User.DoesNotExist:
+			return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+		# Prevent deleting yourself
+		if target_user.id == admin.id:
+			return Response({'error': 'You cannot delete your own account.'}, status=status.HTTP_400_BAD_REQUEST)
+
+		username = target_user.username
+		# Django CASCADE handles all related data (startups, applications, messages, etc.)
+		target_user.delete()
+		return Response({'message': f'User "{username}" and all associated data have been deleted.'}, status=status.HTTP_200_OK)
