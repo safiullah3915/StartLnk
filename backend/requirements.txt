@@ -10,8 +10,8 @@ django-ratelimit
 Pillow
 django-extensions
 Faker
-sentence-transformers
 APScheduler
 django-apscheduler
 requests
 django-redis
+django-jazzmin

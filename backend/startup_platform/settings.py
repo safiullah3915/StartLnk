@@ -20,6 +20,7 @@ ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,localhost:5
 
 # Application definition
 INSTALLED_APPS = [
+    'jazzmin',                       # must come BEFORE django.contrib.admin
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -313,5 +314,115 @@ LOGGING = {
             'level': 'INFO',
             'propagate': True,
         },
+    },
+}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  JAZZMIN — Django Admin UI
+# ══════════════════════════════════════════════════════════════════════════════
+
+JAZZMIN_SETTINGS = {
+    # ── Branding ──────────────────────────────────────────────────────────────
+    'site_title':        'StartLnk Admin',
+    'site_header':       'StartLnk',
+    'site_brand':        'StartLnk',
+    'welcome_sign':      'StartLnk Admin Portal',
+    'copyright':         'StartLnk',
+
+    # ── Icons ─────────────────────────────────────────────────────────────────
+    'site_icon':  None,
+    'site_logo':  None,
+
+    # ── Top menu ──────────────────────────────────────────────────────────────
+    'topmenu_links': [
+        {'name': 'Platform',   'url': 'https://startlnk.xyz', 'new_window': True},
+        {'name': 'Portal UI',  'url': '/portal', 'new_window': False},
+        {'app': 'api'},
+    ],
+
+    # ── User menu ─────────────────────────────────────────────────────────────
+    'usermenu_links': [
+        {'name': 'Platform', 'url': 'https://startlnk.xyz', 'new_window': True},
+    ],
+
+    # ── Sidebar navigation groups ─────────────────────────────────────────────
+    'show_sidebar': True,
+    'navigation_expanded': True,
+    'hide_apps': [],
+    'hide_models': [],
+    'order_with_respect_to': [
+        'api',
+    ],
+    'icons': {
+        # App-level icons
+        'auth':                          'fas fa-users-cog',
+        'auth.group':                    'fas fa-users',
+        # Model-level icons
+        'api.user':                      'fas fa-user',
+        'api.userprofile':               'fas fa-id-card',
+        'api.startup':                   'fas fa-rocket',
+        'api.startuptag':                'fas fa-tag',
+        'api.position':                  'fas fa-briefcase',
+        'api.application':               'fas fa-file-alt',
+        'api.conversation':              'fas fa-comments',
+        'api.message':                   'fas fa-envelope',
+        'api.team':                      'fas fa-users',
+        'api.teammember':                'fas fa-user-plus',
+        'api.notification':              'fas fa-bell',
+        'api.favorite':                  'fas fa-heart',
+        'api.interest':                  'fas fa-star',
+        'api.fileupload':                'fas fa-file-upload',
+        'api.profileview':               'fas fa-eye',
+        'api.useronboardingpreferences': 'fas fa-sliders-h',
+        'api.userinteraction':           'fas fa-mouse-pointer',
+        'api.startupinteraction':        'fas fa-chart-line',
+    },
+    'default_icon_parents': 'fas fa-chevron-circle-right',
+    'default_icon_children': 'fas fa-circle',
+
+    # ── Appearance ────────────────────────────────────────────────────────────
+    'related_modal_active': True,
+    'custom_css': None,
+    'custom_js':  None,
+    'use_google_fonts_cdn': True,
+    'show_ui_builder': False,
+    'changeform_format': 'horizontal_tabs',
+    'changeform_format_overrides': {
+        'auth.user':  'collapsible',
+        'auth.group': 'vertical_tabs',
+    },
+}
+
+JAZZMIN_UI_TWEAKS = {
+    # Dark theme — closest match to the portal's dark glassmorphism
+    'navbar_small_text':    False,
+    'footer_small_text':    False,
+    'body_small_text':      False,
+    'brand_small_text':     False,
+    'brand_colour':         'navbar-dark',
+    'accent':               'accent-indigo',
+    'navbar':               'navbar-dark',
+    'no_navbar_border':     True,
+    'navbar_fixed':         True,
+    'layout_boxed':         False,
+    'footer_fixed':         False,
+    'sidebar_fixed':        True,
+    'sidebar':              'sidebar-dark-indigo',
+    'sidebar_nav_small_text':   False,
+    'sidebar_disable_expand':   False,
+    'sidebar_nav_child_indent': True,
+    'sidebar_nav_compact_style': False,
+    'sidebar_nav_legacy_style':  False,
+    'sidebar_nav_flat_style':    False,
+    'theme':                'darkly',
+    'dark_mode_theme':      'darkly',
+    'button_classes': {
+        'primary':   'btn-primary',
+        'secondary': 'btn-secondary',
+        'info':      'btn-info',
+        'warning':   'btn-warning',
+        'danger':    'btn-danger',
+        'success':   'btn-success',
     },
 }
