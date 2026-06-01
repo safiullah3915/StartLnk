@@ -53,7 +53,8 @@ class Message(models.Model):
         ordering = ['created_at']
     
     def __str__(self):
-        return f"{self.sender.username}: {self.content[:50]}"
+        sender_name = self.sender.username if self.sender else "System"
+        return f"{sender_name}: {self.content[:50]}"
 
 
 class UserProfile(models.Model):
