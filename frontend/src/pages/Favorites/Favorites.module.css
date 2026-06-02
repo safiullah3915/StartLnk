@@ -256,8 +256,11 @@
   }
 
   .hero {
-    flex-direction: column;
-    gap: 1.5rem;
+    display: contents;
+  }
+
+  .heroCopy {
+    margin-bottom: 1.5rem;
   }
 
   .heroCopy h1 {
@@ -267,7 +270,27 @@
   .heroActions {
     flex-wrap: nowrap;
     width: 100%;
-    padding-top: 0;
+    padding: 0.75rem 0.25rem;
+    margin-bottom: 1.5rem;
+    position: sticky;
+    top: 80px;
+    z-index: 999;
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .searchSection {
+    display: contents;
+  }
+
+  .searchForm {
+    padding: 0.5rem 0.25rem;
+    position: sticky;
+    top: 144px;
+    z-index: 998;
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    margin-bottom: 1rem;
   }
 
   .startupGrid {

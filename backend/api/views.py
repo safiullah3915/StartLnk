@@ -190,11 +190,17 @@ class CheckUsernameView(generics.GenericAPIView):
 		if not username:
 			return Response({'available': False, 'error': 'Username is required.'}, status=400)
 
-		import re
-		if not re.match(r'^[a-zA-Z0-9@.+\-_]+$', username):
+		if not (1 <= len(username) <= 30):
 			return Response({
 				'available': False,
-				'error': 'Username can only contain letters, numbers, and @/./+/-/_ characters.'
+				'error': 'Username must be between 1 and 30 characters.'
+			}, status=200)
+
+		import re
+		if not re.match(r'^[a-z0-9.]+$', username):
+			return Response({
+				'available': False,
+				'error': 'Username can only contain lowercase letters, numbers, and "."'
 			}, status=200)
 
 		exists = User.objects.filter(username__iexact=username).exists()

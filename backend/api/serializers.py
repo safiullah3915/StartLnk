@@ -46,6 +46,19 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 			raise serializers.ValidationError("User already exists")
 		return value
 	
+	def validate_username(self, value):
+		username = value.strip()
+		if not (1 <= len(username) <= 30):
+			raise serializers.ValidationError("Username must be between 1 and 30 characters.")
+		
+		import re
+		if not re.match(r'^[a-z0-9.]+$', username):
+			raise serializers.ValidationError('Username can only contain lowercase letters, numbers, and "."')
+		
+		if User.objects.filter(username__iexact=username).exists():
+			raise serializers.ValidationError("This username is already taken.")
+		return username
+	
 	def create(self, validated_data):
 		is_google_user = validated_data.pop('is_google_user', False)
 		password = validated_data.pop('password', None)

@@ -309,7 +309,7 @@ const Collaboration = () => {
       <div className={styles.marketplace}>
         <div className={styles.hero}>
           <div className={styles.heroCopy}>
-            <h1>Search all jobs</h1>
+            <h1>Search all collaborations</h1>
             <p>Discover startup roles by keyword, business model, stage, and team size.</p>
           </div>
 
@@ -355,7 +355,7 @@ const Collaboration = () => {
                 </svg>
                 <input
                   type="text"
-                  placeholder="Search jobs by title, description, or company..."
+                  placeholder="Search collaborations by title, description, or company..."
                   value={filters.query}
                   onChange={(e) => handleFilterChange('query', e.target.value)}
                   className={styles.searchInput}

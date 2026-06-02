@@ -13,8 +13,8 @@ const ROLES = [
 ];
 
 const TOTAL_STEPS = 2;
-// Django username: letters, digits, @/./+/-/_
-const USERNAME_REGEX = /^[a-zA-Z0-9@.+\-_]+$/;
+// Username must contain only lowercase letters, numbers, and "."
+const USERNAME_REGEX = /^[a-z0-9.]+$/;
 
 function CompleteProfile() {
     const navigate   = useNavigate();
@@ -51,10 +51,13 @@ function CompleteProfile() {
 
     // ── Local username format validation ──────────────────────────────────────
     const localValidate = (value) => {
-        if (!value.trim())         return "Username is required.";
+        const trimmed = value.trim();
+        if (!trimmed)         return "Username is required.";
         if (value.includes(" "))   return "Username cannot contain spaces.";
-        if (!USERNAME_REGEX.test(value))
-            return "Only letters, numbers, and @/./+/-/_ characters are allowed.";
+        if (trimmed.length < 1 || trimmed.length > 30)
+            return "Username must be between 1 and 30 characters.";
+        if (!USERNAME_REGEX.test(trimmed))
+            return 'Username can only contain lowercase letters, numbers, and "."';
         return "";
     };
 
@@ -134,7 +137,7 @@ function CompleteProfile() {
                     setStep(1);
                     setNameError(raw.includes("already") || raw.includes("unique")
                         ? "This username is already taken. Please choose a different one."
-                        : "Username can only contain letters, numbers, and @/./+/-/_.");
+                        : 'Username can only contain lowercase letters, numbers, and "."');
                     return;
                 }
 
@@ -182,7 +185,7 @@ function CompleteProfile() {
                                 <input
                                     id="cp-fullname"
                                     type="text"
-                                    placeholder="e.g. Ahsan Tariq"
+                                    placeholder="e.g. John Brown"
                                     className={`cp-input${fullNameError ? " cp-input-err" : ""}`}
                                     value={fullName}
                                     onChange={(e) => {
@@ -203,7 +206,7 @@ function CompleteProfile() {
                                 <input
                                     id="cp-username"
                                     type="text"
-                                    placeholder="e.g. ahsan_tariq"
+                                    placeholder="e.g. john_brown"
                                     className={`cp-input${nameError ? " cp-input-err" : ""}`}
                                     value={name}
                                     onChange={(e) => {

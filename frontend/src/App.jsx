@@ -274,15 +274,18 @@ function AppRoutes() {
             } />
             <Route path="/collaboration" element={
               <ProtectedRoute><Collaboration /></ProtectedRoute>
+              //<Collaboration />
             } />
             <Route path="/startupdetail/:id" element={
               <ProtectedRoute><StartupDetails /></ProtectedRoute>
             } />
             <Route path="/search" element={
               <ProtectedRoute><SearchStartups /></ProtectedRoute>
+              //<SearchStartups />
             } />
             <Route path="/favorites" element={
               <ProtectedRoute><Favorites /></ProtectedRoute>
+              //<Favorites />
             } />
             <Route path="/account" element={
               <ProtectedRoute><AccountSettingsII /></ProtectedRoute>
