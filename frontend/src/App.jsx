@@ -289,6 +289,7 @@ function AppRoutes() {
             } />
             <Route path="/account" element={
               <ProtectedRoute><AccountSettingsII /></ProtectedRoute>
+              //<AccountSettingsII />
             } />
             <Route path="/message" element={
               <ProtectedRoute><MessageDark /></ProtectedRoute>

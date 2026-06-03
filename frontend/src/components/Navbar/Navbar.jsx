@@ -400,6 +400,9 @@ const Navbar = () => {
                 <div className={styles.mobileProfileName}>{user?.username}</div>
                 <div className={styles.mobileProfileRole}>{user?.role}</div>
               </div>
+              <svg className={styles.mobileProfileChevron} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
             </Link>
             <button onClick={() => { handleLogout(); closeMenu(); }} className={styles.mobileLogoutBtn}>
               Logout
