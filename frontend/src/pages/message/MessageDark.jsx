@@ -39,58 +39,69 @@ const TeamMemberRow = React.memo(({
       </div>
     </div>
     {isSelected && (
-      <div className="inline-role-row">
-        <span className="inline-role-label">POSITION:</span>
-        <div className="custom-dropdown-container" style={{ flex: 1 }}>
-          <div
-            className="custom-dropdown-header"
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleRoleDropdown(member.id);
-            }}
-            style={{ border: '1px solid rgba(79, 70, 229, 0.55)', background: '#020617', padding: '0.45rem 0.75rem', minHeight: 'auto', borderRadius: '0.6rem' }}
-          >
-            <span style={{ fontSize: '0.85rem' }}>{assignment.role === '__other__' ? 'Other' : assignment.role || 'Select position...'}</span>
-            <svg className="dropdown-chevron" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ transform: isDropdownOpen ? 'rotate(180deg)' : 'none', margin: 0 }}>
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-            </svg>
-          </div>
-          {isDropdownOpen && (
-            <div className="custom-dropdown-list" style={{ top: 'calc(100% + 4px)', zIndex: 1000 }}>
-              {positionOptions.map((title) => (
+      <div className="inline-role-row" style={{ alignItems: 'flex-start' }}>
+        <span className="inline-role-label" style={{ marginTop: '0.45rem' }}>POSITION:</span>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div className="custom-dropdown-container" style={{ width: '100%' }}>
+            <div
+              className="custom-dropdown-header"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleRoleDropdown(member.id);
+              }}
+              style={{ border: '1px solid rgba(79, 70, 229, 0.55)', background: '#020617', padding: '0.45rem 0.75rem', minHeight: 'auto', borderRadius: '0.6rem' }}
+            >
+              <span style={{ fontSize: '0.85rem' }}>{assignment.role === '__other__' ? 'Other' : assignment.role || 'Select position...'}</span>
+              <svg className="dropdown-chevron" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ transform: isDropdownOpen ? 'rotate(180deg)' : 'none', margin: 0 }}>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+            {isDropdownOpen && (
+              <div className="custom-dropdown-list" style={{ top: 'calc(100% + 4px)', zIndex: 1000 }}>
+                {positionOptions.map((title) => (
+                  <div
+                    key={title}
+                    className={`custom-dropdown-item ${assignment.role === title ? 'selected' : ''}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelectRole(member.id, title);
+                    }}
+                  >
+                    {title}
+                  </div>
+                ))}
                 <div
-                  key={title}
-                  className={`custom-dropdown-item ${assignment.role === title ? 'selected' : ''}`}
+                  className={`custom-dropdown-item ${assignment.role === '__other__' ? 'selected' : ''}`}
                   onClick={(e) => {
                     e.stopPropagation();
-                    onSelectRole(member.id, title);
+                    onSelectRole(member.id, '__other__');
                   }}
                 >
-                  {title}
+                  Other
                 </div>
-              ))}
-              <div
-                className={`custom-dropdown-item ${assignment.role === '__other__' ? 'selected' : ''}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSelectRole(member.id, '__other__');
-                }}
-              >
-                Other
               </div>
-            </div>
+            )}
+          </div>
+          {assignment.role === '__other__' && (
+            <input
+              type="text"
+              className="inline-role-custom-input"
+              placeholder="Custom title"
+              value={assignment.customRole}
+              onChange={(e) => onCustomRoleChange(member.id, e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: '100%',
+                border: '1px solid rgba(79, 70, 229, 0.55)',
+                background: '#020617',
+                padding: '0.45rem 0.75rem',
+                borderRadius: '0.6rem',
+                fontSize: '0.85rem',
+                boxSizing: 'border-box'
+              }}
+            />
           )}
         </div>
-        {assignment.role === '__other__' && (
-          <input
-            type="text"
-            className="inline-role-custom-input"
-            placeholder="Custom title"
-            value={assignment.customRole}
-            onChange={(e) => onCustomRoleChange(member.id, e.target.value)}
-            onClick={(e) => e.stopPropagation()}
-          />
-        )}
       </div>
     )}
   </div>
