@@ -238,6 +238,82 @@ const MessageDark = () => {
     return () => clearInterval(interval);
   }, [user, conversations, currentConversation]);
 
+  // Background polling for conversations list and active conversation messages
+  useEffect(() => {
+    if (!user) return;
+
+    let timerId;
+    let isMounted = true;
+
+    const pollData = async () => {
+      try {
+        // 1. Silently fetch conversations list
+        const conversationsData = await MessageService.getConversations();
+        const safeConversationsRaw = Array.isArray(conversationsData)
+          ? conversationsData
+          : (conversationsData && Array.isArray(conversationsData.results) ? conversationsData.results : []);
+        const safeConversations = safeConversationsRaw.filter(c => !!c?.last_message || !!c?.team_id);
+
+        if (isMounted) {
+          setConversations(prev => {
+            // Check if current conversation is in the fetched list
+            const activeConversationInList = safeConversations.find(c => c.id === currentConversation?.id);
+            let updatedConversations = safeConversations;
+            if (currentConversation && !activeConversationInList) {
+              // Keep the empty active conversation in the list so it doesn't vanish
+              updatedConversations = [currentConversation, ...safeConversations];
+            }
+
+            // Simple comparison to check if list changed
+            const hasChanged = prev.length !== updatedConversations.length ||
+              updatedConversations.some((c, idx) => {
+                const prevC = prev[idx];
+                if (!prevC) return true;
+                return prevC.id !== c.id || prevC.last_message?.id !== c.last_message?.id;
+              });
+
+            return hasChanged ? updatedConversations : prev;
+          });
+        }
+
+        // 2. Silently fetch messages for current active conversation
+        if (currentConversation && isMounted) {
+          const messagesData = await MessageService.getMessages(currentConversation.id);
+          const uniqueById = Array.isArray(messagesData)
+            ? Object.values(
+              messagesData.reduce((acc, msg) => {
+                if (msg && msg.id != null) acc[msg.id] = msg;
+                return acc;
+              }, {})
+            )
+            : [];
+
+          if (isMounted) {
+            setMessages(prev => {
+              const hasChanged = prev.length !== uniqueById.length ||
+                uniqueById.some((msg, idx) => !prev[idx] || prev[idx].id !== msg.id);
+              return hasChanged ? uniqueById : prev;
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error during silent background polling:', error);
+      } finally {
+        if (isMounted) {
+          timerId = setTimeout(pollData, 2000); // Poll every 2 seconds
+        }
+      }
+    };
+
+    // Start polling after 2 seconds
+    timerId = setTimeout(pollData, 2000);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timerId);
+    };
+  }, [user, currentConversation]);
+
   const getConversationPresence = (conversation) => {
     // Presence should only be shown for one-to-one conversations (2 participants, no team_id)
     if (!conversation?.participants || conversation.participants.length !== 2 || conversation.team_id) return null;

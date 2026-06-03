@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect, useRef, useCallback } from 'react';
+import React, { Suspense, lazy, useEffect, useRef } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import './App.css';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -90,49 +90,12 @@ function ScrollToTop() {
   return null;
 }
 
-// ── Pull-to-refresh (mobile) ─────────────────────────────────────────────────
-function usePullToRefresh(onRefresh) {
-  const startY = useRef(0);
-  const isPulling = useRef(false);
-  const THRESHOLD = 80;
-
-  useEffect(() => {
-    const onTouchStart = (e) => {
-      if (window.scrollY === 0) {
-        startY.current = e.touches[0].clientY;
-        isPulling.current = true;
-      }
-    };
-    const onTouchMove = (e) => {
-      if (!isPulling.current) return;
-      if (e.touches[0].clientY - startY.current > THRESHOLD) {
-        isPulling.current = 'triggered';
-      }
-    };
-    const onTouchEnd = () => {
-      if (isPulling.current === 'triggered') onRefresh();
-      isPulling.current = false;
-      startY.current = 0;
-    };
-
-    document.addEventListener('touchstart', onTouchStart, { passive: true });
-    document.addEventListener('touchmove', onTouchMove, { passive: true });
-    document.addEventListener('touchend', onTouchEnd, { passive: true });
-
-    return () => {
-      document.removeEventListener('touchstart', onTouchStart);
-      document.removeEventListener('touchmove', onTouchMove);
-      document.removeEventListener('touchend', onTouchEnd);
-    };
-  }, [onRefresh]);
-}
 
 // ── Main routed application ───────────────────────────────────────────────────
 function AppRoutes() {
   const { isAuthenticated, user, loading } = useAuth();
   const location = useLocation();
   const [transitionStage, setTransitionStage] = React.useState('fade-in');
-  const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [showAuthRouteLoader, setShowAuthRouteLoader] = React.useState(false);
   const previousPathRef = useRef(location.pathname);
 
@@ -158,58 +121,6 @@ function AppRoutes() {
     return () => clearTimeout(t);
   }, [location.pathname]);
 
-  // Pull-to-refresh handler
-  const handleRefresh = useCallback(() => {
-    if (isRefreshing) return;
-    setIsRefreshing(true);
-
-    const styleTag = document.createElement('style');
-    styleTag.textContent = '@keyframes ptr-spin { to { transform: rotate(360deg); } }';
-    document.head.appendChild(styleTag);
-
-    const svgContent = `
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-           stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-           width="26" height="26">
-        <path d="M21 2v6h-6"/>
-        <path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
-        <path d="M3 22v-6h6"/>
-        <path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
-      </svg>`;
-    const svgUri = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgContent);
-
-    const overlay = document.createElement('div');
-    overlay.style.cssText = [
-      'position:fixed', 'inset:0', 'display:flex', 'flex-direction:column',
-      'align-items:center', 'justify-content:flex-start',
-      'background:rgba(255,255,255,0.55)',
-      'backdrop-filter:blur(10px)', '-webkit-backdrop-filter:blur(10px)',
-      'z-index:99999', 'padding-top:22px',
-    ].join(';');
-
-    const circle = document.createElement('div');
-    circle.style.cssText = [
-      'width:54px', 'height:54px', 'display:flex',
-      'align-items:center', 'justify-content:center',
-      'background:#25224A', 'border-radius:50%',
-      'box-shadow:0 4px 20px rgba(37,34,74,0.35)',
-      'animation:ptr-spin 0.85s linear infinite',
-    ].join(';');
-
-    const img = document.createElement('img');
-    img.src = svgUri;
-    img.style.cssText = 'width:26px;height:26px;display:block;';
-
-    circle.appendChild(img);
-    overlay.appendChild(circle);
-    document.body.appendChild(overlay);
-
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => { window.location.reload(); });
-    });
-  }, [isRefreshing]);
-
-  usePullToRefresh(handleRefresh);
 
   // Show full-screen spinner while AuthContext resolves session
   if (loading) {
