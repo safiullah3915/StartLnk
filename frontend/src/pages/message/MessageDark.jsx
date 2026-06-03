@@ -44,7 +44,7 @@ const TeamMemberRow = React.memo(({
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           <div className="custom-dropdown-container" style={{ width: '100%' }}>
             <div
-              className="custom-dropdown-header"
+              className="custom-dropdown-header member-dropdown-header"
               onClick={(e) => {
                 e.stopPropagation();
                 onToggleRoleDropdown(member.id);
@@ -1540,10 +1540,16 @@ const MessageDark = () => {
           cursor: pointer;
         }
 
+        #team-modal-root .member-dropdown-header {
+          padding: 0.45rem 0.75rem !important;
+          min-height: auto !important;
+          border-radius: 0.6rem !important;
+        }
+
         #team-modal-root .inline-role-custom-input {
-          flex: 1;
-          padding: 0.35rem 0.75rem !important;
-          border: 1px solid var(--glass-border) !important;
+          width: 100% !important;
+          padding: 0.45rem 0.75rem !important;
+          border: 1px solid rgba(79, 70, 229, 0.55) !important;
           border-radius: 0.6rem !important;
           background-color: #020617 !important;
           background: #020617 !important;
