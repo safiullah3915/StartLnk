@@ -154,6 +154,18 @@ generate_configuration() {
     render_template "${PROJECT_ROOT}/deployment/templates/gunicorn.service.template" "/etc/systemd/system/${APP_NAME}.service"
 
     log_info "Rendering Nginx site configuration template..."
+    # Ensure SSL certificate files exist (generate temporary self-signed cert if missing)
+    if [[ ! -f "${SSL_CERT_PATH}" || ! -f "${SSL_KEY_PATH}" ]]; then
+        log_info "SSL certificate for ${DOMAIN} not found at ${SSL_CERT_PATH}."
+        log_info "Generating temporary self-signed SSL certificate for initial Nginx setup..."
+        mkdir -p "$(dirname "${SSL_CERT_PATH}")"
+        openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+            -keyout "${SSL_KEY_PATH}" \
+            -out "${SSL_CERT_PATH}" \
+            -subj "/CN=${DOMAIN}" >/dev/null 2>&1 || true
+        log_success "Temporary SSL certificate created. Run 'certbot --nginx' to issue real Let's Encrypt certificates."
+    fi
+
     render_template "${PROJECT_ROOT}/deployment/templates/nginx.conf.template" "/etc/nginx/sites-available/${APP_NAME}"
     if [[ ! -L "/etc/nginx/sites-enabled/${APP_NAME}" ]]; then
         ln -sf "/etc/nginx/sites-available/${APP_NAME}" "/etc/nginx/sites-enabled/${APP_NAME}"
