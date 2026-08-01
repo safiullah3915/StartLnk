@@ -1,0 +1,37 @@
+# ══════════════════════════════════════════════════════════════════════════════
+#  StartLnk — Log Rotation Configuration Template
+# ══════════════════════════════════════════════════════════════════════════════
+#  Rendered to /etc/logrotate.d/{{APP_NAME}} by the deployment framework.
+#  Manages daily rotation, compression, and 14-day retention for application
+#  and Nginx access/error logs.
+# ══════════════════════════════════════════════════════════════════════════════
+
+# Application Django & WSGI Logs
+{{DEPLOY_ROOT}}/shared/logs/*.log {
+    daily
+    missingok
+    rotate 14
+    compress
+    delaycompress
+    notifempty
+    create 0664 {{DEPLOY_USER}} {{DEPLOY_GROUP}}
+    sharedscripts
+    postrotate
+        /usr/bin/systemctl reload {{APP_NAME}}.service > /dev/null 2>&1 || true
+    endscript
+}
+
+# Nginx Web Server Access & Error Logs
+/var/log/nginx/{{APP_NAME}}_*.log {
+    daily
+    missingok
+    rotate 14
+    compress
+    delaycompress
+    notifempty
+    create 0640 www-data adm
+    sharedscripts
+    postrotate
+        /usr/bin/systemctl reload nginx > /dev/null 2>&1 || true
+    endscript
+}

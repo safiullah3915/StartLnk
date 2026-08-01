@@ -1,0 +1,31 @@
+[Unit]
+Description={{APP_NAME}} Gunicorn Application Server Daemon
+Documentation=https://github.com/safiullah3915/StartLnk
+Requires={{APP_NAME}}.socket
+After=network.target postgresql.service redis-server.service
+
+[Service]
+Type=notify
+User={{DEPLOY_USER}}
+Group={{DEPLOY_GROUP}}
+WorkingDirectory={{WORKING_DIRECTORY}}
+EnvironmentFile={{WORKING_DIRECTORY}}/.env
+ExecStart={{VENV_PATH}}/bin/gunicorn \
+          --access-logfile - \
+          --error-logfile - \
+          --workers {{GUNICORN_WORKERS}} \
+          --timeout {{GUNICORN_TIMEOUT}} \
+          --max-requests 1000 \
+          --max-requests-jitter 100 \
+          --bind unix:{{SOCKET_PATH}} \
+          {{WSGI_MODULE}}
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=5
+PrivateTmp=true
+NoNewPrivileges=true
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,68 @@
+# ══════════════════════════════════════════════════════════════════
+#  StartLnk — Master Deployment Configuration Template
+# ══════════════════════════════════════════════════════════════════
+#  Copy this file to deployment/config on the target VPS.
+#  This is the SINGLE SOURCE OF TRUTH for all server configuration.
+#  All other environment and configuration files (backend/.env,
+#  frontend/.env.production, Nginx site config, systemd units)
+#  are automatically generated from this file during deployment.
+# ══════════════════════════════════════════════════════════════════
+
+# ── Server Identity ──────────────────────────────────────────────
+APP_NAME=startlnk
+DOMAIN=startlnk.xyz
+SERVER_IP=64.227.180.47
+
+# ── System User ──────────────────────────────────────────────────
+DEPLOY_USER=safi
+DEPLOY_GROUP=www-data
+
+# ── Paths ────────────────────────────────────────────────────────
+# Base directory on VPS where releases/ and shared/ will live
+DEPLOY_ROOT=/home/${DEPLOY_USER}/${APP_NAME}
+
+# ── Git Repository ───────────────────────────────────────────────
+GIT_REPO=https://github.com/safiullah3915/StartLnk.git
+GIT_BRANCH=main
+
+# ── Django Application Secrets ───────────────────────────────────
+SECRET_KEY=change-this-to-a-secure-random-string-in-production
+DEBUG=False
+JWT_SECRET_KEY=change-this-to-a-secure-jwt-secret-in-production
+JWT_COOKIE_SECURE=True
+
+# ── Database (PostgreSQL) ────────────────────────────────────────
+DB_ENGINE=django.db.backends.postgresql
+DB_NAME=startlnkdb
+DB_USER=startlnkuser
+DB_PASSWORD=change-this-to-real-db-password
+DB_HOST=localhost
+DB_PORT=5432
+
+# ── Google OAuth ─────────────────────────────────────────────────
+GOOGLE_CLIENT_ID=107351568402-etjf2vg4auc5iguelv5i7ghpfg4fkep2.apps.googleusercontent.com
+
+# ── Email / SMTP Settings ────────────────────────────────────────
+EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USE_TLS=True
+EMAIL_HOST_USER=your-email@gmail.com
+EMAIL_HOST_PASSWORD=your-email-app-password
+
+# ── Redis Cache ──────────────────────────────────────────────────
+REDIS_URL=redis://127.0.0.1:6379/0
+
+# ── Gunicorn WSGI Server ─────────────────────────────────────────
+GUNICORN_WORKERS=auto         # "auto" calculates (2 * CPU_CORES + 1), or set explicit integer
+GUNICORN_TIMEOUT=60
+
+# ── Backup Settings ──────────────────────────────────────────────
+BACKUP_DIR=/home/${DEPLOY_USER}/backups
+BACKUP_RETENTION_DAYS=30
+
+# ── SSL Certificate ──────────────────────────────────────────────
+ADMIN_EMAIL=admin@startlnk.xyz
+
+# ── Release Retention ────────────────────────────────────────────
+KEEP_RELEASES=5               # Number of historical releases to keep in DEPLOY_ROOT/releases/

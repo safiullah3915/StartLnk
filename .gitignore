@@ -137,3 +137,22 @@ Desktop.ini
 $RECYCLE.BIN/
 
 Important.txt
+
+# ── Deployment Framework (added 2026-08-01) ──────────────────────────────────
+# Google OAuth secret — MUST NOT be in version control
+client_secret.json
+
+# Server-specific deployment config (contains production secrets)
+# Only config.example is tracked; the real config is per-server
+deployment/config
+
+# Large data files (ML training data, exports)
+*.csv
+
+# Allow Markdown files in docs/ directory (overrides *.md rule above)
+!docs/
+!docs/**/*.md
+
+# Allow Markdown files in deployment/ directory
+!deployment/
+!deployment/**/*.md

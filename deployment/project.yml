@@ -1,0 +1,44 @@
+# deployment/project.yml — Project Manifest
+# Deployment scripts validate the target server against this manifest.
+
+project:
+  name: startlnk
+  description: "StartLnk — Startup Networking Platform"
+  repository: "https://github.com/safiullah3915/StartLnk.git"
+
+requirements:
+  ubuntu:
+    supported: ["24.04", "22.04"]
+    recommended: "24.04"
+
+  python:
+    version: "3.12"
+    minimum: "3.11"
+
+  node:
+    version: "20"
+    minimum: "18"
+
+  postgresql:
+    version: "16"
+    minimum: "14"
+
+  redis:
+    version: "7"
+    minimum: "6"
+
+  nginx:
+    version: "1.24"
+    minimum: "1.18"
+
+  gunicorn:
+    version: "26.0.0"
+
+architecture:
+  wsgi_module: "startup_platform.wsgi:application"
+  django_settings: "startup_platform.settings"
+  frontend_build_command: "npm run build"
+  frontend_build_output: "dist"
+  static_root: "staticfiles"
+  media_root: "media"
+  log_file: "django.log"

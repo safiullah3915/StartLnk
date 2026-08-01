@@ -1,0 +1,135 @@
+# ══════════════════════════════════════════════════════════════════════════════
+#  StartLnk — Production Nginx Site Configuration Template
+# ══════════════════════════════════════════════════════════════════════════════
+#  Generated automatically by generate-config.sh from deployment/config.
+#  DO NOT EDIT DIRECTLY ON THE SERVER.
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ── HTTP Server (Port 80) — Redirects to HTTPS or serves ACME challenge ──────
+server {
+    listen 80;
+    listen [::]:80;
+    server_name {{DOMAIN}} www.{{DOMAIN}} {{SERVER_IP}};
+
+    # Certbot webroot challenge directory
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
+
+    # Redirect all HTTP traffic to HTTPS (uncommented during SSL setup)
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# ── HTTPS Server (Port 443) ───────────────────────────────────────────────────
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name {{DOMAIN}} www.{{DOMAIN}} {{SERVER_IP}};
+
+    # ── SSL Certificates ──────────────────────────────────────────────────────
+    ssl_certificate {{SSL_CERT_PATH}};
+    ssl_certificate_key {{SSL_KEY_PATH}};
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers on;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1d;
+
+    # ── Security Headers ──────────────────────────────────────────────────────
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    # ── Upload Limit & Timeouts ───────────────────────────────────────────────
+    client_max_body_size 20M;
+    client_body_buffer_size 128k;
+
+    # ── Gzip Compression ──────────────────────────────────────────────────────
+    gzip on;
+    gzip_disable "msie6";
+    gzip_vary on;
+    gzip_proxied any;
+    gzip_comp_level 6;
+    gzip_buffers 16 8k;
+    gzip_http_version 1.1;
+    gzip_types
+        text/plain
+        text/css
+        application/json
+        application/javascript
+        text/xml
+        application/xml
+        application/xml+rss
+        text/javascript
+        image/svg+xml;
+
+    # ── Log Files ─────────────────────────────────────────────────────────────
+    access_log /var/log/nginx/{{APP_NAME}}_access.log;
+    error_log  /var/log/nginx/{{APP_NAME}}_error.log warn;
+
+    # ── Frontend SPA (React / Vite output) ────────────────────────────────────
+    root {{FRONTEND_DIST_DIR}};
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Static assets cache control (Vite hashed assets)
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # ── Django API & Auth Proxies ──────────────────────────────────────────────
+    location /api/ {
+        proxy_pass http://unix:{{SOCKET_PATH}};
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 60s;
+        proxy_connect_timeout 60s;
+    }
+
+    location /auth/ {
+        proxy_pass http://unix:{{SOCKET_PATH}};
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 60s;
+        proxy_connect_timeout 60s;
+    }
+
+    # ── Django Static & Media Files ───────────────────────────────────────────
+    location /static/ {
+        alias {{STATIC_ROOT}}/;
+        expires 30d;
+        add_header Cache-Control "public, no-transform";
+    }
+
+    location /media/ {
+        alias {{MEDIA_ROOT}}/;
+        expires 30d;
+        add_header Cache-Control "public, no-transform";
+    }
+
+    # SEO verification files
+    location = /robots.txt {
+        log_not_found off;
+        access_log off;
+    }
+
+    location = /sitemap.xml {
+        proxy_pass http://unix:{{SOCKET_PATH}};
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}

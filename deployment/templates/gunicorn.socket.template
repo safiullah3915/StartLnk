@@ -1,0 +1,12 @@
+[Unit]
+Description={{APP_NAME}} Gunicorn Socket
+Documentation=https://github.com/safiullah3915/StartLnk
+
+[Socket]
+ListenStream={{SOCKET_PATH}}
+SocketUser={{DEPLOY_USER}}
+SocketGroup={{DEPLOY_GROUP}}
+SocketMode=0660
+
+[Install]
+WantedBy=sockets.target

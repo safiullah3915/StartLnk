@@ -1,17 +1,58 @@
-Django
-djangorestframework
-django-cors-headers
-PyJWT
-bcrypt
-python-decouple
+# ══════════════════════════════════════════════════════════════════════════════
+#  StartLnk — Python Dependencies (Production-Pinned)
+# ══════════════════════════════════════════════════════════════════════════════
+#  Versions pinned to match production server (Ubuntu 24.04, Python 3.12.3)
+#  Last audited: 2026-08-01 from All-VM-Conf-Data.md
+#
+#  To update a package:
+#    1. Test locally with the new version
+#    2. Update the pin here
+#    3. Deploy via the deployment framework
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ── Django Core ──────────────────────────────────────────────────────────────
+Django==6.0.5
+djangorestframework==3.17.1
+django-cors-headers==4.9.0
+django-extensions==4.1
+django-jazzmin>=3.0
+
+# ── Authentication & Security ────────────────────────────────────────────────
+PyJWT==2.12.1
+bcrypt==5.0.0
+google-auth==2.53.0
+google-auth-oauthlib==1.4.0
+cryptography==48.0.0
+
+# ── Database ─────────────────────────────────────────────────────────────────
+psycopg2-binary==2.9.12
+# NOTE: mysqlclient is included for development compatibility.
+# Production uses PostgreSQL (psycopg2-binary). Do NOT remove without
+# verifying no local development environments depend on it.
 mysqlclient
-psycopg2-binary
-django-ratelimit
-Pillow
-django-extensions
-Faker
-APScheduler
-django-apscheduler
+
+# ── Cache ────────────────────────────────────────────────────────────────────
+django-redis==6.0.0
+redis==7.4.0
+
+# ── Configuration ────────────────────────────────────────────────────────────
+python-decouple==3.8
+
+# ── Rate Limiting ────────────────────────────────────────────────────────────
+django-ratelimit==4.1.0
+
+# ── Image Processing ────────────────────────────────────────────────────────
+Pillow==12.2.0
+
+# ── Background Tasks ────────────────────────────────────────────────────────
+APScheduler==3.11.2
+django-apscheduler==0.7.0
+
+# ── WSGI Server ──────────────────────────────────────────────────────────────
+gunicorn==26.0.0
+
+# ── Testing & Data ──────────────────────────────────────────────────────────
+Faker==40.18.0
+
+# ── HTTP ─────────────────────────────────────────────────────────────────────
 requests
-django-redis
-django-jazzmin
