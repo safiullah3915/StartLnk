@@ -115,7 +115,7 @@ class PositionAdmin(admin.ModelAdmin):
     list_filter   = ('is_active', 'created_at')
     search_fields = ('title', 'description', 'startup__title')
     ordering      = ('-created_at',)
-    readonly_fields = ('id', 'created_at', 'updated_at')
+    readonly_fields = ('id', 'created_at')
 
 
 @admin.register(Application)
@@ -195,10 +195,10 @@ class TeamMemberInline(admin.TabularInline):
 
 @admin.register(Team)
 class TeamAdmin(admin.ModelAdmin):
-    list_display  = ('name', 'startup', 'created_by', 'member_count', 'created_at')
-    search_fields = ('name', 'startup__title', 'created_by__username')
+    list_display  = ('id', 'startup', 'member_count', 'created_at')
+    search_fields = ('startup__title',)
     ordering      = ('-created_at',)
-    readonly_fields = ('id', 'created_at', 'updated_at')
+    readonly_fields = ('id', 'created_at')
     inlines       = [TeamMemberInline]
 
     def member_count(self, obj):
@@ -210,7 +210,7 @@ class TeamAdmin(admin.ModelAdmin):
 class TeamMemberAdmin(admin.ModelAdmin):
     list_display  = ('user', 'team', 'role', 'joined_at')
     list_filter   = ('role',)
-    search_fields = ('user__username', 'team__name')
+    search_fields = ('user__username', 'team__startup__title')
     ordering      = ('-joined_at',)
     readonly_fields = ('id', 'joined_at')
 
@@ -221,9 +221,8 @@ class TeamMemberAdmin(admin.ModelAdmin):
 
 @admin.register(Notification)
 class NotificationAdmin(admin.ModelAdmin):
-    list_display  = ('user', 'short_message', 'notification_type',
-                     'is_read', 'created_at')
-    list_filter   = ('notification_type', 'is_read', 'created_at')
+    list_display  = ('user', 'short_message', 'type', 'is_read', 'created_at')
+    list_filter   = ('type', 'is_read', 'created_at')
     search_fields = ('user__username', 'message')
     ordering      = ('-created_at',)
     readonly_fields = ('id', 'created_at')
@@ -295,8 +294,8 @@ class UserInteractionAdmin(admin.ModelAdmin):
 
 @admin.register(StartupInteraction)
 class StartupInteractionAdmin(admin.ModelAdmin):
-    list_display  = ('startup', 'indicator', 'created_at')
-    list_filter   = ('created_at',)
-    search_fields = ('startup__title', 'indicator')
+    list_display  = ('startup', 'target_user', 'interaction_type', 'weight', 'created_at')
+    list_filter   = ('interaction_type', 'created_at')
+    search_fields = ('startup__title', 'target_user__username')
     ordering      = ('-created_at',)
     readonly_fields = ('id', 'created_at')
