@@ -54,7 +54,7 @@ EMAIL_HOST_PASSWORD=your-email-app-password
 REDIS_URL=redis://127.0.0.1:6379/0
 
 # ── Gunicorn WSGI Server ─────────────────────────────────────────
-GUNICORN_WORKERS=auto         # "auto" calculates (2 * CPU_CORES + 1), or set explicit integer
+GUNICORN_WORKERS=3            # Set explicit integer (e.g. 3) or "auto" (auto-calculates 2 * CPU_CORES + 1)
 GUNICORN_TIMEOUT=60
 
 # ── Backup Settings ──────────────────────────────────────────────

@@ -36,7 +36,14 @@ load_config() {
     CURRENT_SYM_DIR="${DEPLOY_ROOT}/current"
     SOCKET_PATH="${SOCKET_PATH:-/run/${APP_NAME:-startlnk}.sock}"
 
-    export DEPLOY_ROOT RELEASES_DIR SHARED_DIR CURRENT_SYM_DIR SOCKET_PATH
+    # Resolve GUNICORN_WORKERS if "auto" or non-numeric
+    if [[ -z "${GUNICORN_WORKERS:-}" || "${GUNICORN_WORKERS:-}" == "auto" || ! "${GUNICORN_WORKERS}" =~ ^[0-9]+$ ]]; then
+        local cores
+        cores=$(nproc 2>/dev/null || echo 1)
+        GUNICORN_WORKERS=$((cores * 2 + 1))
+    fi
+
+    export DEPLOY_ROOT RELEASES_DIR SHARED_DIR CURRENT_SYM_DIR SOCKET_PATH GUNICORN_WORKERS
     return 0
 }
 
