@@ -27,6 +27,10 @@ downloads/
 eggs/
 .eggs/
 lib/
+
+!deployment/lib/
+!deployment/lib/**
+
 lib64/
 parts/
 sdist/
@@ -155,4 +159,4 @@ deployment/config
 
 # Allow Markdown files in deployment/ directory
 !deployment/
-!deployment/**/*.md
+!deployment/**/*.md
