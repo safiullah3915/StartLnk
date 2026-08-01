@@ -26,10 +26,6 @@ cryptography==48.0.0
 
 # ── Database ─────────────────────────────────────────────────────────────────
 psycopg2-binary==2.9.12
-# NOTE: mysqlclient is included for development compatibility.
-# Production uses PostgreSQL (psycopg2-binary). Do NOT remove without
-# verifying no local development environments depend on it.
-mysqlclient
 
 # ── Cache ────────────────────────────────────────────────────────────────────
 django-redis==6.0.0
