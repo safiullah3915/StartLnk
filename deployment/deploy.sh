@@ -97,6 +97,7 @@ load_and_validate_config() {
     export STATIC_ROOT="${RELEASE_DIR}/backend/staticfiles"
     export MEDIA_ROOT="${SHARED_DIR}/media"
     export WSGI_MODULE="${WSGI_MODULE:-startup_platform.wsgi:application}"
+    export DJANGO_SETTINGS_MODULE="${DJANGO_SETTINGS_MODULE:-startup_platform.settings}"
     export SSL_CERT_PATH="${SSL_CERT_PATH:-/etc/letsencrypt/live/${DOMAIN}/fullchain.pem}"
     export SSL_KEY_PATH="${SSL_KEY_PATH:-/etc/letsencrypt/live/${DOMAIN}/privkey.pem}"
 }
