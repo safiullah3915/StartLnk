@@ -2,33 +2,17 @@
 #  StartLnk — Production Nginx Site Configuration Template
 # ══════════════════════════════════════════════════════════════════════════════
 #  Generated automatically by generate-config.sh from deployment/config.
-#  DO NOT EDIT DIRECTLY ON THE SERVER.
+#  Serves HTTP (Port 80) and HTTPS (Port 443) for both IP-based testing and domains.
 # ══════════════════════════════════════════════════════════════════════════════
 
-# ── HTTP Server (Port 80) — Redirects to HTTPS or serves ACME challenge ──────
 server {
-    listen 80;
-    listen [::]:80;
-    server_name {{DOMAIN}} www.{{DOMAIN}} {{SERVER_IP}};
-
-    # Certbot webroot challenge directory
-    location /.well-known/acme-challenge/ {
-        root /var/www/html;
-    }
-
-    # Redirect all HTTP traffic to HTTPS (uncommented during SSL setup)
-    location / {
-        return 301 https://$host$request_uri;
-    }
-}
-
-# ── HTTPS Server (Port 443) ───────────────────────────────────────────────────
-server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
     server_name {{DOMAIN}} www.{{DOMAIN}} {{SERVER_IP}};
 
-    # ── SSL Certificates ──────────────────────────────────────────────────────
+    # ── SSL Certificates (Self-signed fallback or Let's Encrypt) ──────────────
     ssl_certificate {{SSL_CERT_PATH}};
     ssl_certificate_key {{SSL_KEY_PATH}};
     ssl_protocols TLSv1.2 TLSv1.3;
@@ -37,12 +21,16 @@ server {
     ssl_session_cache shared:SSL:10m;
     ssl_session_timeout 1d;
 
+    # Certbot webroot challenge directory
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
+
     # ── Security Headers ──────────────────────────────────────────────────────
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-XSS-Protection "1; mode=block" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 
     # ── Upload Limit & Timeouts ───────────────────────────────────────────────
     client_max_body_size 20M;
